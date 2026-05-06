@@ -37,7 +37,7 @@
 <body>
 
 <h1>Compile byte-equality tests</h1>
-<p>Each rig in <code>../todaclj/toda-twist-maker/rigs/</code> is compiled
+<p>Each rig in <code>rigs/</code> (symlinked into <code>../todaclj/toda-twist-maker/rigs/</code>) is compiled
    twice — once in JS, once via the Clojure server at <code>localhost:7878</code> —
    and the bytes are compared. Only deterministic rigs (shielded:false +
    reqsat:null on every line) can byte-match; others are skipped.</p>

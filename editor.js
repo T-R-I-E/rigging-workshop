@@ -226,7 +226,7 @@ document.getElementById('url-input').addEventListener('keydown', e => {
 
 // --- examples panel ---------------------------------------------------------
 
-const RIGS_BASE = '../todaclj/toda-twist-maker/rigs/'
+const RIGS_BASE = 'rigs/'
 // Expected rig-check colour: green = pass, yellow = missing, red = fail.
 // 21–27 verified from todaclj/test-suite/src/test_suite/rigs/complex_rigs.clj;
 // the rest are pattern-based guesses from filenames (correct as needed).

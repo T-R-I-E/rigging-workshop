@@ -5,7 +5,7 @@
 import { parse_trdl_string, trdl_to_spec } from './toda/trdl.js'
 import { build } from './toda/compile.js'
 
-const RIGS_BASE = '../todaclj/toda-twist-maker/rigs/'
+const RIGS_BASE = 'rigs/'
 const SERVER    = 'http://localhost:7878'
 
 const RIG_FILES = [
