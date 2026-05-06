@@ -617,10 +617,17 @@ class UnshieldedInterpreter extends Interpreter {
             this.nextTetheredTwist(unverifiedFast).hash, optLastSupported)) {
             return
         }
+        // Walk back to the previous tethered twist. The canonical also
+        // navigates by prev() here, but it relies on the "must be full hitch"
+        // check we removed to short-circuit before reaching a twist whose
+        // prev() exists yet has no tethered ancestor. Treat that case as
+        // "verified back to the line's origin" and stop.
         if (this.twist(unverifiedFast).prev()) {
-            return this._verifyHitchLine(
-                this.prevTetheredTwist(unverifiedFast).hash,
-                optLastSupported, false)
+            let prevFast = this.prevTetheredTwist(unverifiedFast)
+            if (prevFast) {
+                return this._verifyHitchLine(
+                    prevFast.hash, optLastSupported, false)
+            }
         }
     }
 }
