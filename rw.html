@@ -1,0 +1,782 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Rigging Workshop</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  /* ---------- tokens ---------- */
+  :root {
+    --bg:        #f6f5f2;          /* warm paper */
+    --panel:     #ffffff;
+    --panel-2:   #fbfaf7;
+    --ink:       #1a1a1a;
+    --ink-2:     #4a4a48;
+    --ink-3:     #8a8a85;
+    --line:      #e6e3dc;
+    --line-2:    #d8d4cb;
+    --accent:    oklch(0.55 0.10 200);   /* muted teal */
+    --accent-soft: oklch(0.96 0.02 200);
+    --warn:      oklch(0.62 0.13 50);    /* amber */
+    --bad:       oklch(0.55 0.16 25);    /* red-orange */
+    --ok:        oklch(0.58 0.10 150);   /* green */
+
+    --hl-a3:     oklch(0.92 0.07 150);   /* A3 highlight (greenish) */
+    --hl-tri:    oklch(0.86 0.10 25);    /* triangle highlight (coral) */
+
+    --shadow-1:  0 1px 0 rgba(0,0,0,0.02), 0 1px 2px rgba(20,20,15,0.04);
+    --radius:    6px;
+    --radius-sm: 4px;
+
+    --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --sans: 'Inter', system-ui, -apple-system, Helvetica, Arial, sans-serif;
+
+    --row-h: 28px;
+    --nav-h: 44px;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    font-family: var(--sans);
+    font-size: 13px;
+    color: var(--ink);
+    background: var(--bg);
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+  }
+
+  /* ---------- app shell ---------- */
+  .app {
+    display: grid;
+    grid-template-rows: var(--nav-h) 1fr;
+    height: 100vh;
+  }
+
+  /* ---------- nav ---------- */
+  .nav {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 0 14px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--line);
+  }
+  .brand {
+    display: flex; align-items: center; gap: 8px;
+    font-weight: 600; letter-spacing: -0.01em;
+    color: var(--ink);
+    padding-right: 6px;
+  }
+  .brand { text-decoration: none; }
+  .brand-mark {
+    width: 18px; height: 18px;
+    display: block;
+  }
+  .brand small {
+    font-family: var(--mono);
+    color: var(--ink-3);
+    font-weight: 400;
+    font-size: 11px;
+    margin-left: 2px;
+  }
+
+  .nav-group {
+    display: flex; align-items: center; gap: 6px;
+    padding: 0 8px;
+    border-left: 1px solid var(--line);
+    height: 24px;
+  }
+  .nav-group:first-of-type { border-left: 0; padding-left: 0; }
+
+  .input {
+    height: 26px;
+    border: 1px solid var(--line-2);
+    border-radius: var(--radius-sm);
+    padding: 0 8px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--ink);
+    background: var(--panel-2);
+    min-width: 220px;
+    outline: none;
+  }
+  .input::placeholder { color: var(--ink-3); }
+  .input:focus { border-color: var(--accent); background: #fff; }
+
+  .btn {
+    height: 26px;
+    padding: 0 10px;
+    border: 1px solid var(--line-2);
+    background: var(--panel-2);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 12px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .btn:hover { background: #fff; border-color: var(--ink-3); }
+  .btn.primary {
+    background: var(--ink);
+    color: #fff;
+    border-color: var(--ink);
+  }
+  .btn.primary:hover { background: #000; }
+  .btn.ghost { background: transparent; border-color: transparent; }
+  .btn.ghost:hover { background: var(--panel-2); border-color: var(--line-2); }
+  .btn .kbd {
+    font-family: var(--mono); font-size: 10px;
+    color: var(--ink-3);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    padding: 0 4px;
+    line-height: 14px;
+  }
+
+  .nav-spacer { flex: 1; }
+
+  .status {
+    display: flex; align-items: center; gap: 8px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-2);
+  }
+  .status .dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--ok);
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--ok) 18%, transparent);
+  }
+  .status .dot.warn { background: var(--warn); box-shadow: 0 0 0 3px color-mix(in oklab, var(--warn) 18%, transparent); }
+  .status .dot.bad  { background: var(--bad);  box-shadow: 0 0 0 3px color-mix(in oklab, var(--bad) 18%, transparent); }
+
+  /* ---------- panel grid ---------- */
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap: 1px;
+    background: var(--line);
+    height: 100%;
+    min-height: 0;
+  }
+
+  .panel {
+    background: var(--panel);
+    display: grid;
+    grid-template-rows: auto 1fr;
+    min-width: 0; min-height: 0;
+  }
+  .panel-head {
+    height: var(--row-h);
+    display: flex; align-items: center;
+    padding: 0 10px;
+    border-bottom: 1px solid var(--line);
+    background: var(--panel-2);
+    gap: 10px;
+  }
+  .panel-title {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--ink-2);
+  }
+  .panel-meta {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-3);
+  }
+  .panel-tools {
+    margin-left: auto;
+    display: flex; align-items: center; gap: 2px;
+  }
+  .icon-btn {
+    width: 22px; height: 22px;
+    display: inline-flex; align-items: center; justify-content: center;
+    border: 0;
+    background: transparent;
+    color: var(--ink-3);
+    border-radius: 3px;
+    cursor: pointer;
+  }
+  .icon-btn:hover { background: var(--line); color: var(--ink); }
+  .icon-btn svg { width: 13px; height: 13px; }
+
+  .panel-body {
+    overflow: auto;
+    min-height: 0;
+  }
+
+  /* ---------- editor ---------- */
+  .editor {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    line-height: 1.55;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    height: 100%;
+  }
+  .gutter {
+    padding: 8px 10px 8px 12px;
+    text-align: right;
+    color: var(--ink-3);
+    user-select: none;
+    border-right: 1px solid var(--line);
+    background: var(--panel-2);
+    font-size: 11.5px;
+  }
+  .gutter span { display: block; }
+  .code {
+    padding: 8px 12px;
+    white-space: pre;
+    color: var(--ink);
+    overflow: auto;
+  }
+  .code .ln { display: block; }
+  .tok-key { color: oklch(0.45 0.13 270); }   /* indigo */
+  .tok-str { color: oklch(0.50 0.13 150); }   /* green */
+  .tok-num { color: oklch(0.55 0.13 30);  }   /* orange */
+  .tok-com { color: var(--ink-3); }
+  .tok-hash { color: oklch(0.50 0.10 200); }  /* teal */
+
+  .chip-a3, .chip-tri {
+    display: inline-block;
+    padding: 0 6px;
+    border-radius: 3px;
+    font-family: var(--mono);
+    font-size: 11px;
+    line-height: 18px;
+  }
+  .chip-a3  { background: var(--hl-a3);  color: oklch(0.30 0.08 150); }
+  .chip-tri { background: var(--hl-tri); color: oklch(0.30 0.10 25); }
+
+  /* ---------- viz ---------- */
+  .viz-wrap { position: relative; height: 100%; background:
+    radial-gradient(circle at 1px 1px, #e9e6df 1px, transparent 1px) 0 0 / 16px 16px,
+    var(--panel);
+  }
+  .viz-wrap svg { width: 100%; height: 100%; display: block; }
+
+  .viz-legend {
+    position: absolute;
+    left: 10px; bottom: 10px;
+    background: rgba(255,255,255,0.92);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    padding: 6px 8px;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    color: var(--ink-2);
+    display: grid; gap: 3px;
+    backdrop-filter: blur(4px);
+  }
+  .viz-legend .row { display: flex; align-items: center; gap: 6px; }
+  .viz-legend .sw {
+    width: 10px; height: 10px; border-radius: 2px;
+    border: 1px solid var(--ink);
+  }
+
+  .viz-controls {
+    position: absolute;
+    right: 10px; top: 10px;
+    display: flex; gap: 2px;
+    background: rgba(255,255,255,0.92);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    padding: 2px;
+  }
+
+  /* ---------- left-bottom (actions + meta) ---------- */
+  .stack {
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    height: 100%;
+  }
+
+  .section {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--line);
+  }
+  .section:last-child { border-bottom: 0; }
+  .section h4 {
+    margin: 0 0 8px 0;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ink-3);
+  }
+  .actions {
+    display: flex; flex-wrap: wrap; gap: 6px;
+  }
+  .action {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 9px;
+    border: 1px solid var(--line-2);
+    background: var(--panel-2);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: 12px;
+  }
+  .action:hover { background: #fff; border-color: var(--ink-3); }
+  .action.disabled { opacity: 0.5; pointer-events: none; }
+  .action .marker {
+    width: 8px; height: 8px;
+    border: 1px solid var(--ink);
+  }
+  .action.trdl-only { border-style: dashed; }
+  .action.trdl-only::after {
+    content: 'TRDL';
+    font-family: var(--mono); font-size: 9.5px;
+    color: var(--ink-3);
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    padding: 0 3px;
+    margin-left: 2px;
+  }
+
+  .rig-check {
+    display: flex; align-items: flex-start; gap: 8px;
+    padding: 8px 10px;
+    background: color-mix(in oklab, var(--ok) 8%, var(--panel));
+    border: 1px solid color-mix(in oklab, var(--ok) 25%, var(--line));
+    border-radius: var(--radius-sm);
+    font-family: var(--mono);
+    font-size: 11.5px;
+    color: var(--ink-2);
+  }
+  .rig-check .badge {
+    flex: none;
+    background: var(--ok);
+    color: #fff;
+    font-weight: 600;
+    padding: 1px 6px;
+    border-radius: 2px;
+    font-size: 10px;
+    letter-spacing: 0.04em;
+  }
+  .rig-check.warn {
+    background: color-mix(in oklab, var(--warn) 10%, var(--panel));
+    border-color: color-mix(in oklab, var(--warn) 30%, var(--line));
+  }
+  .rig-check.warn .badge { background: var(--warn); }
+
+  .meta-grid {
+    display: grid;
+    grid-template-columns: 110px 1fr;
+    row-gap: 4px; column-gap: 12px;
+    font-family: var(--mono);
+    font-size: 11.5px;
+  }
+  .meta-grid dt { color: var(--ink-3); }
+  .meta-grid dd { margin: 0; color: var(--ink); }
+
+  /* ---------- hex viewer ---------- */
+  .hex {
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 1.6;
+    display: grid;
+    grid-template-columns: auto auto 1fr;
+    column-gap: 16px;
+    padding: 8px 12px;
+  }
+  .hex .addr { color: var(--ink-3); }
+  .hex .bytes { color: var(--ink); white-space: pre; }
+  .hex .ascii { color: var(--ink-2); white-space: pre; }
+  .hex .row { display: contents; }
+  .hex .row:hover .addr,
+  .hex .row:hover .bytes,
+  .hex .row:hover .ascii { background: var(--accent-soft); }
+
+  .hex .b-hash { color: oklch(0.50 0.10 200); cursor: pointer; text-decoration: underline dotted; text-underline-offset: 2px; }
+  .hex .b-hash:hover { background: var(--accent-soft); }
+  .hex .b-trie { background: var(--hl-a3); border-radius: 2px; padding: 0 1px; }
+  .hex .b-len  { color: oklch(0.55 0.13 30); }
+  .hex .b-tag  { color: oklch(0.45 0.13 270); font-weight: 500; }
+
+  .hex-tabs {
+    display: flex; align-items: center; gap: 0;
+    margin-left: auto;
+    margin-right: 4px;
+  }
+  .hex-tab {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-3);
+    padding: 2px 8px;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+  }
+  .hex-tab.active { color: var(--ink); border-bottom-color: var(--accent); }
+
+  /* ---------- icons (inline svg helper) ---------- */
+  .ic { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+
+  /* ---------- selection ---------- */
+  ::selection { background: color-mix(in oklab, var(--accent) 25%, transparent); }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ============ NAV ============ -->
+  <header class="nav">
+    <a class="brand" href="https://trie.site" target="_blank" rel="noopener">
+      <svg class="brand-mark" viewBox="0 0 24 24" aria-hidden="true">
+        <!-- trie.site logo placeholder -->
+        <circle cx="12" cy="5" r="2.2" fill="#1a1a1a"/>
+        <circle cx="5" cy="13" r="2.2" fill="#1a1a1a"/>
+        <circle cx="12" cy="13" r="2.2" fill="#1a1a1a"/>
+        <circle cx="19" cy="13" r="2.2" fill="#1a1a1a"/>
+        <circle cx="8.5" cy="20" r="2" fill="#1a1a1a"/>
+        <circle cx="15.5" cy="20" r="2" fill="#1a1a1a"/>
+        <path d="M12 7L5 11M12 7L12 11M12 7L19 11M5 15L8.5 18M12 15L8.5 18M12 15L15.5 18M19 15L15.5 18" stroke="#1a1a1a" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+      </svg>
+      <span>T.R.I.E.</span>
+      <small>rigging workshop</small>
+    </a>
+
+    <div class="nav-group">
+      <input class="input" placeholder="https://… paste TRDL or TODA url" />
+      <button class="btn">
+        <svg class="ic" viewBox="0 0 24 24"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14"/></svg>
+        Open file
+      </button>
+    </div>
+
+    <div class="nav-group">
+      <button class="btn ghost" title="Undo"><svg class="ic" viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 010 10h-3"/></svg></button>
+      <button class="btn ghost" title="Redo"><svg class="ic" viewBox="0 0 24 24"><path d="M15 14l5-5-5-5"/><path d="M20 9H9a5 5 0 000 10h3"/></svg></button>
+    </div>
+
+    <div class="nav-spacer"></div>
+
+    <div class="nav-group">
+      <button class="btn primary">
+        <svg class="ic" viewBox="0 0 24 24" style="stroke:#fff"><path d="M12 21V9m0 0l-4 4m4-4l4 4M5 3h14"/></svg>
+        Save
+        <svg class="ic" viewBox="0 0 24 24" style="stroke:#fff"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- ============ GRID ============ -->
+  <main class="grid">
+
+    <!-- TL: Editor -->
+    <section class="panel" aria-label="TRDL editor">
+      <header class="panel-head">
+        <span class="panel-title">Editor</span>
+        <span class="panel-meta">trdl</span>
+        <div class="panel-tools">
+          <button class="icon-btn" title="Wrap"><svg class="ic" viewBox="0 0 24 24"><path d="M3 6h18M3 12h13a4 4 0 010 8h-3l3-3m0 6l-3-3M3 18h6"/></svg></button>
+          <button class="icon-btn" title="Search"><svg class="ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4-4"/></svg></button>
+          <button class="icon-btn" title="Format"><svg class="ic" viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h16"/></svg></button>
+        </div>
+      </header>
+      <div class="panel-body">
+        <div class="editor">
+          <div class="gutter" id="gutter"></div>
+          <div class="code" id="code"><span class="ln"><span class="tok-com"># rigging description · trdl 0.4.2</span></span><span class="ln"><span class="tok-key">version</span> <span class="tok-num">0.4.2</span></span><span class="ln"><span class="tok-key">root</span>   <span class="chip-a3">A3</span> <span class="tok-hash">41a9c2…7f0e</span></span><span class="ln"></span><span class="ln"><span class="tok-key">line</span> <span class="tok-str">"main"</span> {</span><span class="ln">  <span class="tok-key">tether</span> <span class="tok-hash">2c1f04…b6a1</span></span><span class="ln">  <span class="tok-key">twist</span> <span class="tok-num">0</span> { <span class="tok-key">type</span>: <span class="tok-str">loose</span>,  <span class="tok-key">cargo</span>: <span class="tok-hash">aa11…3e</span> }</span><span class="ln">  <span class="tok-key">twist</span> <span class="tok-num">1</span> { <span class="tok-key">type</span>: <span class="tok-str">fast</span>,   <span class="tok-key">reqs</span>:  [<span class="tok-hash">d4…1c</span>, <span class="tok-hash">90…42</span>] }</span><span class="ln">  <span class="tok-key">twist</span> <span class="tok-num">2</span> { <span class="tok-key">type</span>: <span class="tok-str">fast</span>,   <span class="tok-key">shield</span>: <span class="tok-hash">7e…b2</span> }</span><span class="ln">  <span class="tok-key">twist</span> <span class="tok-num">3</span> { <span class="tok-key">type</span>: <span class="tok-str">loose</span> }</span><span class="ln">}</span><span class="ln"></span><span class="ln"><span class="tok-key">line</span> <span class="tok-str">"branch.a"</span> {</span><span class="ln">  <span class="tok-key">parent</span> <span class="tok-hash">main#2</span></span><span class="ln">  <span class="tok-key">twist</span> <span class="tok-num">0</span> { <span class="tok-key">type</span>: <span class="tok-str">fast</span>,   <span class="tok-key">cargo</span>: <span class="tok-hash">5b…91</span> }</span><span class="ln">  <span class="tok-key">twist</span> <span class="tok-num">1</span> { <span class="tok-key">type</span>: <span class="tok-str">loose</span>,  <span class="tok-key">tail</span>:  <span class="chip-tri">▲</span> }</span><span class="ln">}</span><span class="ln"></span><span class="ln"><span class="tok-key">rigtrie</span> {</span><span class="ln">  <span class="tok-key">leaf</span> <span class="tok-hash">main#3</span>  → <span class="tok-hash">f01a…77</span></span><span class="ln">  <span class="tok-key">leaf</span> <span class="tok-hash">branch.a#1</span> → <span class="chip-tri">▲ unresolved</span></span><span class="ln">}</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TR: Viz -->
+    <section class="panel" aria-label="Visualization">
+      <header class="panel-head">
+        <span class="panel-title">Visualization</span>
+        <span class="panel-meta">2 lines · 6 twists · 1 unresolved</span>
+        <div class="panel-tools">
+          <button class="icon-btn" title="Fit"><svg class="ic" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+          <button class="icon-btn" title="Layout"><svg class="ic" viewBox="0 0 24 24"><circle cx="6" cy="6" r="2"/><circle cx="18" cy="6" r="2"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="18" r="2"/><path d="M8 6h8M6 8v8M18 8v8M8 18h8"/></svg></button>
+          <button class="icon-btn" title="Export SVG"><svg class="ic" viewBox="0 0 24 24"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14"/></svg></button>
+        </div>
+      </header>
+      <div class="panel-body">
+        <div class="viz-wrap">
+          <svg viewBox="0 0 600 360" preserveAspectRatio="xMidYMid meet">
+            <!-- edges -->
+            <g stroke="#1a1a1a" stroke-width="1.2" fill="none" stroke-linecap="round">
+              <path d="M80 80 L180 90 L300 100 L420 110 L520 100"/>
+              <path d="M180 90 L220 200"/>
+              <path d="M300 100 L260 220"/>
+              <path d="M300 100 L360 220"/>
+              <path d="M420 110 L380 230"/>
+              <path d="M420 110 L470 240"/>
+              <path d="M220 200 L260 220 L360 220 L380 230 L470 240"/>
+              <path d="M470 240 L530 260"/>
+              <path d="M530 260 L555 280" stroke-dasharray="3 3"/>
+            </g>
+
+            <!-- twist nodes -->
+            <g>
+              <!-- root A3 -->
+              <g transform="translate(80,80)">
+                <rect x="-18" y="-12" width="36" height="24" rx="3" fill="oklch(0.92 0.07 150)" stroke="#1a1a1a"/>
+                <text x="0" y="4" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#1a1a1a">A3</text>
+              </g>
+
+              <!-- main line -->
+              <circle cx="180" cy="90" r="8" fill="#fff" stroke="#1a1a1a"/>
+              <circle cx="300" cy="100" r="8" fill="#fff" stroke="#1a1a1a"/>
+              <circle cx="420" cy="110" r="8" fill="#1a1a1a" stroke="#1a1a1a"/>
+
+              <!-- "fast" twist -->
+              <g transform="translate(520,100)">
+                <polygon points="-10,-10 10,-10 10,10 -10,10" fill="#fff" stroke="#1a1a1a"/>
+                <polygon points="-6,-6 6,-6 6,6 -6,6" fill="oklch(0.86 0.10 25)" stroke="#1a1a1a"/>
+              </g>
+
+              <!-- branch nodes -->
+              <circle cx="220" cy="200" r="7" fill="#fff" stroke="#1a1a1a"/>
+              <circle cx="260" cy="220" r="7" fill="#fff" stroke="#1a1a1a"/>
+              <circle cx="360" cy="220" r="7" fill="#1a1a1a" stroke="#1a1a1a"/>
+              <circle cx="380" cy="230" r="7" fill="#fff" stroke="#1a1a1a"/>
+              <circle cx="470" cy="240" r="7" fill="#fff" stroke="#1a1a1a"/>
+
+              <!-- tail triangle (unresolved) -->
+              <g transform="translate(530,260)">
+                <polygon points="0,-10 10,8 -10,8" fill="oklch(0.86 0.10 25)" stroke="#1a1a1a"/>
+              </g>
+
+              <!-- bracket cluster top right -->
+              <g transform="translate(550,90)">
+                <path d="M0 -14 L6 -14 L6 14 L0 14" fill="none" stroke="#8a8a85"/>
+                <text x="12" y="4" font-family="JetBrains Mono" font-size="10" fill="#8a8a85">cluster</text>
+              </g>
+            </g>
+
+            <!-- floating labels -->
+            <g font-family="JetBrains Mono" font-size="9.5" fill="#8a8a85">
+              <text x="180" y="78">main#0</text>
+              <text x="300" y="88">main#1</text>
+              <text x="420" y="98">main#2</text>
+              <text x="498" y="88">main#3</text>
+              <text x="220" y="190">b.a#0</text>
+              <text x="380" y="220">b.a#1</text>
+            </g>
+          </svg>
+
+          <div class="viz-controls">
+            <button class="icon-btn" title="Zoom in"><svg class="ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M11 8v6M8 11h6M20 20l-4-4"/></svg></button>
+            <button class="icon-btn" title="Zoom out"><svg class="ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M8 11h6M20 20l-4-4"/></svg></button>
+            <button class="icon-btn" title="Reset"><svg class="ic" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></button>
+          </div>
+
+          <div class="viz-legend">
+            <div class="row"><span class="sw" style="background:#fff"></span> twist</div>
+            <div class="row"><span class="sw" style="background:#1a1a1a"></span> fast twist</div>
+            <div class="row"><span class="sw" style="background:var(--hl-a3)"></span> A3 / root</div>
+            <div class="row"><span class="sw" style="background:var(--hl-tri); border-radius: 0; clip-path: polygon(50% 0, 100% 100%, 0 100%);"></span> tail / unresolved</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- BL: Actions + meta -->
+    <section class="panel" aria-label="Actions and metadata">
+      <header class="panel-head">
+        <span class="panel-title">Workshop</span>
+        <span class="panel-meta">main · twist 3 selected</span>
+      </header>
+      <div class="panel-body stack">
+
+        <div class="section">
+          <h4>Actions</h4>
+          <div class="actions">
+            <button class="action"><span class="marker" style="border-radius:50%"></span> Start a new line</button>
+            <button class="action"><span class="marker" style="border-radius:50%; background:#fff"></span> Make a loose twist</button>
+            <button class="action"><span class="marker" style="background:#1a1a1a"></span> Make a fast twist</button>
+            <button class="action"><span class="marker" style="background: var(--hl-tri); border:0; clip-path: polygon(50% 0, 100% 100%, 0 100%);"></span> Choose tether…</button>
+            <button class="action trdl-only"><span class="marker"></span> Add reqsat</button>
+            <button class="action trdl-only"><span class="marker"></span> Attach cargo</button>
+            <button class="action trdl-only"><span class="marker"></span> Insert rigtrie</button>
+            <button class="action trdl-only"><span class="marker"></span> Apply shield</button>
+          </div>
+        </div>
+
+        <div class="section">
+          <h4>Rig check</h4>
+          <div class="rig-check warn">
+            <span class="badge">WARN</span>
+            <div>
+              <div>1 unresolved tether at <span style="color:var(--ink); text-decoration: underline dotted;">branch.a#1</span></div>
+              <div style="color: var(--ink-3); margin-top:2px;">All 6 fast twists verify · 0 broken hashes · trie consistent</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <h4>Metadata</h4>
+          <dl class="meta-grid">
+            <dt>format</dt><dd>TRDL <span style="color:var(--ink-3)">/ derived from .toda</span></dd>
+            <dt>file size</dt><dd>2,408 bytes</dd>
+            <dt>atoms</dt><dd>23 <span style="color:var(--ink-3)">(18 unique)</span></dd>
+            <dt>twists</dt><dd>6 <span style="color:var(--ink-3)">· 4 fast · 2 loose</span></dd>
+            <dt>lines</dt><dd>2 <span style="color:var(--ink-3)">(main, branch.a)</span></dd>
+            <dt>root A3</dt><dd>41a9c2…7f0e</dd>
+          </dl>
+        </div>
+      </div>
+    </section>
+
+    <!-- BR: Hex viewer -->
+    <section class="panel" aria-label="Hex viewer">
+      <header class="panel-head">
+        <span class="panel-title">Hex</span>
+        <div class="hex-tabs">
+          <span class="hex-tab active">atoms</span>
+          <span class="hex-tab">raw</span>
+          <span class="hex-tab">tries</span>
+        </div>
+        <div class="panel-tools">
+          <button class="icon-btn" title="Find"><svg class="ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4-4"/></svg></button>
+          <button class="icon-btn" title="Toggle ascii"><svg class="ic" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg></button>
+        </div>
+      </header>
+      <div class="panel-body">
+        <div class="hex" id="hex">
+          <div class="row">
+            <span class="addr">0000</span>
+            <span class="bytes"><span class="b-tag">54 52 44 4c</span> <span class="b-len">00 04 02</span> 00 <span class="b-hash">41 a9 c2 7b 1e 5f</span> 88 9d</span>
+            <span class="ascii">TRDL···· A·Â{·_··</span>
+          </div>
+          <div class="row">
+            <span class="addr">0010</span>
+            <span class="bytes"><span class="b-trie">11 22 33 44</span> 55 66 77 88 <span class="b-hash">2c 1f 04 9a b6 a1 00 ff</span></span>
+            <span class="ascii">·"3DUfw· ,···¶¡·ÿ</span>
+          </div>
+          <div class="row">
+            <span class="addr">0020</span>
+            <span class="bytes">01 02 <span class="b-tag">A3</span> 00 <span class="b-len">00 20</span> aa 11 <span class="b-hash">3e 4d 5e 6f 70 81 92 a3</span></span>
+            <span class="ascii">··£·· ª·>M^op···</span>
+          </div>
+          <div class="row">
+            <span class="addr">0030</span>
+            <span class="bytes">b4 c5 d6 e7 f8 09 1a 2b <span class="b-trie">3c 4d 5e 6f</span> 70 81 92 a3</span>
+            <span class="ascii">····ø··+ &lt;M^op···</span>
+          </div>
+          <div class="row">
+            <span class="addr">0040</span>
+            <span class="bytes"><span class="b-tag">54 57 53 54</span> <span class="b-len">00 00 18</span> <span class="b-hash">d4 88 12 7c 1c</span> 90 42 ff</span>
+            <span class="ascii">TWST···· Ô··|··B·</span>
+          </div>
+          <div class="row">
+            <span class="addr">0050</span>
+            <span class="bytes">7e b2 00 00 11 22 33 44 55 66 77 88 99 aa bb cc</span>
+            <span class="ascii">~²···"3D UfwÚ··ÌÌ</span>
+          </div>
+          <div class="row">
+            <span class="addr">0060</span>
+            <span class="bytes"><span class="b-tag">52 47 54 52</span> <span class="b-len">00 00 0c</span> <span class="b-hash">f0 1a 77 5b 91 88</span> 23</span>
+            <span class="ascii">RGTR···· ð·w[··#</span>
+          </div>
+          <div class="row">
+            <span class="addr">0070</span>
+            <span class="bytes">00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00</span>
+            <span class="ascii">···············</span>
+          </div>
+          <div class="row">
+            <span class="addr">0080</span>
+            <span class="bytes"><span class="b-tag">54 57 53 54</span> <span class="b-len">00 00 24</span> <span class="b-hash">5b 91 88 23 4d e2</span> 01 ff</span>
+            <span class="ascii">TWST···· [···#Mâ··</span>
+          </div>
+          <div class="row">
+            <span class="addr">0090</span>
+            <span class="bytes">a1 b2 c3 d4 e5 f6 07 18 29 3a 4b 5c 6d 7e 8f 90</span>
+            <span class="ascii">¡²ÃÔåö··):K\m~··</span>
+          </div>
+          <div class="row">
+            <span class="addr">00a0</span>
+            <span class="bytes"><span class="b-tag">43 41 52 47</span> <span class="b-len">00 00 10</span> <span class="b-hash">aa 11 3e 4d 5e 6f</span> 70 81</span>
+            <span class="ascii">CARG···· ª·>M^op·</span>
+          </div>
+          <div class="row">
+            <span class="addr">00b0</span>
+            <span class="bytes">92 a3 b4 c5 d6 e7 f8 09 1a 2b 3c 4d 5e 6f 70 81</span>
+            <span class="ascii">·£´ÅÖçø· ·+&lt;M^op·</span>
+          </div>
+          <div class="row">
+            <span class="addr">00c0</span>
+            <span class="bytes"><span class="b-tag">52 51 53 54</span> <span class="b-len">00 00 14</span> <span class="b-hash">d4 88 12 7c 1c 90</span> 42</span>
+            <span class="ascii">RQST···· Ô··|··B</span>
+          </div>
+          <div class="row">
+            <span class="addr">00d0</span>
+            <span class="bytes">ff 00 11 22 33 44 55 66 <span class="b-trie">77 88 99 aa</span> bb cc dd ee</span>
+            <span class="ascii">ÿ··"3DUf wÚ·ª»ÌÝî</span>
+          </div>
+          <div class="row">
+            <span class="addr">00e0</span>
+            <span class="bytes"><span class="b-tag">53 48 4c 44</span> <span class="b-len">00 00 08</span> <span class="b-hash">7e b2 00 00</span> 11 22 33</span>
+            <span class="ascii">SHLD···· ~²····"3</span>
+          </div>
+          <div class="row">
+            <span class="addr">00f0</span>
+            <span class="bytes">44 55 66 77 88 99 aa bb cc dd ee ff 00 11 22 33</span>
+            <span class="ascii">DUfw···« ÌÝîÿ··"3</span>
+          </div>
+          <div class="row">
+            <span class="addr">0100</span>
+            <span class="bytes"><span class="b-tag">52 47 54 52</span> <span class="b-len">00 00 18</span> <span class="b-hash">f0 1a 77 5b 91 88</span> 23</span>
+            <span class="ascii">RGTR···· ð·w[··#</span>
+          </div>
+          <div class="row">
+            <span class="addr">0110</span>
+            <span class="bytes"><span class="b-trie">3c 4d 5e 6f</span> 70 81 92 a3 b4 c5 d6 e7 f8 09 1a 2b</span>
+            <span class="ascii">&lt;M^op··· ·ÅÖçø··+</span>
+          </div>
+          <div class="row">
+            <span class="addr">0120</span>
+            <span class="bytes"><span class="b-tag">54 52 49 45</span> <span class="b-len">00 00 0c</span> <span class="b-hash">2c 1f 04 9a b6 a1</span> 00</span>
+            <span class="ascii">TRIE···· ,···¶¡·</span>
+          </div>
+          <div class="row">
+            <span class="addr">0130</span>
+            <span class="bytes">ff 00 00 00 11 22 33 44 55 66 77 88 99 aa bb cc</span>
+            <span class="ascii">ÿ···"3DU fw·ª»Ì</span>
+          </div>
+          <div class="row">
+            <span class="addr">0140</span>
+            <span class="bytes"><span class="b-tag">45 4e 44</span> 00 00 00 00 00 — — — — — — — —</span>
+            <span class="ascii">END·····</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+  // line-number gutter for editor
+  (function () {
+    const code = document.getElementById('code');
+    const gutter = document.getElementById('gutter');
+    const lines = code.querySelectorAll('.ln').length;
+    let html = '';
+    for (let i = 1; i <= lines; i++) html += '<span>' + i + '</span>';
+    gutter.innerHTML = html;
+  })();
+
+  // hex tabs
+  document.querySelectorAll('.hex-tab').forEach(t => {
+    t.addEventListener('click', () => {
+      document.querySelectorAll('.hex-tab').forEach(x => x.classList.remove('active'));
+      t.classList.add('active');
+    });
+  });
+</script>
+
+</body>
+</html>

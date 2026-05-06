@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Rigging Workshop</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+
+<script type="importmap">
+{
+  "imports": {
+    "@codemirror/state":        "https://esm.sh/@codemirror/state@6",
+    "@codemirror/view":         "https://esm.sh/@codemirror/view@6",
+    "@codemirror/commands":     "https://esm.sh/@codemirror/commands@6",
+    "@codemirror/language":     "https://esm.sh/@codemirror/language@6",
+    "@codemirror/search":       "https://esm.sh/@codemirror/search@6",
+    "@codemirror/autocomplete": "https://esm.sh/@codemirror/autocomplete@6",
+    "@codemirror/lint":         "https://esm.sh/@codemirror/lint@6",
+    "@codemirror/lang-json":    "https://esm.sh/@codemirror/lang-json@6",
+    "@noble/ed25519":           "https://esm.sh/@noble/ed25519@2"
+  }
+}
+</script>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ============ NAV ============ -->
+  <header class="nav">
+    <a class="brand" href="https://trie.site" target="_blank" rel="noopener">
+      <svg class="brand-mark" viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="12" cy="5" r="2.2" fill="#1a1a1a"/>
+        <circle cx="5" cy="13" r="2.2" fill="#1a1a1a"/>
+        <circle cx="12" cy="13" r="2.2" fill="#1a1a1a"/>
+        <circle cx="19" cy="13" r="2.2" fill="#1a1a1a"/>
+        <circle cx="8.5" cy="20" r="2" fill="#1a1a1a"/>
+        <circle cx="15.5" cy="20" r="2" fill="#1a1a1a"/>
+        <path d="M12 7L5 11M12 7L12 11M12 7L19 11M5 15L8.5 18M12 15L8.5 18M12 15L15.5 18M19 15L15.5 18" stroke="#1a1a1a" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+      </svg>
+      <span>T.R.I.E.</span>
+      <small>rigging workshop</small>
+    </a>
+
+    <div class="nav-group">
+      <input id="url-input" class="input" placeholder="https://… url to .trdl or .toda" />
+      <button id="btn-load" class="btn">
+        <svg class="ic" viewBox="0 0 24 24"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+        Load
+      </button>
+      <button id="btn-open" class="btn">
+        <svg class="ic" viewBox="0 0 24 24"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14"/></svg>
+        Open file
+      </button>
+      <input id="file-input" type="file" accept=".trdl,.toda" hidden />
+    </div>
+
+    <div class="nav-spacer"></div>
+
+    <div class="nav-group">
+      <button id="btn-save-trdl" class="btn">
+        <svg class="ic" viewBox="0 0 24 24"><path d="M12 21V9m0 0l-4 4m4-4l4 4M5 3h14"/></svg>
+        Save .trdl
+      </button>
+      <button id="btn-save-toda" class="btn">
+        <svg class="ic" viewBox="0 0 24 24"><path d="M12 21V9m0 0l-4 4m4-4l4 4M5 3h14"/></svg>
+        Export .toda
+      </button>
+    </div>
+  </header>
+
+  <!-- ============ GRID ============ -->
+  <main class="grid">
+
+    <!-- TL: Editor -->
+    <section class="panel" aria-label="TRDL editor">
+      <header class="panel-head">
+        <span class="panel-title">Editor</span>
+        <span class="panel-meta">trdl · jsonl</span>
+      </header>
+      <div class="panel-body">
+        <div id="editor" class="editor-host"></div>
+      </div>
+    </section>
+
+    <!-- TR: Viz -->
+    <section class="panel" aria-label="Visualization">
+      <header class="panel-head">
+        <span class="panel-title">Visualization</span>
+        <span id="viz-meta" class="panel-meta">—</span>
+      </header>
+      <div class="panel-body">
+        <div class="viz-wrap">
+          <svg id="viz" preserveAspectRatio="xMidYMid meet"></svg>
+          <div class="viz-legend">
+            <div class="row"><span class="sw" style="background:#999"></span> prev</div>
+            <div class="row"><span class="sw" style="background:#f9f"></span> teth</div>
+            <div class="row"><span class="sw" style="background:rgb(61,255,51)"></span> lead</div>
+            <div class="row"><span class="sw" style="background:#86f"></span> meet</div>
+            <div class="row"><span class="sw" style="background:rgb(255,174,60)"></span> post</div>
+            <div class="row"><span class="sw" style="background:rgb(255,0,0)"></span> cargo</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- BL: Workshop (rig check + metadata) -->
+    <section class="panel" aria-label="Workshop">
+      <header class="panel-head">
+        <span class="panel-title">Workshop</span>
+        <span class="panel-meta">v1</span>
+      </header>
+      <div class="panel-body stack">
+        <div class="section">
+          <h4>Rig check</h4>
+          <div id="rigcheck" class="rig-check warn">
+            <span class="badge">IDLE</span>
+            <div>Loading…</div>
+          </div>
+        </div>
+        <div class="section rigs-section">
+          <h4>Examples</h4>
+          <div id="rigs-list" class="rigs-list"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- BR: Hex viewer -->
+    <section class="panel" aria-label="Hex viewer">
+      <header class="panel-head">
+        <span class="panel-title">Hex</span>
+        <span id="meta" class="panel-meta">—</span>
+      </header>
+      <div class="panel-body">
+        <div id="hex" class="hex"><div class="empty">no rig loaded</div></div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script type="module" src="app.js"></script>
+<script type="module" src="hex.js"></script>
+<script type="module" src="editor.js"></script>
+</body>
+</html>
