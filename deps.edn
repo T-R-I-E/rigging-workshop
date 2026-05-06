@@ -1,0 +1,11 @@
+;; `src/` is a symlink into ../svgiewer/src for the JS modules; Clojure
+;; sources for the bridge live under clj/ to avoid the collision.
+{:paths ["clj"]
+
+ :deps {org.clojure/clojure    {:mvn/version "1.11.1"}
+        org.clojure/data.json  {:mvn/version "2.4.0"}
+        toda/twist-maker       {:local/root "../todaclj/toda-twist-maker"}}
+
+ :aliases
+ {:server
+  {:main-opts ["-m" "rigging-workshop.server"]}}}

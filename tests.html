@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Rigging Workshop — Compile Tests</title>
+<link rel="stylesheet" href="style.css">
+
+<script type="importmap">
+{
+  "imports": {
+    "@noble/ed25519": "https://esm.sh/@noble/ed25519@2"
+  }
+}
+</script>
+
+<style>
+  body { padding: 16px; font-family: var(--mono); font-size: 12px;
+         background: var(--bg); color: var(--ink); overflow: auto; }
+  h1 { font-size: 16px; margin: 0 0 8px; }
+  p  { color: var(--ink-2); }
+  .controls { margin: 12px 0; display: flex; gap: 8px; align-items: center; }
+  table { border-collapse: collapse; min-width: 720px; }
+  th { font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em;
+       color: var(--ink-3); border-bottom: 1px solid var(--line); }
+  td, th { padding: 4px 10px; text-align: left; vertical-align: top; }
+  td:last-child { white-space: pre; font-family: var(--mono); font-size: 11px; }
+  tr:hover td { background: var(--accent-soft); }
+  .ok   { color: var(--ok);   font-weight: 600; }
+  .bad  { color: var(--bad);  font-weight: 600; }
+  .skip { color: var(--ink-3); }
+  .summary { margin-top: 12px; padding: 8px 10px; border: 1px solid var(--line);
+             border-radius: 4px; background: var(--panel); }
+  pre { background: var(--panel); padding: 8px; border: 1px solid var(--line);
+        border-radius: 4px; max-height: 200px; overflow: auto; font-size: 11px; }
+</style>
+</head>
+<body>
+
+<h1>Compile byte-equality tests</h1>
+<p>Each rig in <code>../todaclj/toda-twist-maker/rigs/</code> is compiled
+   twice — once in JS, once via the Clojure server at <code>localhost:7878</code> —
+   and the bytes are compared. Only deterministic rigs (shielded:false +
+   reqsat:null on every line) can byte-match; others are skipped.</p>
+
+<div class="controls">
+  <button class="btn primary" id="run">Run all</button>
+  <span id="summary" class="summary" hidden></span>
+</div>
+
+<table id="results">
+  <thead><tr>
+    <th>rig</th><th>js bytes</th><th>server bytes</th><th>result</th><th>note</th>
+  </tr></thead>
+  <tbody></tbody>
+</table>
+
+<script type="module" src="tests.js"></script>
+</body>
+</html>
