@@ -228,8 +228,10 @@ document.getElementById('url-input').addEventListener('keydown', e => {
 
 const RIGS_BASE = 'rigs/'
 // Expected rig-check colour: green = pass, yellow = missing, red = fail.
-// 21–27 verified from todaclj/test-suite/src/test_suite/rigs/complex_rigs.clj;
-// the rest are pattern-based guesses from filenames (correct as needed).
+// Authoritative source: todaclj/toda-clj-tests/test-suite/*.json (matches
+// our shielded:false trdl rigs). complex_rigs.clj is the *shielded* form
+// of these rigs and uses different colours, so it doesn't apply here.
+// Rigs without a JSON in test-suite/ are still pattern-based guesses.
 const RIGS = [
   ['1-splice-no-post.trdl',                                                       'green'],
   ['2-right-fast-first.trdl',                                                     'green'],
@@ -255,11 +257,11 @@ const RIGS = [
   ['19-fast-line-multiply-lashed-up-to-slow-line.trdl',                           'yellow'],
   ['20-slow-line-lashed-up-to-fast-line.trdl',                                    'yellow'],
   ['21-direct-tether-spliced-to-indirect-tether.trdl',                            'green'],
-  ['22-indirect-tether-spliced-to-direct-tether.trdl',                            'green'],
+  ['22-indirect-tether-spliced-to-direct-tether.trdl',                            'yellow'],
   ['23-indirect-tether-spliced-to-direct-tether-bad-post.trdl',                   'red'],
   ['24-direct-tether-spliced-to-indirect-tether-bad-post.trdl',                   'red'],
-  ['25-lashed-rigs-spliced-for-maximal-time-crossing.trdl',                       'green'],
-  ['26-like-above-back-and-forth.trdl',                                           'green'],
+  ['25-lashed-rigs-spliced-for-maximal-time-crossing.trdl',                       'yellow'],
+  ['26-like-above-back-and-forth.trdl',                                           'red'],
   ['27-intermediate-lines-change-tether-direction-via-corkline.trdl',             'green'],
   ['28-intermediate-lines-change-tether-direction-via-new-line.trdl',             'green'],
   ['29-intermediate-lines-change-tether-direction-via-tether-loop.trdl',          'green'],
