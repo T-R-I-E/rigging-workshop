@@ -603,6 +603,13 @@ class UnshieldedInterpreter extends Interpreter {
         if (!meet.isTethered())    throw new Error('Meet is not fast')
         return meet
     }
+    // Unshielded posts don't carry a rig entry pointing back at the lead, so
+    // the canonical hitchPost throws MissingPostEntry on every unshielded
+    // rig with a post. Just return the next tethered twist (or null).
+    hitchPost(hash) {
+        let meet = this.hitchMeet(hash)
+        return this.nextTetheredTwist(meet.hash) || null
+    }
     async _verifyHitchLine(unverifiedFast, optLastSupported, optFirst) {
         await this._verifyHitch(unverifiedFast)
         // No "must be full hitch" check — test rigs may have half hitches.

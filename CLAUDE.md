@@ -60,7 +60,8 @@ Verification harness, optional. **Requires the Clojure server.**
   `shielded:false` produces the simpler `{lead.hash → meet.hash}` form.
   Strict verification is tried first; if it fails with `MissingHoistError`,
   the unshielded fallback runs (also relaxes the "must be full hitch" rule
-  so `post:"none"` rigs verify).
+  so `post:"none"` rigs verify, and overrides `hitchPost` to skip the
+  post-rig-entry check, since unshielded posts don't carry one).
 ## Git policy (overrides global)
 You manage git directly in this project. The global "manual git" rule does
 NOT apply here. `git push` remains denied at the permission layer; the user
