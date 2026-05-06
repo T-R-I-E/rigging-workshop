@@ -1,0 +1,5 @@
+# Clojure tools.deps compile cache (test-oracle server only).
+.cpcache/
+
+# macOS
+.DS_Store
