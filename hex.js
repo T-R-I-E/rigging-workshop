@@ -20,6 +20,11 @@ const CONTENT_LIMIT = 32                     // bytes shown before truncation
 // pointing at it. Built once per render in build_usage().
 let _usage = new Map()
 
+// Last broadcast click-select hashes, kept so we can restore the selection
+// after a rebuild blows away the row DOM. Hover state isn't restored —
+// it's tied to where the cursor actually is right now.
+let _last_select = []
+
 function add_use(atom_hash, twist_hash) {
   if (!atom_hash) return
   let s = _usage.get(atom_hash)
@@ -32,6 +37,7 @@ function build_usage(env) {
   let twists = env.shapes?.[TWIST] || []
   for (let t of twists) {
     add_use(t.hash, t.hash)
+    add_use(t.sats_h, t.hash)
     let b = t.body
     if (!b) continue
     add_use(b.hash, t.hash)
@@ -96,6 +102,10 @@ function render_hex(env) {
     return
   }
   host.innerHTML = env.atoms.map(a => render_atom(env.buff, a)).join('')
+  // Restore click-selection across rebuilds. Any hashes no longer present
+  // are silently skipped by paint(), so this is safe even when a rebuild
+  // changes the atom set.
+  paint('select', _last_select)
 }
 
 const host = document.getElementById('hex')
@@ -132,7 +142,10 @@ function paint(klass, hashes) {
   }
 }
 
-document.addEventListener('workshop:hover',  e => paint('hover',  e.detail.hashes))
-document.addEventListener('workshop:select', e => paint('select', e.detail.hashes))
+document.addEventListener('workshop:hover', e => paint('hover', e.detail.hashes))
+document.addEventListener('workshop:select', e => {
+  _last_select = e.detail.hashes || []
+  paint('select', _last_select)
+})
 
 document.addEventListener('workshop:rendered', e => render_hex(e.detail))

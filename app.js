@@ -144,6 +144,7 @@ function twist_list(env) {
         t.body = env.index[b] || 0
         if(!t.body) return 0
         t.body.twist = t
+        t.sats_h = pluck_hash(env.buff, t.bin.cfirst + leng(b))
         t.innies = []
         t.outies = []
         t.succ = []
@@ -409,7 +410,15 @@ function write_stats(env) {
 
 function notify_rendered(env) {
     document.dispatchEvent(new CustomEvent('workshop:rendered', {detail: env}))
-    if(env.focus) show_abject_info(env.focus.hash)
+    // Restore prior click-selection by hash; falls back to env.focus when
+    // none of the previously-selected hashes are in this render.
+    let still = _selected_hashes.filter(h => el(h))
+    if (still.length) {
+        apply_select_dom(still)
+    } else {
+        _selected_hashes = []
+        if (env.focus) show_abject_info(env.focus.hash)
+    }
     return env
 }
 
@@ -526,7 +535,10 @@ document.addEventListener('workshop:select', e => {
 })
 
 
-let _selected_set = new Set()  // set of currently .select-flagged DOM elements
+// Persistent click-select state, kept by hash so it survives a rebuild
+// (the SVG re-renders and the old DOM elements get blown away).
+let _selected_hashes = []
+let _selected_set = new Set()  // currently .select-flagged DOM elements
 let _highlighted = null
 
 function relayout(env) {
@@ -552,6 +564,7 @@ function expand_segment(seg) {
 // Pure DOM update — does NOT broadcast a select event. show_abject_info
 // runs against the first hash so the rig-check panel reflects the click.
 function apply_select_dom(hashes) {
+    _selected_hashes = [...hashes]
     _selected_set.forEach(d => d.classList.remove('select'))
     _selected_set.clear()
     for (let h of hashes) {
