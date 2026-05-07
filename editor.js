@@ -67,7 +67,11 @@ const select_field = decoration_field(set_select, 'cm-hl-select')
 
 const cursor_broadcast = EditorView.updateListener.of(update => {
   if (update.docChanged) schedule_build()
-  if (!update.selectionSet && !update.docChanged) return
+  // Broadcast select ONLY on explicit cursor moves (click, arrow keys) — not
+  // on typing-induced moves. Typing both moves the cursor and changes the
+  // doc, and re-broadcasting on every keystroke would clobber whatever the
+  // user click-selected in viz/hex with the typed-in cursor's line hashes.
+  if (!update.selectionSet || update.docChanged) return
   let hashes = current_line_hashes()
   document.dispatchEvent(new CustomEvent('workshop:select', {
     detail: { hashes, source: 'editor' },
