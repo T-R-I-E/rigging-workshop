@@ -35,34 +35,41 @@ let last_built_bytes = null
 let line_hashes = []                         // entityIdx → [hash, ...]; from /compile
 
 // --- highlight machinery -----------------------------------------------------
+// Two independent decoration fields so a transient hover doesn't replace the
+// persistent click-select. CodeMirror layers both into the same DOM line.
 
-const set_highlight = StateEffect.define()  // payload: Set<lineNumber>
-
-const highlight_field = StateField.define({
-  create() { return Decoration.none },
-  update(deco, tr) {
-    deco = deco.map(tr.changes)
-    for (let e of tr.effects) if (e.is(set_highlight)) {
-      let lns = [...e.value].sort((a, b) => a - b)
-      let ranges = []
-      for (let n of lns) {
-        if (n >= 1 && n <= tr.state.doc.lines) {
-          let line = tr.state.doc.line(n)
-          ranges.push(Decoration.line({ class: 'cm-hl-line' }).range(line.from))
+function decoration_field(set_effect, css_class) {
+  return StateField.define({
+    create() { return Decoration.none },
+    update(deco, tr) {
+      deco = deco.map(tr.changes)
+      for (let e of tr.effects) if (e.is(set_effect)) {
+        let lns = [...e.value].sort((a, b) => a - b)
+        let ranges = []
+        for (let n of lns) {
+          if (n >= 1 && n <= tr.state.doc.lines) {
+            let line = tr.state.doc.line(n)
+            ranges.push(Decoration.line({ class: css_class }).range(line.from))
+          }
         }
+        deco = Decoration.set(ranges)
       }
-      deco = Decoration.set(ranges)
-    }
-    return deco
-  },
-  provide: f => EditorView.decorations.from(f),
-})
+      return deco
+    },
+    provide: f => EditorView.decorations.from(f),
+  })
+}
+
+const set_hover  = StateEffect.define()  // payload: Set<lineNumber>
+const set_select = StateEffect.define()  // payload: Set<lineNumber>
+const hover_field  = decoration_field(set_hover,  'cm-hl-hover')
+const select_field = decoration_field(set_select, 'cm-hl-select')
 
 const cursor_broadcast = EditorView.updateListener.of(update => {
   if (update.docChanged) schedule_build()
   if (!update.selectionSet && !update.docChanged) return
   let hashes = current_line_hashes()
-  document.dispatchEvent(new CustomEvent('workshop:highlight', {
+  document.dispatchEvent(new CustomEvent('workshop:select', {
     detail: { hashes, source: 'editor' },
   }))
 })
@@ -84,7 +91,8 @@ const view = new EditorView({
     syntaxHighlighting(defaultHighlightStyle),
     keymap.of([...defaultKeymap, ...historyKeymap]),
     json(),
-    highlight_field,
+    hover_field,
+    select_field,
     cursor_broadcast,
   ],
 })
@@ -99,21 +107,29 @@ function current_line_hashes() {
   return line_hashes[i] || []
 }
 
-document.addEventListener('workshop:highlight', e => {
+function lines_for(target) {
+  let lines = new Set()
+  if (!target.size) return lines
+  let n = 0
+  let doc = view.state.doc
+  for (let i = 1; i <= doc.lines; i++) {
+    if (doc.line(i).text.trim() === '') continue
+    let hs = line_hashes[n] || []
+    if (hs.some(h => target.has(h))) lines.add(i)
+    n++
+  }
+  return lines
+}
+
+document.addEventListener('workshop:hover', e => {
+  let target = new Set(e.detail.hashes || [])
+  view.dispatch({ effects: set_hover.of(lines_for(target)) })
+})
+
+document.addEventListener('workshop:select', e => {
   if (e.detail.source === 'editor') return
   let target = new Set(e.detail.hashes || [])
-  let lines = new Set()
-  if (target.size) {
-    let n = 0
-    let doc = view.state.doc
-    for (let i = 1; i <= doc.lines; i++) {
-      if (doc.line(i).text.trim() === '') continue
-      let hs = line_hashes[n] || []
-      if (hs.some(h => target.has(h))) lines.add(i)
-      n++
-    }
-  }
-  view.dispatch({ effects: set_highlight.of(lines) })
+  view.dispatch({ effects: set_select.of(lines_for(target)) })
 })
 
 function get_doc() { return view.state.doc.toString() }

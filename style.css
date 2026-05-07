@@ -214,7 +214,11 @@ body {
   border-right: 1px solid var(--line);
 }
 .editor-host .cm-content { padding: 8px 0; }
-.editor-host .cm-line.cm-hl-line { background: var(--accent-soft); }
+/* Click-select is persistent (teal-tinted, with an accent bar to match the
+   hex pane). Hover is transient (warm-yellow tint). Hover renders on top so
+   the user sees what's under the cursor, but the select never gets erased. */
+.editor-host .cm-line.cm-hl-select { background: var(--accent-soft); box-shadow: inset 2px 0 0 var(--accent); }
+.editor-host .cm-line.cm-hl-hover  { background: oklch(0.95 0.05 80); }
 
 /* ---------- viz ---------- */
 .viz-wrap {
@@ -373,8 +377,8 @@ body {
   padding: 1px 0;
   white-space: pre;
 }
-.hex .atom:hover { background: var(--accent-soft); }
-.hex .atom.hi    { background: var(--accent-soft); box-shadow: inset 2px 0 0 var(--accent); }
+.hex .atom.select { background: var(--accent-soft); box-shadow: inset 2px 0 0 var(--accent); }
+.hex .atom.hover  { background: oklch(0.95 0.05 80); }
 .hex .b-hash {
   color: oklch(0.50 0.10 200);
   cursor: pointer;

@@ -67,19 +67,36 @@ const host = document.getElementById('hex')
 host?.addEventListener('mouseover', e => {
   let row = e.target.closest('.atom')
   if (!row) return
-  document.dispatchEvent(new CustomEvent('workshop:highlight', {
+  document.dispatchEvent(new CustomEvent('workshop:hover', {
     detail: { hashes: [row.dataset.hash], source: 'hex' },
   }))
 })
 
-document.addEventListener('workshop:highlight', e => {
+host?.addEventListener('mouseleave', () => {
+  document.dispatchEvent(new CustomEvent('workshop:hover', {
+    detail: { hashes: [], source: 'hex' },
+  }))
+})
+
+host?.addEventListener('click', e => {
+  let row = e.target.closest('.atom')
+  if (!row) return
+  document.dispatchEvent(new CustomEvent('workshop:select', {
+    detail: { hashes: [row.dataset.hash], source: 'hex' },
+  }))
+})
+
+function paint(klass, hashes) {
   if (!host) return
-  host.querySelectorAll('.atom.hi').forEach(r => r.classList.remove('hi'))
-  let target = new Set(e.detail.hashes || [])
+  host.querySelectorAll('.atom.' + klass).forEach(r => r.classList.remove(klass))
+  let target = new Set(hashes || [])
   if (!target.size) return
   for (let r of host.querySelectorAll('.atom')) {
-    if (target.has(r.dataset.hash)) r.classList.add('hi')
+    if (target.has(r.dataset.hash)) r.classList.add(klass)
   }
-})
+}
+
+document.addEventListener('workshop:hover',  e => paint('hover',  e.detail.hashes))
+document.addEventListener('workshop:select', e => paint('select', e.detail.hashes))
 
 document.addEventListener('workshop:rendered', e => render_hex(e.detail))

@@ -500,24 +500,34 @@ if(vp) {
         }
     })
     vp.addEventListener('mousemove', e => {
-        if (e.target.tagName === 'circle') {
-            document.dispatchEvent(new CustomEvent('workshop:highlight', {
-                detail: { hashes: [e.target.id], source: 'viz' }
-            }))
-        }
+        let hashes = e.target.tagName === 'circle' ? [e.target.id] : []
+        document.dispatchEvent(new CustomEvent('workshop:hover', {
+            detail: { hashes, source: 'viz' }
+        }))
         if (panning) scroll_to(env.vp.x - e.movementX / env.vp.s, env.vp.y - e.movementY / env.vp.s)
+    })
+    vp.addEventListener('mouseleave', () => {
+        document.dispatchEvent(new CustomEvent('workshop:hover', {
+            detail: { hashes: [], source: 'viz' }
+        }))
     })
 }
 
-document.addEventListener('workshop:highlight', e => {
-    let hashes = e.detail.hashes || []
+document.addEventListener('workshop:hover', e => {
     if(!vp) return
+    let hashes = e.detail.hashes || []
     vp.querySelectorAll('.highlight').forEach(c => c.classList.remove('highlight'))
     for (let h of hashes) el(h)?.classList.add('highlight')
 })
 
+document.addEventListener('workshop:select', e => {
+    if(!vp || e.detail.source === 'viz') return
+    apply_select_dom(e.detail.hashes || [])
+})
 
-let _selected = null, _highlighted = null
+
+let _selected_set = new Set()  // set of currently .select-flagged DOM elements
+let _highlighted = null
 
 function relayout(env) {
     env.shapes[TWIST]?.forEach(t => t.x = 0)
@@ -529,7 +539,7 @@ function relayout(env) {
 function expand_segment(seg) {
     seg.collapsed = false
     let vx = env.vp.x, vy = env.vp.y
-    _selected = null; _highlighted = null
+    _selected_set.clear(); _highlighted = null
     relayout(env)
     render_svg(env)
     let focus = env.focus?.hash
@@ -538,22 +548,36 @@ function expand_segment(seg) {
     select_node(seg.first.hash)
 }
 
+// Apply .select to the given hashes (clearing any previous selection).
+// Pure DOM update — does NOT broadcast a select event. show_abject_info
+// runs against the first hash so the rig-check panel reflects the click.
+function apply_select_dom(hashes) {
+    _selected_set.forEach(d => d.classList.remove('select'))
+    _selected_set.clear()
+    for (let h of hashes) {
+        let dom = el(h)
+        if (dom) {
+            dom.classList.add('select')
+            _selected_set.add(dom)
+        }
+    }
+    if (hashes[0]) show_abject_info(hashes[0])
+}
+
 function select_node(id) {
     let t = env.index?.[id]
     if(!t) return 0
     let seg = t.segment
     if(seg?.collapsed && t !== seg.first && t !== seg.last)
         return expand_segment(seg)
-    let dom = el(id)
-    if(!dom) return 0
-    _selected?.classList.remove('select')
-    _selected = dom
-    dom.classList.add('select')
-    show_abject_info(id)
+    apply_select_dom([id])
+    document.dispatchEvent(new CustomEvent('workshop:select', {
+        detail: { hashes: [id], source: 'viz' }
+    }))
 }
 
 function highlight_node(id) {                // legacy single-node entry point
-    document.dispatchEvent(new CustomEvent('workshop:highlight', {
+    document.dispatchEvent(new CustomEvent('workshop:hover', {
         detail: { hashes: id ? [id] : [], source: 'viz' }
     }))
 }
