@@ -313,6 +313,15 @@ body {
   min-height: 0;
   margin: 0 -4px;                               /* let hover row span fully */
 }
+.rig-group {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--ink-3);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 8px 12px 2px 8px;
+}
+.rig-group:first-child { padding-top: 0; }
 .rig-item {
   font-family: var(--mono);
   font-size: 11.5px;
@@ -339,11 +348,20 @@ body {
 .rig-dot.yellow { background: var(--warn); }
 .rig-dot.red    { background: var(--bad); }
 
-/* Reference metadata for the loaded rig (when a matching test-suite/*.json
-   exists). Rendered as a single concise row above the rig-check box. */
+/* Canonical descriptor for the loaded rig (when a sibling tests/.json
+   exists). Rendered as a thin row of pills below a small filename header. */
+.rig-meta-filename {
+  margin: 0 0 6px 0;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--ink-2);
+  word-break: break-all;
+}
 .rig-meta {
   display: flex; flex-wrap: wrap; gap: 4px 10px;
-  margin-bottom: 8px;
   font-family: var(--mono);
   font-size: 11px;
   color: var(--ink-2);

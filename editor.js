@@ -216,7 +216,7 @@ async function load_bytes(buf) {
 function deselect_rig() {
   active_rig = null
   render_rigs_list()
-  load_rig_meta(null)
+  clear_rig_meta()
 }
 
 async function load_file(file) {
@@ -282,75 +282,144 @@ document.getElementById('url-input').addEventListener('keydown', e => {
 
 // --- examples panel ---------------------------------------------------------
 
-const RIGS_BASE = 'rigs/'
-// Expected rig-check colour: green = pass, yellow = missing, red = fail.
-// Authoritative source: todaclj/toda-clj-tests/test-suite/*.json (matches
-// our shielded:false trdl rigs). complex_rigs.clj is the *shielded* form
-// of these rigs and uses different colours, so it doesn't apply here.
-// Rigs without a JSON in test-suite/ are still pattern-based guesses.
+// Each entry: [trdl_url, colour, json_url?]. trdl_url is relative to the
+// workshop root. json_url override is rare; the loader otherwise falls back
+// to the sibling .json (same path, .trdl → .json) — so anything under
+// tests/<subdir>/ that ships a paired descriptor lights up automatically.
+//
+// Workshop rigs (rigs/*.trdl) are the unshielded twist-maker examples and
+// have no canonical .json in the codebase; their colours are heuristic
+// guesses. Test rigs (tests/<subdir>/*.trdl) come paired with a .json that
+// declares the canonical expected colour.
 const RIGS = [
-  ['1-splice-no-post.trdl',                                                       'green'],
-  ['2-right-fast-first.trdl',                                                     'green'],
-  ['3-normally-expected-splice.trdl',                                             'green'],
-  ['4-lash-left-non-overlap-null.trdl',                                           'green'],
-  ['5-lash-left-non-overlap-missing.trdl',                                        'yellow'],
-  ['6-lash-right-non-overlap.trdl',                                               'green'],
-  ['7-corkline-self-tether.trdl',                                                 'green'],
-  ['8-splice-on-mutual-tether.trdl',                                              'green'],
-  ['9-leadline-equivocal-from-corkline.trdl',                                     'red'],
-  ['10-leadline-has-corkline-predecessor.trdl',                                   'green'],
-  ['11-bottom-fastener-not-fast.trdl',                                            'red'],
-  ['12-bottom-hoist-not-fast.trdl',                                               'red'],
-  ['13-bottom-corkline-top-leadline.trdl',                                        'green'],
-  ['14-bottom-corkline-shorter-than-top-leadline-both-sides.trdl',                'green'],
-  ['15-splicing-hitches-with-identical-toplines.trdl',                            'green'],
-  ['16-lashing-2-hitches-to-15.trdl',                                             'green'],
-  ['17-lashing-2-non-consecutive-hitches-to-15.trdl',                             'green'],
-  ['18-lashing-to-2-hitch-splice-with-missing-right-hoist.trdl',                  'yellow'],
+  ['rigs/1-splice-no-post.trdl',                                                       'green'],
+  ['rigs/2-right-fast-first.trdl',                                                     'green'],
+  ['rigs/3-normally-expected-splice.trdl',                                             'green'],
+  ['rigs/4-lash-left-non-overlap-null.trdl',                                           'green'],
+  ['rigs/5-lash-left-non-overlap-missing.trdl',                                        'yellow'],
+  ['rigs/6-lash-right-non-overlap.trdl',                                               'green'],
+  ['rigs/7-corkline-self-tether.trdl',                                                 'green'],
+  ['rigs/8-splice-on-mutual-tether.trdl',                                              'green'],
+  ['rigs/9-leadline-equivocal-from-corkline.trdl',                                     'red'],
+  ['rigs/10-leadline-has-corkline-predecessor.trdl',                                   'green'],
+  ['rigs/11-bottom-fastener-not-fast.trdl',                                            'red'],
+  ['rigs/12-bottom-hoist-not-fast.trdl',                                               'red'],
+  ['rigs/13-bottom-corkline-top-leadline.trdl',                                        'green'],
+  ['rigs/14-bottom-corkline-shorter-than-top-leadline-both-sides.trdl',                'green'],
+  ['rigs/15-splicing-hitches-with-identical-toplines.trdl',                            'green'],
+  ['rigs/16-lashing-2-hitches-to-15.trdl',                                             'green'],
+  ['rigs/17-lashing-2-non-consecutive-hitches-to-15.trdl',                             'green'],
+  ['rigs/18-lashing-to-2-hitch-splice-with-missing-right-hoist.trdl',                  'yellow'],
   // 19, 20: spec graph is circular (interlocking lashings). Both the JS
   // compiler and the Clojure server reject these as "Circular dependency
   // in twist specs", so they never even reach rig-check.
-  ['19-fast-line-multiply-lashed-up-to-slow-line.trdl',                           'yellow'],
-  ['20-slow-line-lashed-up-to-fast-line.trdl',                                    'yellow'],
-  ['21-direct-tether-spliced-to-indirect-tether.trdl',                            'green',  'complex-rig-21-direct-to-indirect-tether.json'],
-  ['22-indirect-tether-spliced-to-direct-tether.trdl',                            'yellow', 'complex-rig-22-indirect-to-direct-tether.json'],
-  ['23-indirect-tether-spliced-to-direct-tether-bad-post.trdl',                   'red'],
-  ['24-direct-tether-spliced-to-indirect-tether-bad-post.trdl',                   'red'],
-  ['25-lashed-rigs-spliced-for-maximal-time-crossing.trdl',                       'yellow', 'complex-rig-25-lashed-maximal-time-crossing.json'],
-  ['26-like-above-back-and-forth.trdl',                                           'red',    'complex-rig-26-lashed-complex.json'],
-  ['27-intermediate-lines-change-tether-direction-via-corkline.trdl',             'green'],
-  ['28-intermediate-lines-change-tether-direction-via-new-line.trdl',             'green'],
-  ['29-intermediate-lines-change-tether-direction-via-tether-loop.trdl',          'green'],
-  ['29a-attempt-to-trigger-false-positive-on-tether-loop-detection.trdl',         'green'],
-  ['30-example-rig-from-spec.trdl',                                               'green'],
-  ['31-irrelevent-tether-loop-after-corkline-reached.trdl',                       'green'],
+  ['rigs/19-fast-line-multiply-lashed-up-to-slow-line.trdl',                           'yellow'],
+  ['rigs/20-slow-line-lashed-up-to-fast-line.trdl',                                    'yellow'],
+  ['rigs/21-direct-tether-spliced-to-indirect-tether.trdl',                            'green'],
+  ['rigs/22-indirect-tether-spliced-to-direct-tether.trdl',                            'yellow'],
+  ['rigs/23-indirect-tether-spliced-to-direct-tether-bad-post.trdl',                   'red'],
+  ['rigs/24-direct-tether-spliced-to-indirect-tether-bad-post.trdl',                   'red'],
+  ['rigs/25-lashed-rigs-spliced-for-maximal-time-crossing.trdl',                       'yellow'],
+  ['rigs/26-like-above-back-and-forth.trdl',                                           'red'],
+  ['rigs/27-intermediate-lines-change-tether-direction-via-corkline.trdl',             'green'],
+  ['rigs/28-intermediate-lines-change-tether-direction-via-new-line.trdl',             'green'],
+  ['rigs/29-intermediate-lines-change-tether-direction-via-tether-loop.trdl',          'green'],
+  ['rigs/29a-attempt-to-trigger-false-positive-on-tether-loop-detection.trdl',         'green'],
+  ['rigs/30-example-rig-from-spec.trdl',                                               'green'],
+  ['rigs/31-irrelevent-tether-loop-after-corkline-reached.trdl',                       'green'],
+
+  ['tests/test-suite/complex-rig-21-direct-to-indirect-tether.trdl',                   'green'],
+  ['tests/test-suite/complex-rig-22-indirect-to-direct-tether.trdl',                   'yellow'],
+  ['tests/test-suite/complex-rig-25-lashed-maximal-time-crossing.trdl',                'yellow'],
+  ['tests/test-suite/complex-rig-26-lashed-complex.trdl',                              'red'],
+  ['tests/test-suite/half-hitch-invalid-lead-not-tethered.trdl',                       'red'],
+  ['tests/test-suite/half-hitch-invalid-meet-not-fast.trdl',                           'red'],
+  ['tests/test-suite/half-hitch-valid-null-shield.trdl',                               'red'],
+  ['tests/test-suite/half-hitch-valid-with-shield.trdl',                               'red'],
+
+  ['tests/toda-rig-checker/api-valid-lashed-rig.trdl',                                 'yellow'],
+  ['tests/toda-rig-checker/half-hitch-footline-reaches-null.trdl',                     'red'],
+  ['tests/toda-rig-checker/half-hitch-lead-mismatch.trdl',                             'red'],
+  ['tests/toda-rig-checker/half-hitch-lead-not-fast.trdl',                             'red'],
+  ['tests/toda-rig-checker/half-hitch-meet-not-fast.trdl',                             'red'],
+  ['tests/toda-rig-checker/half-hitch-topline-fastener-not-found.trdl',                'red'],
+  ['tests/toda-rig-checker/half-hitch-valid.trdl',                                     'red'],
+  ['tests/toda-rig-checker/hitch-lead-footline-reaches-null.trdl',                     'red'],
+  ['tests/toda-rig-checker/hitch-post-footline-reaches-null.trdl',                     'red'],
+  ['tests/toda-rig-checker/hitch-post-not-fast.trdl',                                  'red'],
+  ['tests/toda-rig-checker/hitch-valid.trdl',                                          'red'],
+  ['tests/toda-rig-checker/rigging-corkline-incomplete-early.trdl',                    'green'],
+  ['tests/toda-rig-checker/rigging-corkline-incomplete-late.trdl',                     'red'],
+  ['tests/toda-rig-checker/rigging-lash-non-colinear.trdl',                            'green'],
+  ['tests/toda-rig-checker/rigging-valid-lash-and-splice.trdl',                        'red'],
+  ['tests/toda-rig-checker/rigging-valid-simple-lash.trdl',                            'red'],
+  ['tests/toda-rig-checker/rigging-valid-spliced-unit-rigs.trdl',                      'green'],
+  ['tests/toda-rig-checker/rigging-valid-unit-rig.trdl',                               'red'],
+
+  ['tests/toda-graph/basic-half-hitch.trdl',                                           'green'],
+  ['tests/toda-graph/extra-fast-between-meet-and-post.trdl',                           'yellow'],
+  ['tests/toda-graph/full-hitch-with-post.trdl',                                       'red'],
+  ['tests/toda-graph/multi-level-rig.trdl',                                            'yellow'],
+  ['tests/toda-graph/three-hitches-horizontal.trdl',                                   'green'],
+  ['tests/toda-graph/three-hitches-vertical.trdl',                                     'green'],
+
+  ['tests/toda-abject/delegation-chain-4-level.trdl',                                  'green'],
+
+  ['tests/toda-core/twist-chain-with-fields.trdl',                                     'green'],
+  ['tests/toda-core/twist-isolation-multi-line.trdl',                                  'green'],
 ]
+
+function group_label(path) {
+  if (path.startsWith('rigs/')) return 'workshop'
+  let m = path.match(/^tests\/([^/]+)/)
+  return m ? m[1] : 'other'
+}
+
+function rig_label(path) {
+  let basename = path.replace(/^.*\//, '').replace(/\.trdl$/, '')
+  return basename.replace(/^(\d+a?)-/, '$1 · ')
+}
 
 let active_rig = null
 function render_rigs_list() {
   let host = document.getElementById('rigs-list')
   if (!host) return
-  host.innerHTML = RIGS.map(([f, colour]) => {
-    let label = f.replace(/\.trdl$/, '').replace(/^(\d+a?)-/, '$1 · ')
-    let active = f === active_rig ? ' active' : ''
-    return `<div class="rig-item${active}" data-file="${f}">` +
-           `<span class="rig-dot ${colour}"></span>${label}</div>`
-  }).join('')
+  let last_group = null
+  let html = ''
+  for (let entry of RIGS) {
+    let [path, colour] = entry
+    let g = group_label(path)
+    if (g !== last_group) {
+      html += `<div class="rig-group">${escape_html(g)}</div>`
+      last_group = g
+    }
+    let label  = rig_label(path)
+    let active = path === active_rig ? ' active' : ''
+    html += `<div class="rig-item${active}" data-file="${escape_html(path)}">` +
+            `<span class="rig-dot ${colour}"></span>${label}</div>`
+  }
+  host.innerHTML = html
 }
-
-const TEST_SUITE_BASE = 'test-suite/'
 
 function truncate_hash(h, head=10, tail=8) {
   if (!h || h.length <= head + tail + 1) return h
   return h.slice(0, head) + '…' + h.slice(-tail)
 }
 
-async function load_rig_meta(json_file) {
-  let host = document.getElementById('rig-meta')
-  if (!host) return
-  if (!json_file) { host.hidden = true; host.innerHTML = ''; return }
+function clear_rig_meta() {
+  let section = document.getElementById('rig-meta-section')
+  if (section) section.hidden = true
+}
+
+async function load_rig_meta(trdl_url, explicit_json_url) {
+  let section = document.getElementById('rig-meta-section')
+  let header  = document.getElementById('rig-meta-filename')
+  let host    = document.getElementById('rig-meta')
+  if (!section || !host) return
+  let json_url = explicit_json_url || trdl_url?.replace(/\.trdl$/, '.json')
+  if (!json_url) { section.hidden = true; return }
   try {
-    let res = await fetch(TEST_SUITE_BASE + json_file)
+    let res = await fetch(json_url)
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
     let m = await res.json()
     let parts = []
@@ -358,28 +427,28 @@ async function load_rig_meta(json_file) {
     if (m.colour)   parts.push(`<span class="rm-colour ${escape_html(m.colour)}">${escape_html(m.colour)}</span>`)
     if (m.corkline) parts.push(`<span class="rm-cork" title="${escape_html(m.corkline)}">cork: ${escape_html(truncate_hash(m.corkline))}</span>`)
     if (m.issue)    parts.push(`<span class="rm-issue">issue: ${escape_html(m.issue)}</span>`)
+    if (header) header.textContent = json_url.replace(/^.*\//, '')
     host.innerHTML = parts.join('')
-    host.hidden = parts.length === 0
+    section.hidden = parts.length === 0
   } catch {
-    host.hidden = true
-    host.innerHTML = ''
+    section.hidden = true
   }
 }
 
 document.getElementById('rigs-list')?.addEventListener('click', async e => {
   let item = e.target.closest('.rig-item')
   if (!item) return
-  let file = item.dataset.file
-  active_rig = file
+  let path = item.dataset.file
+  active_rig = path
   render_rigs_list()
-  let entry = RIGS.find(r => r[0] === file)
-  load_rig_meta(entry?.[2])                     // hides if no JSON for this rig
+  let entry = RIGS.find(r => r[0] === path)
+  load_rig_meta(path, entry?.[2])               // sibling .json by default
   try {
-    let res = await fetch(RIGS_BASE + file)
+    let res = await fetch(path)
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
     set_doc(await res.text())                   // auto-build picks it up
   } catch (err) {
-    set_rigcheck('bad', 'FAIL', `load ${file}: ${err.message}`)
+    set_rigcheck('bad', 'FAIL', `load ${path}: ${err.message}`)
   }
 })
 
