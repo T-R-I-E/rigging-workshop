@@ -339,6 +339,28 @@ body {
 .rig-dot.yellow { background: var(--warn); }
 .rig-dot.red    { background: var(--bad); }
 
+/* Reference metadata for the loaded rig (when a matching test-suite/*.json
+   exists). Rendered as a single concise row above the rig-check box. */
+.rig-meta {
+  display: flex; flex-wrap: wrap; gap: 4px 10px;
+  margin-bottom: 8px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--ink-2);
+}
+.rig-meta .rm-moniker { color: var(--ink); }
+.rig-meta .rm-cork    { color: var(--ink-3); }
+.rig-meta .rm-colour  {
+  display: inline-flex; align-items: center; gap: 4px;
+}
+.rig-meta .rm-colour::before {
+  content: ''; width: 8px; height: 8px; border-radius: 50%;
+  border: 1px solid color-mix(in oklab, currentColor 30%, transparent);
+}
+.rig-meta .rm-colour.green::before  { background: var(--ok); }
+.rig-meta .rm-colour.yellow::before { background: var(--warn); }
+.rig-meta .rm-colour.red::before    { background: var(--bad); }
+
 .rig-check {
   display: flex; align-items: flex-start; gap: 8px;
   padding: 8px 10px;

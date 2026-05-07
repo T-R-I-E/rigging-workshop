@@ -213,7 +213,14 @@ async function load_bytes(buf) {
   }
 }
 
+function deselect_rig() {
+  active_rig = null
+  render_rigs_list()
+  load_rig_meta(null)
+}
+
 async function load_file(file) {
+  deselect_rig()
   if (file.name.toLowerCase().endsWith('.trdl')) {
     set_doc(await file.text())          // auto-build kicks in
   } else {
@@ -222,6 +229,7 @@ async function load_file(file) {
 }
 
 async function load_url(url) {
+  deselect_rig()
   try {
     let res = await fetch(url)
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
@@ -304,12 +312,12 @@ const RIGS = [
   // in twist specs", so they never even reach rig-check.
   ['19-fast-line-multiply-lashed-up-to-slow-line.trdl',                           'yellow'],
   ['20-slow-line-lashed-up-to-fast-line.trdl',                                    'yellow'],
-  ['21-direct-tether-spliced-to-indirect-tether.trdl',                            'green'],
-  ['22-indirect-tether-spliced-to-direct-tether.trdl',                            'yellow'],
+  ['21-direct-tether-spliced-to-indirect-tether.trdl',                            'green',  'complex-rig-21-direct-to-indirect-tether.json'],
+  ['22-indirect-tether-spliced-to-direct-tether.trdl',                            'yellow', 'complex-rig-22-indirect-to-direct-tether.json'],
   ['23-indirect-tether-spliced-to-direct-tether-bad-post.trdl',                   'red'],
   ['24-direct-tether-spliced-to-indirect-tether-bad-post.trdl',                   'red'],
-  ['25-lashed-rigs-spliced-for-maximal-time-crossing.trdl',                       'yellow'],
-  ['26-like-above-back-and-forth.trdl',                                           'red'],
+  ['25-lashed-rigs-spliced-for-maximal-time-crossing.trdl',                       'yellow', 'complex-rig-25-lashed-maximal-time-crossing.json'],
+  ['26-like-above-back-and-forth.trdl',                                           'red',    'complex-rig-26-lashed-complex.json'],
   ['27-intermediate-lines-change-tether-direction-via-corkline.trdl',             'green'],
   ['28-intermediate-lines-change-tether-direction-via-new-line.trdl',             'green'],
   ['29-intermediate-lines-change-tether-direction-via-tether-loop.trdl',          'green'],
@@ -330,12 +338,42 @@ function render_rigs_list() {
   }).join('')
 }
 
+const TEST_SUITE_BASE = 'test-suite/'
+
+function truncate_hash(h, head=10, tail=8) {
+  if (!h || h.length <= head + tail + 1) return h
+  return h.slice(0, head) + '…' + h.slice(-tail)
+}
+
+async function load_rig_meta(json_file) {
+  let host = document.getElementById('rig-meta')
+  if (!host) return
+  if (!json_file) { host.hidden = true; host.innerHTML = ''; return }
+  try {
+    let res = await fetch(TEST_SUITE_BASE + json_file)
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    let m = await res.json()
+    let parts = []
+    if (m.moniker)  parts.push(`<span class="rm-moniker">${escape_html(m.moniker)}</span>`)
+    if (m.colour)   parts.push(`<span class="rm-colour ${escape_html(m.colour)}">${escape_html(m.colour)}</span>`)
+    if (m.corkline) parts.push(`<span class="rm-cork" title="${escape_html(m.corkline)}">cork: ${escape_html(truncate_hash(m.corkline))}</span>`)
+    if (m.issue)    parts.push(`<span class="rm-issue">issue: ${escape_html(m.issue)}</span>`)
+    host.innerHTML = parts.join('')
+    host.hidden = parts.length === 0
+  } catch {
+    host.hidden = true
+    host.innerHTML = ''
+  }
+}
+
 document.getElementById('rigs-list')?.addEventListener('click', async e => {
   let item = e.target.closest('.rig-item')
   if (!item) return
   let file = item.dataset.file
   active_rig = file
   render_rigs_list()
+  let entry = RIGS.find(r => r[0] === file)
+  load_rig_meta(entry?.[2])                     // hides if no JSON for this rig
   try {
     let res = await fetch(RIGS_BASE + file)
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
