@@ -10,8 +10,43 @@ const SHAPE_NAMES = {
   0x63: 'pairtrie',
 }
 
+const TWIST    = 0x48
 const PAIRTRIE = 0x63
 const CONTENT_LIMIT = 32                     // bytes shown before truncation
+
+// atom hash → set of twist hashes that "use" it. A twist uses its own body,
+// and (transitively via that body) the body's rig pairtrie, reqs trie,
+// shield, and cargo. Hovering a body/pairtrie/arb row picks up every twist
+// pointing at it. Built once per render in build_usage().
+let _usage = new Map()
+
+function add_use(atom_hash, twist_hash) {
+  if (!atom_hash) return
+  let s = _usage.get(atom_hash)
+  if (!s) { s = new Set(); _usage.set(atom_hash, s) }
+  s.add(twist_hash)
+}
+
+function build_usage(env) {
+  _usage.clear()
+  let twists = env.shapes?.[TWIST] || []
+  for (let t of twists) {
+    add_use(t.hash, t.hash)
+    let b = t.body
+    if (!b) continue
+    add_use(b.hash, t.hash)
+    add_use(b.rigs, t.hash)
+    add_use(b.reqs, t.hash)
+    add_use(b.shld, t.hash)
+    add_use(b.carg, t.hash)
+  }
+}
+
+function broadcast_hashes_for(row) {
+  let h = row.dataset.hash
+  let users = _usage.get(h)
+  return users && users.size ? [h, ...users] : [h]
+}
 
 function truncate_hash(h) {
   if (h.length <= 20) return h
@@ -55,6 +90,7 @@ function render_atom(buf, atom) {
 function render_hex(env) {
   let host = document.getElementById('hex')
   if (!host) return
+  build_usage(env)
   if (!env.atoms?.length) {
     host.innerHTML = '<div class="empty">no atoms</div>'
     return
@@ -68,7 +104,7 @@ host?.addEventListener('mouseover', e => {
   let row = e.target.closest('.atom')
   if (!row) return
   document.dispatchEvent(new CustomEvent('workshop:hover', {
-    detail: { hashes: [row.dataset.hash], source: 'hex' },
+    detail: { hashes: broadcast_hashes_for(row), source: 'hex' },
   }))
 })
 
@@ -82,7 +118,7 @@ host?.addEventListener('click', e => {
   let row = e.target.closest('.atom')
   if (!row) return
   document.dispatchEvent(new CustomEvent('workshop:select', {
-    detail: { hashes: [row.dataset.hash], source: 'hex' },
+    detail: { hashes: broadcast_hashes_for(row), source: 'hex' },
   }))
 })
 

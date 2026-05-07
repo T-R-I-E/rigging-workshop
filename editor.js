@@ -132,6 +132,34 @@ document.addEventListener('workshop:select', e => {
   view.dispatch({ effects: set_select.of(lines_for(target)) })
 })
 
+// Hover dispatch: mousemove over the editor → broadcast that line's hashes.
+// Mirrors the hex pane's hover semantics so cross-pane sync works the same
+// way no matter which pane the cursor is in.
+function hashes_at_coords(x, y) {
+  let pos = view.posAtCoords({x, y}, false)
+  if (pos == null) return []
+  let line = view.state.doc.lineAt(pos)
+  if (line.text.trim() === '') return []
+  let n = 0
+  for (let i = 1; i < line.number; i++) {
+    if (view.state.doc.line(i).text.trim() !== '') n++
+  }
+  return line_hashes[n] || []
+}
+
+view.dom.addEventListener('mousemove', e => {
+  let hashes = hashes_at_coords(e.clientX, e.clientY)
+  document.dispatchEvent(new CustomEvent('workshop:hover', {
+    detail: { hashes, source: 'editor' },
+  }))
+})
+
+view.dom.addEventListener('mouseleave', () => {
+  document.dispatchEvent(new CustomEvent('workshop:hover', {
+    detail: { hashes: [], source: 'editor' },
+  }))
+})
+
 function get_doc() { return view.state.doc.toString() }
 
 function set_doc(text) {
