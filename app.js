@@ -550,7 +550,6 @@ function select_node(id) {
     _selected = dom
     dom.classList.add('select')
     show_abject_info(id)
-    scroll_to(t.cx, t.cy)
 }
 
 function highlight_node(id) {                // legacy single-node entry point
