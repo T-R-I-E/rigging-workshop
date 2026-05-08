@@ -331,19 +331,21 @@ body {
 .section h4.collapsible {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 6px;
   cursor: pointer;
   user-select: none;
 }
 .section h4.collapsible:hover { color: var(--ink-2); }
 .section h4.collapsible .chevron {
   font-family: var(--sans);   /* mono fonts often miss the unicode triangle */
-  font-size: 11px;
+  font-size: 14px;
   color: var(--ink-2);
   text-transform: none;       /* H4 sets uppercase, undo for the glyph */
   transition: transform 0.15s;
   display: inline-block;
-  margin-left: 8px;
+  width: 14px;                /* fixed width keeps the title flush across rotation */
+  text-align: center;
+  flex: none;
 }
 .section.collapsed h4.collapsible {
   margin-bottom: 0;
