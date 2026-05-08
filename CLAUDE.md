@@ -47,21 +47,18 @@ Verification harness, optional. **Requires the Clojure server.**
 - `ed25519.js` uses raw 32-byte public keys; the Clojure server wraps them
   in X.509. Bytes diverge on `reqsat: ed25519` rigs (none of the test rigs
   use ed25519, so this hasn't surfaced in practice).
-- `decompile.js` only detects unshielded hitches. Shielded hitch detection
-  (computing `s/ss` hashes from shield arbs) is deferred.
+- `decompile.js` was written against the prior non-canonical hoist form
+  (`{lead → meet}`). After the spec-compliant compile fix, hoist pairtries
+  always carry `{S(lead) → meet, S(S(lead)) → S(meet)}`, so decompile's
+  hitch detection needs reworking to compute `s/ss` hashes from each lead
+  candidate's shield (NULL or arb). Currently decompile won't recover
+  hitches from spec-compliant `.toda` bytes — opening `.toda` files via
+  the Open / URL paths is broken until this is updated.
 - Random shields make `shielded: true` rigs non-deterministic across runs.
 - Anonymous-line naming in decompile (`a`, `b`, `c`, …) follows JS atom
   byte-discovery order, which can differ from the Clojure server's JVM
   hash-bucket order. The resulting TRDL is structurally equivalent — same
   rig, possibly different label assignment to nameless lines.
-- Rig check uses an `UnshieldedInterpreter` subclass in `app.js` for trdl
-  rigs with `shielded:false`. The canonical `Interpreter` only recognises
-  the shielded `{s(lead) → meet, ss(lead) → s(meet)}` hoist form; trdl's
-  `shielded:false` produces the simpler `{lead.hash → meet.hash}` form.
-  Strict verification is tried first; if it fails with `MissingHoistError`,
-  the unshielded fallback runs (also relaxes the "must be full hitch" rule
-  so `post:"none"` rigs verify, and overrides `hitchPost` to skip the
-  post-rig-entry check, since unshielded posts don't carry one).
 ## Git policy (overrides global)
 You manage git directly in this project. The global "manual git" rule does
 NOT apply here. `git push` remains denied at the permission layer; the user

@@ -100,16 +100,21 @@ function expand_hitches(hitch_entities, lines_map) {
                                          post_kw = meet_info.ids[meet_idx + 1]
     else                                 post_kw = null
 
-    let hoist_rig = shielded
-      ? { [`s:${lead}`]: meet, [`ss:${lead}`]: `s:${meet}` }
-      : { [`f:${lead}`]: meet }
+    // Hoist rig is always {S(lead) → meet, S(S(lead)) → S(meet)} per spec.
+    // For null-shielded leads (shielded:false), the shield function on the
+    // resolver side falls back to plain hash, but the entry shape stays the
+    // same — the keys are never the raw lead hash.
+    let hoist_rig = { [`s:${lead}`]: meet, [`ss:${lead}`]: `s:${meet}` }
 
     let post_rig = post_kw ? { [lead]: hoist } : null
 
     set_in('tethers', lead, fastener)
     if (!all_leads.has(meet)) set_in('tethers', meet, fastener)
     merge_in('hoist_rigs', hoist, hoist_rig)
-    if (shielded) set_in('shield_sources', hoist, lead)
+    // shield_source names the lead whose shield bytes feed S(lead); set
+    // unconditionally because every hoist needs the lookup, even when the
+    // lead's shield is NULL (resolver returns plain hash in that case).
+    set_in('shield_sources', hoist, lead)
     if (post_kw)  merge_in('post_rigs', post_kw, post_rig)
     if (post_kw && !all_leads.has(post_kw)) set_in('tethers', post_kw, hoist)
   }

@@ -615,72 +615,10 @@ function set_transform(x, y, s) {
     })
 }
 
-// Subclass that verifies the unshielded hoist form used by trdl rigs with
-// `shielded:false`: pairtrie key = lead.hash directly (no s/ss). The canonical
-// Interpreter only recognises the shielded form, so we try it first, then
-// fall back to this for unshielded rigs. Also relaxes the "every non-first
-// hitch must be full" rule, since trdl test rigs allow `post:"none"`.
-class UnshieldedInterpreter extends Interpreter {
-    isHoist(lead, twist) {
-        let v = twist.rig(lead.hash)
-        return v != null && !v.equals(lead.hash)
-    }
-    hoistForwardSearch(lead, twist) {
-        if (!twist) return null
-        if (this.isHoist(lead, twist)) return twist
-        return this.hoistForwardSearch(lead, this.next(twist.hash))
-    }
-    hitchMeet(hash) {
-        let hoist = this.hitchHoist(hash)
-        if (!hoist) throw new Error('MissingHoist (unshielded)')
-        let meetHash = hoist.rig(hash)
-        if (!meetHash)             throw new Error('No meet entry on hoist')
-        let meet = this.twist(meetHash)
-        if (!meet.isTethered())    throw new Error('Meet is not fast')
-        return meet
-    }
-    // Unshielded posts don't carry a rig entry pointing back at the lead, so
-    // the canonical hitchPost throws MissingPostEntry on every unshielded
-    // rig with a post. Just return the next tethered twist (or null).
-    hitchPost(hash) {
-        let meet = this.hitchMeet(hash)
-        return this.nextTetheredTwist(meet.hash) || null
-    }
-    async _verifyHitchLine(unverifiedFast, optLastSupported, optFirst) {
-        await this._verifyHitch(unverifiedFast)
-        // No "must be full hitch" check — test rigs may have half hitches.
-        if (optLastSupported && this.inSegment(unverifiedFast,
-            this.nextTetheredTwist(unverifiedFast).hash, optLastSupported)) {
-            return
-        }
-        // Walk back to the previous tethered twist. The canonical also
-        // navigates by prev() here, but it relies on the "must be full hitch"
-        // check we removed to short-circuit before reaching a twist whose
-        // prev() exists yet has no tethered ancestor. Treat that case as
-        // "verified back to the line's origin" and stop.
-        if (this.twist(unverifiedFast).prev()) {
-            let prevFast = this.prevTetheredTwist(unverifiedFast)
-            if (prevFast) {
-                return this._verifyHitchLine(
-                    prevFast.hash, optLastSupported, false)
-            }
-        }
-    }
-}
-
 async function check_rigs(line, corklineHash, twistHash) {
-    let strict = new Interpreter(line, corklineHash)
-    try {
-        await strict.verifyTopline()
-        await strict.verifyHitchLine(twistHash)
-        return 'shielded'
-    } catch (e) {
-        if (e?.constructor?.name !== 'MissingHoistError') throw e
-        let unshielded = new UnshieldedInterpreter(line, corklineHash)
-        await unshielded.verifyTopline()
-        await unshielded.verifyHitchLine(twistHash)
-        return 'unshielded'
-    }
+    let interp = new Interpreter(line, corklineHash)
+    await interp.verifyTopline()
+    await interp.verifyHitchLine(twistHash)
 }
 
 function show_abject_info(id) {
@@ -703,10 +641,9 @@ function show_abject_info(id) {
         let line         = Line.fromTwist(twist)
         let corklineHash = Hash.fromHex(corkline)
         check_rigs(line, corklineHash, twist.getHash())
-            .then(mode => {
+            .then(() => {
                 rc.className = 'rig-check'
-                let suffix = mode === 'unshielded' ? ' (unshielded)' : ''
-                rc.innerHTML = `<span class="badge">OK</span><div>Verified${suffix} in ${(performance.now()-time).toFixed(0)}ms</div>`
+                rc.innerHTML = `<span class="badge">OK</span><div>Verified in ${(performance.now()-time).toFixed(0)}ms</div>`
             })
             .catch(e => {
                 rc.className = 'rig-check bad'
