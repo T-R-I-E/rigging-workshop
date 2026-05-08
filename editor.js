@@ -177,6 +177,9 @@ function escape_html(s) {
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))
 }
 
+// Workshop-level status (compile / load failures, idle). Rendered as a
+// single full-width row above the per-checker rows; clearing the
+// rig-check-list layout signals "no per-checker results yet".
 function set_rigcheck(klass, label, msg) {
   let rc = document.getElementById('rigcheck')
   rc.className = 'rig-check ' + klass

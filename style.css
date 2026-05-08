@@ -401,6 +401,22 @@ body {
 .rig-meta .rm-colour.yellow::before { background: var(--warn); }
 .rig-meta .rm-colour.red::before    { background: var(--bad); }
 
+/* Multi-checker layout: each registered checker (svgiewer JS, canonical
+   Clojure via /rigcheck, future toda-bb) renders its own .rig-check row
+   inside this container. set_rigcheck() collapses to a single row when a
+   workshop-level error (compile / load) occurs. */
+.rig-check-list {
+  display: flex; flex-direction: column; gap: 6px;
+}
+.rc-source {
+  display: inline-block;
+  margin-right: 6px;
+  font-size: 10px;
+  color: var(--ink-3);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
 .rig-check {
   display: flex; align-items: flex-start; gap: 8px;
   padding: 8px 10px;

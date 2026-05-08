@@ -685,40 +685,130 @@ async function check_rigs(line, corklineHash, twistHash) {
     await interp.verifyHitchLine(twistHash)
 }
 
+// Each checker is independent — given a context with the .toda bytes plus
+// a few derived shapes (svgiewer Twist, hash hex strings), it returns
+// { state, detail }. Adding a third checker (e.g. toda-bb via SCI or via
+// a second server endpoint) is one entry in this list.
+const CHECKERS = [
+    {
+        id: 'js',
+        label: 'js · svgiewer',
+        async run(ctx) {
+            let line   = Line.fromTwist(ctx.twist)
+            let interp = new HalfHitchInterpreter(line, ctx.corklineHash)
+            await interp.verifyTopline()
+            await interp.verifyHitchLine(ctx.twistHash)
+            return { state: 'ok', detail: 'verified' }
+        },
+    },
+    {
+        id: 'clj',
+        label: 'clj · toda-rig-checker',
+        async run(ctx) {
+            let url = `http://localhost:7878/rigcheck` +
+                      `?cork=${ctx.corklineHex}&twist=${ctx.twistHex}`
+            let res
+            try {
+                res = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/octet-stream' },
+                    body: ctx.bytes,
+                })
+            } catch {
+                return { state: 'warn', detail: 'server offline' }
+            }
+            if (!res.ok) {
+                return { state: 'bad',
+                         detail: `HTTP ${res.status}: ${(await res.text()).slice(0,120)}` }
+            }
+            let { colour } = await res.json()
+            return {
+                state: colour === 'green'  ? 'ok'
+                     : colour === 'yellow' ? 'warn'
+                     : 'bad',
+                detail: colour,
+            }
+        },
+    },
+]
+
+function escape_text(s) {
+    return String(s).replace(/[<&]/g, c => c === '<' ? '&lt;' : '&amp;')
+}
+
+function render_check_row(c, state, badge, detail) {
+    return `<div class="rig-check ${state}" data-checker="${c.id}">` +
+           `<span class="badge">${badge}</span>` +
+           `<div><span class="rc-source">${c.label}</span> ${escape_text(detail)}</div>` +
+           `</div>`
+}
+
+function update_check_row(checker_id, state, badge, detail) {
+    let host = el('rigcheck')
+    if (!host) return
+    let row = host.querySelector(`[data-checker="${checker_id}"]`)
+    let c   = CHECKERS.find(x => x.id === checker_id)
+    if (!row || !c) return
+    row.outerHTML = render_check_row(c, state, badge, detail)
+}
+
 function show_abject_info(id) {
     let rc = el('rigcheck')
-    if(!rc) return
+    if (!rc) return
     let corkline = window.workshop?.corkline
-    if(!corkline) {
-        rc.className = 'rig-check warn'
-        rc.innerHTML = '<span class="badge">N/A</span><div>No corkline available</div>'
+    if (!corkline) {
+        rc.className = 'rig-check-list'
+        rc.innerHTML = CHECKERS.map(c =>
+            render_check_row(c, 'warn', 'N/A', 'No corkline available')).join('')
         return
     }
-    let time = performance.now()
-    rc.className = 'rig-check'
-    rc.innerHTML = '<span class="badge">CHECK</span><div>Verifying rigs…</div>'
+
+    let ctx
     try {
-        if(!env.abject_atoms) {
+        if (!env.abject_atoms) {
             env.abject_atoms = Atoms.fromBytes(new Uint8Array(env.buff))
         }
-        let twist        = new Twist(env.abject_atoms, id)
-        let line         = Line.fromTwist(twist)
-        let corklineHash = Hash.fromHex(corkline)
-        check_rigs(line, corklineHash, twist.getHash())
-            .then(() => {
-                rc.className = 'rig-check'
-                rc.innerHTML = `<span class="badge">OK</span><div>Verified in ${(performance.now()-time).toFixed(0)}ms</div>`
+        let twist = new Twist(env.abject_atoms, id)
+        ctx = {
+            twist,
+            corklineHash: Hash.fromHex(corkline),
+            twistHash:    twist.getHash(),
+            bytes:        new Uint8Array(env.buff),
+            corklineHex:  corkline,
+            twistHex:     id,
+        }
+    } catch (e) {
+        // Fatal-for-everyone: can't even build the Twist. Show one error in
+        // each row — keeps the panel layout consistent.
+        let msg = escape_text((e?.message || String(e)).slice(0, 120))
+        rc.className = 'rig-check-list'
+        rc.innerHTML = CHECKERS.map(c =>
+            render_check_row(c, 'bad', 'FAIL', msg)).join('')
+        console.error(e)
+        return
+    }
+
+    // Render "checking…" rows then dispatch each checker independently.
+    rc.className = 'rig-check-list'
+    rc.innerHTML = CHECKERS.map(c =>
+        render_check_row(c, '', 'CHECK', 'verifying…')).join('')
+
+    for (let c of CHECKERS) {
+        let t0 = performance.now()
+        c.run(ctx)
+            .then(({state, detail}) => {
+                let dt = (performance.now() - t0).toFixed(0)
+                let badge = state === 'ok'   ? 'OK'
+                          : state === 'warn' ? 'WARN'
+                          : state === 'bad'  ? 'FAIL'
+                          : '—'
+                update_check_row(c.id, state, badge, `${detail} · ${dt}ms`)
             })
             .catch(e => {
-                rc.className = 'rig-check bad'
-                let msg = (e?.message || String(e)).slice(0, 120)
-                rc.innerHTML = `<span class="badge">FAIL</span><div>${msg.replace(/[<&]/g, c => c==='<'?'&lt;':'&amp;')}</div>`
-                console.error(e)
+                let msg = escape_text((e?.message || String(e)).slice(0, 120))
+                update_check_row(c.id, 'bad', 'FAIL', msg)
+                console.error(`[${c.label}]`, e)
             })
-    } catch(e) {
-        rc.className = 'rig-check bad'
-        rc.innerHTML = `<span class="badge">FAIL</span><div>${(e?.message || String(e)).slice(0,120)}</div>`
-        console.error(e)
     }
 }
 
