@@ -15,6 +15,6 @@ export async function compile(trdl_text) {
 }
 
 export async function decompile(toda_buf) {
-  let entities = toda_decompile(toda_buf)
+  let entities = await toda_decompile(toda_buf)
   return emit_jsonl(entities)
 }
