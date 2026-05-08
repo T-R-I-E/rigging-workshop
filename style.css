@@ -324,6 +324,31 @@ body {
   letter-spacing: 0.06em;
   color: var(--ink-3);
 }
+/* Collapsible sections (rig-meta, rig-check). Click the H4 to toggle.
+   When .section.collapsed is set, anything below the H4 is hidden so
+   the panel reclaims the vertical space — important when the rig-check
+   list grows to several rows + a divergence section. */
+.section h4.collapsible {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  user-select: none;
+}
+.section h4.collapsible:hover { color: var(--ink-2); }
+.section h4.collapsible .chevron {
+  transition: transform 0.15s;
+  font-size: 9px;
+}
+.section.collapsed h4.collapsible {
+  margin-bottom: 0;
+}
+.section.collapsed h4.collapsible .chevron {
+  transform: rotate(-90deg);
+}
+.section.collapsed > *:not(h4) {
+  display: none !important;
+}
 .rigs-section {
   display: flex;
   flex-direction: column;

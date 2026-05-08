@@ -513,7 +513,10 @@ async function load_rig_meta(rig_url, explicit_json_url) {
     if (m.colour)   parts.push(`<span class="rm-colour ${escape_html(m.colour)}">${escape_html(m.colour)}</span>`)
     if (m.corkline) parts.push(`<span class="rm-cork" title="${escape_html(m.corkline)}">cork: ${escape_html(truncate_hash(m.corkline))}</span>`)
     if (m.issue)    parts.push(`<span class="rm-issue">issue: ${escape_html(m.issue)}</span>`)
-    if (header) header.textContent = json_url.replace(/^.*\//, '')
+    // Update only the title span, not the whole H4 — the H4 also contains
+    // the chevron used by the collapsible toggle.
+    let title = header?.querySelector('.section-title')
+    if (title) title.textContent = json_url.replace(/^.*\//, '')
     host.innerHTML = parts.join('')
     section.hidden = parts.length === 0
     // Use the JSON's canonical corkline when available — for .toda loads
@@ -580,6 +583,14 @@ rigs_list_el?.addEventListener('keydown', e => {
   let live = rigs_list_el.querySelector(`.rig-item[data-file="${CSS.escape(path)}"]`)
   live?.scrollIntoView({ block: 'center' })
 })
+
+// Collapsible sections: clicking an H4.collapsible toggles a
+// .collapsed class on its enclosing .section (CSS hides the body).
+for (let h4 of document.querySelectorAll('h4.collapsible')) {
+  h4.addEventListener('click', () => {
+    h4.closest('.section')?.classList.toggle('collapsed')
+  })
+}
 
 render_rigs_list()
 schedule_build()                                // initial build of the starter doc

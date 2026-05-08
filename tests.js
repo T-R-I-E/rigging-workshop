@@ -109,13 +109,20 @@ async function run_one(file) {
     if (!is_deterministic(trdl)) {
       return { file, skip: true, note: 'non-deterministic (random shield/sig/dangling)' }
     }
-    let svP = server_compile(trdl).catch(e => ({error: e.message}))
-    let jsP = js_compile(trdl).catch(e => ({error: e.message}))
-    let [js, sv] = await Promise.all([jsP, svP])
-    if (sv?.error || js?.error) {
-      // both failing the same way = expected (e.g. circular dep)
-      let note = sv?.error ? `server: ${sv.error}` : `js: ${js.error}`
-      return { file, skip: true, note }
+    // Try js_compile first. If it errors (e.g. circular dep — rigs 19/20),
+    // skip without POSTing to the server. The server would error
+    // symmetrically and the browser would log a 400 in the console for
+    // every such rig, looking like a wall of failures even though the
+    // harness records it as a skip. Skipping client-side first keeps the
+    // console quiet.
+    let js
+    try { js = await js_compile(trdl) }
+    catch (e) { return { file, skip: true, note: `js: ${e.message}` } }
+    let sv
+    try { sv = await server_compile(trdl) }
+    catch (e) {
+      // js compiled but server errored — that's a real divergence.
+      return { file, match: false, note: `server: ${e.message}` }
     }
     let match = bytes_equal(js, sv)
     let note = ''
