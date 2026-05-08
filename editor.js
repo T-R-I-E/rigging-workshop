@@ -497,19 +497,25 @@ async function load_rig_meta(rig_url, explicit_json_url) {
     if (header) header.textContent = json_url.replace(/^.*\//, '')
     host.innerHTML = parts.join('')
     section.hidden = parts.length === 0
+    // Use the JSON's canonical corkline when available — for .toda loads
+    // (todatests/rigging) the immediate render runs before the decompile
+    // → recompile cycle finishes, and without this the rig-check panel
+    // shows "No corkline available". For .trdl loads the auto-build also
+    // sets workshop.corkline, but they should agree round-trip.
+    if (m.corkline) window.workshop.corkline = m.corkline
   } catch {
     section.hidden = true
   }
 }
 
-document.getElementById('rigs-list')?.addEventListener('click', async e => {
-  let item = e.target.closest('.rig-item')
-  if (!item) return
-  let path = item.dataset.file
+async function load_rig(path) {
   active_rig = path
   render_rigs_list()
   let entry = RIGS.find(r => r[0] === path)
-  load_rig_meta(path, entry?.[2])               // sibling .json by default
+  // Await the meta fetch so that workshop.corkline is set from the canonical
+  // JSON before load_bytes triggers an immediate render — otherwise the
+  // .toda rig-check fires with no corkline yet.
+  await load_rig_meta(path, entry?.[2])
   try {
     let res = await fetch(path)
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
@@ -521,6 +527,31 @@ document.getElementById('rigs-list')?.addEventListener('click', async e => {
   } catch (err) {
     set_rigcheck('bad', 'FAIL', `load ${path}: ${err.message}`)
   }
+}
+
+let rigs_list_el = document.getElementById('rigs-list')
+if (rigs_list_el) rigs_list_el.tabIndex = 0      // focusable so it can take key events
+
+rigs_list_el?.addEventListener('click', async e => {
+  let item = e.target.closest('.rig-item')
+  if (!item) return
+  load_rig(item.dataset.file)
+})
+
+rigs_list_el?.addEventListener('keydown', e => {
+  if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key)) return
+  e.preventDefault()
+  let items = [...rigs_list_el.querySelectorAll('.rig-item')]
+  if (!items.length) return
+  let cur = items.findIndex(i => i.dataset.file === active_rig)
+  let next
+  if      (e.key === 'ArrowDown') next = cur < 0 ? 0 : Math.min(items.length - 1, cur + 1)
+  else if (e.key === 'ArrowUp')   next = cur < 0 ? items.length - 1 : Math.max(0, cur - 1)
+  else if (e.key === 'Home')      next = 0
+  else if (e.key === 'End')       next = items.length - 1
+  let target = items[next]
+  target.scrollIntoView({ block: 'nearest' })
+  load_rig(target.dataset.file)
 })
 
 render_rigs_list()

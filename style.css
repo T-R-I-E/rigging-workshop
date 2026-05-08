@@ -297,12 +297,18 @@ body {
                                filter: drop-shadow(0 0 5px gold); }
 
 /* ---------- left-bottom (rig check + examples) ---------- */
+/* Flex so the optional rig-meta section shows up cleanly when present —
+   `auto 1fr` grid only allocates two row tracks, so a third section ended
+   up overlapping. With flex, content-sized rows shrink to fit and the
+   rigs list grabs the remaining vertical space. */
 .stack {
-  display: grid;
-  grid-template-rows: auto 1fr;
+  display: flex;
+  flex-direction: column;
   height: 100%;
   min-height: 0;
 }
+.stack > .section { flex: 0 0 auto; }
+.stack > .rigs-section { flex: 1 1 auto; min-height: 0; }
 .section {
   padding: 10px 12px;
   border-bottom: 1px solid var(--line);

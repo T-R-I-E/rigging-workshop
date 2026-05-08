@@ -639,6 +639,13 @@ function set_transform(x, y, s) {
 //      check itself, since the whole point of the relaxation is to permit
 //      half-hitches.
 class HalfHitchInterpreter extends Interpreter {
+    constructor(...args) {
+        super(...args)
+        // Cycle guard. Some test rigs (e.g. rigs/29 with intentional tether
+        // loops) cause _verifyHitchLine to recurse back through the same
+        // (lead, optLastSupported) state, freezing the page. We dedupe.
+        this._visited = new Set()
+    }
     hitchPost(hash) {
         let meet = this.hitchMeet(hash)
         let post = this.nextTetheredTwist(meet.hash)
@@ -649,6 +656,9 @@ class HalfHitchInterpreter extends Interpreter {
         throw new Error('post rig entry conflict')
     }
     async _verifyHitchLine(unverifiedFast, optLastSupported, optFirst) {
+        let key = String(unverifiedFast) + '|' + String(optLastSupported)
+        if (this._visited.has(key)) return         // already verified this state
+        this._visited.add(key)
         await this._verifyHitch(unverifiedFast)
         if (optLastSupported && this.inSegment(unverifiedFast,
             this.nextTetheredTwist(unverifiedFast).hash, optLastSupported)) {
