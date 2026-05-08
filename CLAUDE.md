@@ -56,6 +56,30 @@ Verification harness, optional. **Requires the Clojure server.**
   byte-discovery order, which can differ from the Clojure server's JVM
   hash-bucket order. The resulting TRDL is structurally equivalent — same
   rig, possibly different label assignment to nameless lines.
+- Rig check uses `HalfHitchInterpreter` in `app.js`, a thin subclass of the
+  canonical Interpreter that allows half-hitches: `hitchPost` returns null
+  on a missing post-rig-entry instead of throwing `MissingPostEntry`, and
+  `_verifyHitchLine` drops the "must be full hitch" check + null-guards
+  the walk-back. This is *not* the unshielded relaxation we removed — that
+  was a compile bug; this is about TRDL test rigs that use `post:"none"`
+  to model the last hitch on a corkline.
+
+## TODO
+- **`tests.html` skipped rigs**: 3 of 32 are skipped, currently in a way
+  that hides per-side compile failures behind "skip". The 3 are:
+    - `5-lash-left-non-overlap-missing.trdl` — non-deterministic (random
+      shield/sig/dangling), legitimately can't byte-compare. Could move to
+      a parallel "structural equality" check instead of skipping.
+    - `19-fast-line-multiply-lashed-up-to-slow-line.trdl` — circular
+      dependency in twist specs (server agrees, both compilers reject it
+      symmetrically). Could mark as "expected error" so it's reported
+      instead of silently skipped.
+    - `20-slow-line-lashed-up-to-fast-line.trdl` — same circular dep as 19.
+  Also: the harness's skip path swallows *any* per-side compile error
+  (`tests.js:115-119` skips when *either* side errors, despite the comment
+  saying "both failing the same way"). Means a JS-only or server-only
+  failure currently masquerades as a skip. Tighten the harness to require
+  both sides to error symmetrically before skipping; otherwise FAIL.
 ## Git policy (overrides global)
 You manage git directly in this project. The global "manual git" rule does
 NOT apply here. `git push` remains denied at the permission layer; the user

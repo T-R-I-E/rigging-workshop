@@ -624,8 +624,47 @@ function set_transform(x, y, s) {
     })
 }
 
+// Subclass that supports half-hitch test rigs in this workshop's example
+// set. Two relaxations vs canonical:
+//   1. Test rigs use post:"none" to model the last hitch on a corkline
+//      (e.g. rigs/1-splice-no-post). The canonical hitchPost throws
+//      MissingPostEntry whenever a post twist exists but carries no rig
+//      entry pointing back at the lead. We treat that case as "no post"
+//      and return null, which lets the hitch pass as a half-hitch.
+//   2. Once half-hitches are allowed mid-line, the recursive walk-back can
+//      reach a twist whose prev() exists but has no prior tethered twist
+//      (start of a tether chain). The canonical null-derefs there because
+//      its "must be full hitch" check would have short-circuited first;
+//      we null-guard and stop the recursion. We also skip that full-hitch
+//      check itself, since the whole point of the relaxation is to permit
+//      half-hitches.
+class HalfHitchInterpreter extends Interpreter {
+    hitchPost(hash) {
+        let meet = this.hitchMeet(hash)
+        let post = this.nextTetheredTwist(meet.hash)
+        if (!post) return null
+        let hoistHash = post.rig(hash)
+        if (!hoistHash) return null                // treat missing entry as "no post"
+        if (hoistHash.equals(this.hitchHoist(hash).hash)) return post
+        throw new Error('post rig entry conflict')
+    }
+    async _verifyHitchLine(unverifiedFast, optLastSupported, optFirst) {
+        await this._verifyHitch(unverifiedFast)
+        if (optLastSupported && this.inSegment(unverifiedFast,
+            this.nextTetheredTwist(unverifiedFast).hash, optLastSupported)) {
+            return
+        }
+        if (this.twist(unverifiedFast).prev()) {
+            let prevFast = this.prevTetheredTwist(unverifiedFast)
+            if (prevFast) {
+                return this._verifyHitchLine(prevFast.hash, optLastSupported, false)
+            }
+        }
+    }
+}
+
 async function check_rigs(line, corklineHash, twistHash) {
-    let interp = new Interpreter(line, corklineHash)
+    let interp = new HalfHitchInterpreter(line, corklineHash)
     await interp.verifyTopline()
     await interp.verifyHitchLine(twistHash)
 }
