@@ -367,16 +367,83 @@ const RIGS = [
 
   ['tests/toda-core/twist-chain-with-fields.trdl',                                     'green'],
   ['tests/toda-core/twist-isolation-multi-line.trdl',                                  'green'],
+
+  // todatests/rigging — pre-compiled .toda + .json pairs (no .trdl source).
+  // Loading these goes through decompile to populate the editor.
+  ['todatests/rigging/complex_bad_hoist_direct_to_indirect.toda',                      'red'],
+  ['todatests/rigging/complex_bad_hoist_indirect_to_direct.toda',                      'red'],
+  ['todatests/rigging/complex_direct_to_indirect_splice.toda',                         'green'],
+  ['todatests/rigging/complex_indirect_to_direct_splice.toda',                         'green'],
+  ['todatests/rigging/complex_maximal_time_crossing.toda',                             'green'],
+  ['todatests/rigging/complex_maximal_time_crossing_complex.toda',                     'green'],
+  ['todatests/rigging/complex_tether_direction_change.toda',                           'green'],
+  ['todatests/rigging/cork_missing_rigging.toda',                                      'yellow'],
+  ['todatests/rigging/cork_prev_invalid_green.toda',                                   'green'],
+  ['todatests/rigging/cork_prev_invalid_red.toda',                                     'red'],
+  ['todatests/rigging/cork_reqsat_fail.toda',                                          'red'],
+  ['todatests/rigging/corkline_incomplete_early_red.toda',                             'red'],
+  ['todatests/rigging/corkline_incomplete_early_yellow.toda',                          'yellow'],
+  ['todatests/rigging/corkline_incomplete_late.toda',                                  'red'],
+  ['todatests/rigging/hh_corkline_twist_missing.toda',                                 'red'],
+  ['todatests/rigging/hh_footline_prev_gap.toda',                                      'red'],
+  ['todatests/rigging/hh_mismatched_s_ss_values.toda',                                 'red'],
+  ['todatests/rigging/hh_no_s_lead.toda',                                              'red'],
+  ['todatests/rigging/hh_no_ss_lead.toda',                                             'red'],
+  ['todatests/rigging/hh_non_fast_meet.toda',                                          'red'],
+  ['todatests/rigging/hh_self_referential_rig.toda',                                   'red'],
+  ['todatests/rigging/hh_tether_missing.toda',                                         'yellow'],
+  ['todatests/rigging/hh_tether_not_twist.toda',                                       'red'],
+  ['todatests/rigging/hh_tether_null.toda',                                            'red'],
+  ['todatests/rigging/hh_tether_symbol.toda',                                          'red'],
+  ['todatests/rigging/hh_valid_lead_root.toda',                                        'green'],
+  ['todatests/rigging/hh_valid_self_ref_subsequent_valid.toda',                        'green'],
+  ['todatests/rigging/hh_valid_shield_non_null.toda',                                  'green'],
+  ['todatests/rigging/hh_valid_shield_null.toda',                                      'green'],
+  ['todatests/rigging/hh_wrong_hoist_values.toda',                                     'red'],
+  ['todatests/rigging/hh_wrong_shield.toda',                                           'red'],
+  ['todatests/rigging/hitch_hoist_rigs_missing.toda',                                  'yellow'],
+  ['todatests/rigging/hitch_meet_tether_null.toda',                                    'red'],
+  ['todatests/rigging/hitch_splice_post_no_lead_entry.toda',                           'red'],
+  ['todatests/rigging/hitch_splice_post_wrong_hoist.toda',                             'red'],
+  ['todatests/rigging/hitch_valid_basic_splice.toda',                                  'green'],
+  ['todatests/rigging/invalid_rigging_green.toda',                                     'green'],
+  ['todatests/rigging/invalid_shielding_green.toda',                                   'green'],
+  ['todatests/rigging/lash_succession_missing_prev.toda',                              'yellow'],
+  ['todatests/rigging/lash_succession_no_fast_twist.toda',                             'red'],
+  ['todatests/rigging/lash_succession_reqsat_fail.toda',                               'red'],
+  ['todatests/rigging/lashed_non_colinear.toda',                                       'red'],
+  ['todatests/rigging/meets_do_not_match.toda',                                        'red'],
+  ['todatests/rigging/missing_rigging.toda',                                           'yellow'],
+  ['todatests/rigging/missing_shield.toda',                                            'yellow'],
+  ['todatests/rigging/multiple_hoists_green.toda',                                     'green'],
+  ['todatests/rigging/post_rigging_missing_post_key.toda',                             'red'],
+  ['todatests/rigging/self_referential.toda',                                          'red'],
+  ['todatests/rigging/simple_lash_f1.toda',                                            'green'],
+  ['todatests/rigging/simple_lash_f2.toda',                                            'green'],
+  ['todatests/rigging/simple_last.toda',                                               'green'],
+  ['todatests/rigging/splice_mismatch.toda',                                           'red'],
+  ['todatests/rigging/unit_rig.toda',                                                  'green'],
+  ['todatests/rigging/unit_rig_multi.toda',                                            'green'],
+  ['todatests/rigging/valid_kiwano.toda',                                              'green'],
+  ['todatests/rigging/valid_kiwano_0.toda',                                            'green'],
+  ['todatests/rigging/valid_kiwano_1.toda',                                            'green'],
+  ['todatests/rigging/valid_kiwano_f1.toda',                                           'green'],
+  ['todatests/rigging/valid_kiwano_f2.toda',                                           'green'],
+  ['todatests/rigging/valid_kiwano_f5.toda',                                           'green'],
 ]
 
 function group_label(path) {
-  if (path.startsWith('rigs/')) return 'workshop'
+  if (path.startsWith('rigs/'))      return 'workshop'
+  if (path.startsWith('todatests/')) {
+    let m = path.match(/^todatests\/([^/]+)/)
+    return m ? `todatests/${m[1]}` : 'todatests'
+  }
   let m = path.match(/^tests\/([^/]+)/)
   return m ? m[1] : 'other'
 }
 
 function rig_label(path) {
-  let basename = path.replace(/^.*\//, '').replace(/\.trdl$/, '')
+  let basename = path.replace(/^.*\//, '').replace(/\.(trdl|toda)$/, '')
   return basename.replace(/^(\d+a?)-/, '$1 · ')
 }
 
@@ -411,12 +478,12 @@ function clear_rig_meta() {
   if (section) section.hidden = true
 }
 
-async function load_rig_meta(trdl_url, explicit_json_url) {
+async function load_rig_meta(rig_url, explicit_json_url) {
   let section = document.getElementById('rig-meta-section')
   let header  = document.getElementById('rig-meta-filename')
   let host    = document.getElementById('rig-meta')
   if (!section || !host) return
-  let json_url = explicit_json_url || trdl_url?.replace(/\.trdl$/, '.json')
+  let json_url = explicit_json_url || rig_url?.replace(/\.(trdl|toda)$/, '.json')
   if (!json_url) { section.hidden = true; return }
   try {
     let res = await fetch(json_url)
@@ -446,7 +513,11 @@ document.getElementById('rigs-list')?.addEventListener('click', async e => {
   try {
     let res = await fetch(path)
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
-    set_doc(await res.text())                   // auto-build picks it up
+    if (path.toLowerCase().endsWith('.trdl')) {
+      set_doc(await res.text())                 // auto-build picks it up
+    } else {
+      await load_bytes(await res.arrayBuffer()) // .toda → decompile path
+    }
   } catch (err) {
     set_rigcheck('bad', 'FAIL', `load ${path}: ${err.message}`)
   }
