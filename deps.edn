@@ -1,13 +1,23 @@
 ;; `src/` is a symlink into ../svgiewer/src for the JS modules; Clojure
 ;; sources for the bridge live under clj/ to avoid the collision.
+;;
+;; toda-bb is launched in a SEPARATE JVM (`:server-bb` alias). It defines
+;; a `toda.shielding` namespace that collides with toda-core's same-named
+;; namespace (which twist-maker and toda-rig-checker pull in). Loading
+;; both in one JVM silently rebinds the vars and NPEs both interpreters.
 {:paths ["clj"]
 
  :deps {org.clojure/clojure    {:mvn/version "1.11.1"}
-        org.clojure/data.json  {:mvn/version "2.4.0"}
-        toda/twist-maker       {:local/root "../todaclj/toda-twist-maker"}
-        todaq/toda-rig-checker {:local/root "../todaclj/toda-rig-checker"}
-        toda/toda-bb           {:local/root "../toda-bb"}}
+        org.clojure/data.json  {:mvn/version "2.4.0"}}
 
  :aliases
- {:server
-  {:main-opts ["-m" "rigging-workshop.server"]}}}
+ {;; Main server on :7878 — compile/decompile + canonical toda-rig-checker.
+  :server
+  {:extra-deps {toda/twist-maker       {:local/root "../todaclj/toda-twist-maker"}
+                todaq/toda-rig-checker {:local/root "../todaclj/toda-rig-checker"}}
+   :main-opts  ["-m" "rigging-workshop.server"]}
+
+  ;; Sidecar server on :7879 — toda-bb only. Run alongside :server.
+  :server-bb
+  {:extra-deps {toda/toda-bb {:local/root "../toda-bb"}}
+   :main-opts  ["-m" "rigging-workshop.server-bb"]}}}

@@ -36,12 +36,25 @@ See [TODO.md](TODO.md) for current plan, tasks, and deferred items.
 2. Open `http://<host>/toda/riggingworkshop/` — the workshop runs entirely in
    the browser. No Clojure server needed.
 
-## Running tests.html
-Verification harness, optional. **Requires the Clojure server.**
-1. Make sure `../todaclj` is on a branch that has `toda-twist-maker/` (e.g.
-   `twist-maker-trdl`).
-2. `clj -M:server` from this directory.
-3. Open `http://<host>/toda/riggingworkshop/tests.html`.
+## Running the Clojure servers (optional)
+
+Two sidecar servers, run in separate terminals. Both are optional —
+the workshop's main UI runs entirely in the browser. The servers exist
+to support `tests.html` byte-equality checks and the dual rig-check
+display in the rig-check panel.
+
+Main server (port 7878) — compile/decompile + canonical toda-rig-checker:
+```
+clj -M:server
+```
+
+BB server (port 7879) — toda-bb interpreter, runs in its own JVM because
+toda-bb's `toda.shielding` namespace collides with toda-core's:
+```
+clj -M:server-bb
+```
+
+`tests.html` only needs the main server.
 
 ## Known v1 caveats
 - `ed25519.js` uses raw 32-byte public keys; the Clojure server wraps them
