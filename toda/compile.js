@@ -30,25 +30,25 @@ async function str_to_hash(s) {
 
 // ---- Rig-ref resolution ---------------------------------------------------
 
-// "id" → twist id (no prefix); "s:id" / "ss:id" / "f:id" → tagged ref.
+// "id" → twist id (no prefix); "s:id" / "ss:id" → tagged ref.
 function parse_rig_ref(s) {
   if (s.startsWith('ss:')) return { tag: 'ss', id: s.slice(3) }
   if (s.startsWith('s:'))  return { tag: 's',  id: s.slice(2) }
-  if (s.startsWith('f:'))  return { tag: 'f',  id: s.slice(2) }
   return { tag: 'id', id: s }
 }
 
-// Resolve a rig key or value. For plain ids and :f tags return the LAT (so
-// pairtrie's val_lats merges in the referenced twist's atoms, matching the
-// Clojure resolve-rig-ref behaviour). For :s and :ss return a hash hex.
+// Resolve a rig key or value. Plain ids return the LAT (so pairtrie's
+// val_lats merges in the referenced twist's atoms). :s and :ss return a
+// hash hex computed via the lead's shield function (plain hash when
+// shield_bytes is null).
 async function resolve_rig_ref(twists, shield_bytes, ref) {
   let { tag, id } = parse_rig_ref(ref)
   let lat = twists.get(id)
   if (!lat) return null                       // referenced twist not yet built
   switch (tag) {
-    case 'id': case 'f': return lat
-    case 's':            return s_hash(lat_focus(lat), shield_bytes)
-    case 'ss':           return ss_hash(lat_focus(lat), shield_bytes)
+    case 'id': return lat
+    case 's':  return s_hash(lat_focus(lat), shield_bytes)
+    case 'ss': return ss_hash(lat_focus(lat), shield_bytes)
   }
 }
 
@@ -93,7 +93,7 @@ function twist_deps(spec, all_ids) {
     // Match twist-maker.core/twist-deps:
     //   plain key (post-rig {lead hoist}) → only the key is a dep; hoist is
     //     on a higher line and built first by natural topo order.
-    //   tagged key (:f/:s/:ss, hoist-rig)   → both key and value are deps.
+    //   tagged key (:s/:ss, hoist-rig) → both key and value are deps.
     for (let [k, v] of Object.entries(spec.rig)) {
       let pk = parse_rig_ref(k)
       let pv = parse_rig_ref(v)
