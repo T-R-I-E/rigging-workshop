@@ -1,18 +1,23 @@
 (ns rigging-workshop.server
   "Tiny HTTP bridge between the browser editor and toda-twist-maker.
    POST /compile   text/plain   TRDL JSONL → octet-stream of .toda bytes
-   POST /decompile octet-stream .toda bytes → text/plain TRDL JSONL"
+   POST /decompile octet-stream .toda bytes → text/plain TRDL JSONL
+   POST /rigcheck?cork=<hex>  octet-stream .toda bytes → {colour: ...}"
   (:require [twist-maker.core      :as core]
             [twist-maker.trdl      :as trdl]
             [twist-maker.decompile :as decompile]
             [lat.core              :as lat]
             [common.util           :as u]
+            [atom.hash             :as h]
+            [store.core            :as store]
+            [interpreter.api       :as interp]
+            [interpreter.result    :as r]
             [clojure.data.json     :as json]
             [clojure.java.io       :as io]
             [clojure.string        :as str])
   (:import  [com.sun.net.httpserver HttpServer HttpHandler HttpExchange]
             [java.net InetSocketAddress]
-            [java.io  ByteArrayOutputStream FileOutputStream File]
+            [java.io  ByteArrayInputStream ByteArrayOutputStream FileOutputStream File]
             [java.util Base64]))
 
 (def PORT 7878)
@@ -84,10 +89,12 @@
     (let [text     (read-text ex)
           entities (trdl/parse-trdl-string text)
           spec     (trdl/trdl->spec entities)
-          {:keys [bytes twists]} (core/build spec)
+          {:keys [bytes twists corkline-h]} (core/build spec)
           line-hashes (mapv #(entity-hashes % twists) entities)
           payload  (json/write-str {:bytes      (b64 bytes)
-                                    :lineHashes line-hashes})]
+                                    :lineHashes line-hashes
+                                    :corkline   (when corkline-h
+                                                  (str corkline-h))})]
       (send-response! ex 200 "application/json; charset=utf-8" payload))
     (catch Throwable t
       (.printStackTrace t)
@@ -106,6 +113,35 @@
         (send-error! ex 400 (.getMessage t)))
       (finally
         (.delete tmp)))))
+
+(defn- parse-query [^String q]
+  (when (and q (not (str/blank? q)))
+    (into {} (for [pair (str/split q #"&")
+                   :let [[k v] (str/split pair #"=" 2)]]
+               [(keyword k) v]))))
+
+(defn- handle-rigcheck
+  "Run the canonical rig-checker over the .toda body. cork query param is
+   required (hex hash). twist query param is optional; if omitted, we use
+   the focus of the seeded bytes."
+  [^HttpExchange ex]
+  (try
+    (let [bytes  (read-bytes ex)
+          query  (parse-query (.getQuery (.getRequestURI ex)))
+          cork-h (-> (:cork query) u/hex->bytes h/from-bytes)
+          store  (store/mutable-store)
+          focus  (with-open [is (ByteArrayInputStream. bytes)]
+                   (store/seed-from-input-stream! store is))
+          twist-h (if-let [t (:twist query)]
+                    (-> t u/hex->bytes h/from-bytes)
+                    focus)
+          result (interp/interpret-rig store twist-h cork-h)
+          colour (name (r/colour result))
+          payload (json/write-str {:colour colour})]
+      (send-response! ex 200 "application/json; charset=utf-8" payload))
+    (catch Throwable t
+      (.printStackTrace t)
+      (send-error! ex 400 (.getMessage t)))))
 
 (defn- handle-health [^HttpExchange ex]
   (send-response! ex 200 "text/plain" "ok"))
@@ -133,6 +169,7 @@
   (let [server (HttpServer/create (InetSocketAddress. PORT) 0)]
     (.createContext server "/compile"   (make-handler handle-compile))
     (.createContext server "/decompile" (make-handler handle-decompile))
+    (.createContext server "/rigcheck"  (make-handler handle-rigcheck))
     (.createContext server "/health"    (make-handler handle-health))
     (.createContext server "/spec"      (make-handler handle-spec))
     (.setExecutor server nil)
