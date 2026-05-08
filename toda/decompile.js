@@ -1,11 +1,13 @@
 // .toda bytes → TRDL entities. Mirrors twist-maker.decompile.
 //
-// v1 caveat: the shielded-hitch detection path (computing s/ss hashes from
-// shield arbs) is not implemented. For shielded:false rigs (the rigs/* test
-// set), unshielded hoist detection — finding a rigging entry whose value
-// equals the meet hash — is sufficient.
+// Hitch detection uses the spec-canonical hoist rig: every hitch's hoist
+// pairtrie has {S(lead, I(lead)) → I(meet), S(lead, S(lead, I(lead))) →
+// S(lead, I(meet))}. We find candidate hoists by scanning for I(meet) as a
+// value in some twist's rig, then confirm the matching SS pair against the
+// lead's shield (NULL shield → plain hash, else hash prefixed with the
+// shield arb's content).
 
-import { bytes_to_hex } from './bytes.js'
+import { bytes_to_hex, hex_to_bytes, sha256, byte_concat } from './bytes.js'
 
 const TWIST = 0x48, BODY = 0x49, ARB = 0x60, HASHLIST = 0x61, PAIRTRIE = 0x63
 const SYM_POPTOP = '22c70173874680c58e5c1d32854bd10486aac6f1aa821b56e3d512fd72e45ac72e'
@@ -137,7 +139,31 @@ function name_lines(env, body_cache, lines) {
   return named
 }
 
-// ---- hitch detection (unshielded only in v1) ------------------------------
+// ---- shield-aware hitch detection -----------------------------------------
+
+async function sha256_hex(bytes) {
+  return '41' + bytes_to_hex(await sha256(bytes))
+}
+
+// shield(twist, data) = hash(I(twist))(C(twist.shld) | data); if shld is
+// NULL, devolves to hash(I(twist))(data). shield_bytes is C(twist.shld) or
+// null. s_hash takes a 33-byte (66 hex char) hash, returns same shape.
+async function s_hash(h_hex, shield_bytes) {
+  let h_bytes = hex_to_bytes(h_hex)
+  let data = shield_bytes ? byte_concat(shield_bytes, h_bytes) : h_bytes
+  return sha256_hex(data)
+}
+async function ss_hash(h_hex, shield_bytes) {
+  return s_hash(await s_hash(h_hex, shield_bytes), shield_bytes)
+}
+
+function shield_bytes_for(env, body_cache, lead_h) {
+  let shld_h = body_cache.get(lead_h)?.shld
+  if (is_null(shld_h)) return null               // NULL shield → plain hash
+  let arb = env.index[shld_h]
+  if (!arb || arb.shape !== ARB) return null     // missing or wrong shape
+  return env.bytes.subarray(arb.cfirst, arb.last + 1)
+}
 
 function is_fast(body_cache, h) {
   let teth = body_cache.get(h)?.teth
@@ -163,18 +189,36 @@ function lead_and_meet(body_cache, fast_h) {
   return (lead && meet) ? [lead, meet] : null
 }
 
-function rig_contains_meet(env, body_cache, twist_h, meet_h) {
+function rig_pairs_of(env, body_cache, twist_h) {
   let rig_h = body_cache.get(twist_h)?.rigs
-  if (is_null(rig_h)) return false
+  if (is_null(rig_h)) return null
   let rig_a = env.index[rig_h]
-  if (!rig_a || rig_a.shape !== PAIRTRIE) return false
-  return read_pairtrie(env, rig_a).some(([, v]) => v === meet_h)
+  if (!rig_a || rig_a.shape !== PAIRTRIE) return null
+  return read_pairtrie(env, rig_a)
 }
 
-function find_hoist(env, body_cache, succ_map, fastener_h, meet_h) {
+// Confirm a candidate hoist by checking both spec-canonical pairs against
+// the lead's shield function. False positives from value-only matches
+// (e.g. dense rigs where some other twist's pairtrie happens to contain
+// meet_h as a value) get rejected here.
+async function verify_hoist_quad(pairs, lead_h, meet_h, shield_bytes) {
+  let s_lead  = await s_hash(lead_h, shield_bytes)
+  let ss_lead = await ss_hash(lead_h, shield_bytes)
+  let s_meet  = await s_hash(meet_h, shield_bytes)
+  let map = new Map(pairs)
+  return map.get(s_lead) === meet_h && map.get(ss_lead) === s_meet
+}
+
+async function find_hoist(env, body_cache, succ_map, fastener_h, lead_h, meet_h) {
+  let shield_bytes = shield_bytes_for(env, body_cache, lead_h)
   let cur = fastener_h
   while (cur) {
-    if (rig_contains_meet(env, body_cache, cur, meet_h)) return cur
+    let pairs = rig_pairs_of(env, body_cache, cur)
+    // Cheap value-only filter first; only run the cryptographic confirmation
+    // when meet_h actually appears in this twist's rig.
+    if (pairs && pairs.some(([, v]) => v === meet_h)) {
+      if (await verify_hoist_quad(pairs, lead_h, meet_h, shield_bytes)) return cur
+    }
     cur = succ_map.get(cur) || null
   }
   return null
@@ -188,7 +232,7 @@ function build_succ_map(body_cache) {
   return m
 }
 
-function detect_hitches(env, body_cache, named_lines) {
+async function detect_hitches(env, body_cache, named_lines) {
   let succ_map = build_succ_map(body_cache)
   let hash_to_ref = new Map()
   for (let { name, twists } of named_lines) {
@@ -210,7 +254,7 @@ function detect_hitches(env, body_cache, named_lines) {
     for (let [lead, meet] of pairs) {
       let fastener = body_cache.get(lead)?.teth
       if (is_null(fastener)) continue
-      let hoist = find_hoist(env, body_cache, succ_map, fastener, meet)
+      let hoist = await find_hoist(env, body_cache, succ_map, fastener, lead, meet)
       if (!hoist) continue
       counter++
       out.push({
@@ -255,12 +299,12 @@ function line_shielded(body_cache, twists) {
 
 // ---- public API ------------------------------------------------------------
 
-export function decompile(buf, name = 'rig') {
+export async function decompile(buf, name = 'rig') {
   let env        = parse_atoms(buf)
   let body_cache = build_body_cache(env)
   let lines      = discover_lines(env, body_cache)
   let named      = name_lines(env, body_cache, lines)
-  let hitches    = detect_hitches(env, body_cache, named)
+  let hitches    = await detect_hitches(env, body_cache, named)
   let crosses    = detect_cross_line_prevs(body_cache, named)
 
   let out = []

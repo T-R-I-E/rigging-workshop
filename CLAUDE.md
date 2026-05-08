@@ -47,13 +47,10 @@ Verification harness, optional. **Requires the Clojure server.**
 - `ed25519.js` uses raw 32-byte public keys; the Clojure server wraps them
   in X.509. Bytes diverge on `reqsat: ed25519` rigs (none of the test rigs
   use ed25519, so this hasn't surfaced in practice).
-- `decompile.js` was written against the prior non-canonical hoist form
-  (`{lead → meet}`). After the spec-compliant compile fix, hoist pairtries
-  always carry `{S(lead) → meet, S(S(lead)) → S(meet)}`, so decompile's
-  hitch detection needs reworking to compute `s/ss` hashes from each lead
-  candidate's shield (NULL or arb). Currently decompile won't recover
-  hitches from spec-compliant `.toda` bytes — opening `.toda` files via
-  the Open / URL paths is broken until this is updated.
+- `decompile.js` finds candidate hoists by scanning rig pairtries for the
+  bare `I(meet)` value, then confirms the spec-canonical quad against the
+  lead's shield (NULL → plain hash, arb → prefixed hash). Works for both
+  shielded:true and shielded:false rigs.
 - Random shields make `shielded: true` rigs non-deterministic across runs.
 - Anonymous-line naming in decompile (`a`, `b`, `c`, …) follows JS atom
   byte-discovery order, which can differ from the Clojure server's JVM
