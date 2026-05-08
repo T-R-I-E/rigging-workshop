@@ -190,7 +190,11 @@ async function build() {
     if (my !== build_seq) return                // stale: a newer build is queued
     last_built_bytes = bytes
     line_hashes = lineHashes
-    window.workshop.corkline = corkline         // read by app.js's rig-check
+    // Only overwrite corkline when compile produced one. For .toda loads
+    // the canonical corkline is set up-front from the sibling .json; if
+    // the decompile→recompile cycle produces a null corkline we keep the
+    // canonical value rather than blanking it out.
+    if (corkline) window.workshop.corkline = corkline
     window.workshop.render(bytes)
   } catch (e) {
     if (my !== build_seq) return
@@ -549,9 +553,14 @@ rigs_list_el?.addEventListener('keydown', e => {
   else if (e.key === 'ArrowUp')   next = cur < 0 ? items.length - 1 : Math.max(0, cur - 1)
   else if (e.key === 'Home')      next = 0
   else if (e.key === 'End')       next = items.length - 1
-  let target = items[next]
-  target.scrollIntoView({ block: 'nearest' })
-  load_rig(target.dataset.file)
+  let path = items[next].dataset.file
+  load_rig(path)
+  // load_rig synchronously re-renders the list (active class moves), so
+  // the previous DOM nodes are detached. Scroll the *new* active item;
+  // 'center' keeps it visible with context above and below rather than
+  // pinning to whichever edge is nearest.
+  let live = rigs_list_el.querySelector(`.rig-item[data-file="${CSS.escape(path)}"]`)
+  live?.scrollIntoView({ block: 'center' })
 })
 
 render_rigs_list()
