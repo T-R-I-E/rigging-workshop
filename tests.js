@@ -132,6 +132,16 @@ async function run_one(file) {
       note = `first diff at byte ${d}\n` +
              `  js: ${hex(js, from, to)}\n` +
              `  sv: ${hex(sv, from, to)}`
+      // Console-level diagnostic for byte divergence — surfaces lengths,
+      // first-diff offset, and a short hex window on either side. Useful
+      // when the two compilers fall out of sync (e.g. spec-canonical fix
+      // applied on one side but not the other).
+      console.warn(`[tests] DIVERGE ${file}\n` +
+                   `  js  len=${js.length}  sha=${js.length}\n` +
+                   `  sv  len=${sv.length}\n` +
+                   `  first diff at byte ${d}/${Math.min(js.length, sv.length)}\n` +
+                   `  js: ${hex(js, from, to)}\n` +
+                   `  sv: ${hex(sv, from, to)}`)
     }
     return { file, js: js.length, sv: sv.length, match, note }
   } catch (e) {

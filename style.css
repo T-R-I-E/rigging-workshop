@@ -337,8 +337,13 @@ body {
 }
 .section h4.collapsible:hover { color: var(--ink-2); }
 .section h4.collapsible .chevron {
+  font-family: var(--sans);   /* mono fonts often miss the unicode triangle */
+  font-size: 11px;
+  color: var(--ink-2);
+  text-transform: none;       /* H4 sets uppercase, undo for the glyph */
   transition: transform 0.15s;
-  font-size: 9px;
+  display: inline-block;
+  margin-left: 8px;
 }
 .section.collapsed h4.collapsible {
   margin-bottom: 0;
