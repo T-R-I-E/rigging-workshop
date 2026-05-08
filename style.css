@@ -272,13 +272,29 @@ body {
 /* Highlight ordering: select before highlight so hover (highlight) wins
    when both classes are on the same circle — matches the editor's "select
    is base, hover overlays" rule. Each state pumps r and stroke-width and
-   adds a soft drop-shadow halo so the ring is visible at a glance. */
+   adds a soft drop-shadow halo so the ring is visible at a glance.
+   Sizes scale with twist count: render_svg() toggles `.compact` (<30
+   twists, glow looks oversized) and `.dense` (≥200, neighbours overlap). */
 .viz-wrap .focus     { r: 11; stroke-width: 5; stroke: #ff17c9;
                        filter: drop-shadow(0 0 6px #ff17c9); }
 .viz-wrap .select    { r: 12; stroke-width: 6; stroke: rgb(0,210,80);
                        filter: drop-shadow(0 0 9px rgb(0,210,80)); }
 .viz-wrap .highlight { r: 12; stroke-width: 5; stroke: gold;
                        filter: drop-shadow(0 0 9px gold); }
+
+.viz-wrap.compact .focus     { r: 7; stroke-width: 2.5;
+                               filter: drop-shadow(0 0 3px #ff17c9); }
+.viz-wrap.compact .select    { r: 7.5; stroke-width: 3;
+                               filter: drop-shadow(0 0 4px rgb(0,210,80)); }
+.viz-wrap.compact .highlight { r: 7.5; stroke-width: 2.5;
+                               filter: drop-shadow(0 0 4px gold); }
+
+.viz-wrap.dense .focus       { r: 8; stroke-width: 3;
+                               filter: drop-shadow(0 0 4px #ff17c9); }
+.viz-wrap.dense .select      { r: 8.5; stroke-width: 3.5;
+                               filter: drop-shadow(0 0 5px rgb(0,210,80)); }
+.viz-wrap.dense .highlight   { r: 8.5; stroke-width: 3;
+                               filter: drop-shadow(0 0 5px gold); }
 
 /* ---------- left-bottom (rig check + examples) ---------- */
 .stack {

@@ -332,6 +332,15 @@ function set_limits(env) {
 }
 
 function render_svg(env) {
+    // Toggle a density class on the viz wrapper so the highlight CSS can
+    // scale with twist count — the glow that looks great at ~100 twists is
+    // comically oversized at 6 and overlaps neighbours at 300+.
+    let wrap = vp?.parentElement
+    if (wrap) {
+        let n = env.shapes[TWIST]?.length || 0
+        wrap.classList.toggle('compact', n < 30)
+        wrap.classList.toggle('dense',   n >= 200)
+    }
     let svgs = '', edgestr = '', edges = []
     let order = ['prev', 'teth', 'lead', 'meet', 'post', 'cargo']
     env.shapes[TWIST]?.forEach(t => {
