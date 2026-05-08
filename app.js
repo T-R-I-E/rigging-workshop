@@ -664,7 +664,13 @@ class HalfHitchInterpreter extends Interpreter {
             this.nextTetheredTwist(unverifiedFast).hash, optLastSupported)) {
             return
         }
-        if (this.twist(unverifiedFast).prev()) {
+        // Twist.prev() throws MissingPrevError when the prev hash isn't in
+        // the atoms — happens for incomplete .toda fixtures. Treat it as
+        // "no prev" and stop the walk-back rather than letting it surface
+        // as a workshop-level rig-check failure.
+        let hasPrev = false
+        try { hasPrev = !!this.twist(unverifiedFast).prev() } catch {}
+        if (hasPrev) {
             let prevFast = this.prevTetheredTwist(unverifiedFast)
             if (prevFast) {
                 return this._verifyHitchLine(prevFast.hash, optLastSupported, false)
