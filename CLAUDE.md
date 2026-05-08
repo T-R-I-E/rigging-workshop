@@ -97,6 +97,14 @@ clj -M:server-bb
   saying "both failing the same way"). Means a JS-only or server-only
   failure currently masquerades as a skip. Tighten the harness to require
   both sides to error symmetrically before skipping; otherwise FAIL.
+- **Add the Rust toda rig-checker via WASM** as a fourth checker. Would
+  give us four independent implementations comparing notes per rig (JS
+  todajs / Clojure toda-rig-checker / Clojure toda-bb / Rust). Pure
+  in-browser via `wasm-bindgen`, no extra server process. Pattern: drop
+  the .wasm bundle in `toda/`, register a fourth entry in `CHECKERS` in
+  `app.js` that calls into it. The registry is already shape-correct
+  (`async run(ctx) → {state, detail}`); each existing checker is one
+  entry, so this slots in cleanly.
 ## Git policy (overrides global)
 You manage git directly in this project. The global "manual git" rule does
 NOT apply here. `git push` remains denied at the permission layer; the user
