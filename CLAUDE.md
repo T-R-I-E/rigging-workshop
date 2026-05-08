@@ -23,13 +23,17 @@ See [TODO.md](TODO.md) for current plan, tasks, and deferred items.
   - `decompile.js` — bytes → TRDL entities (unshielded path only in v1)
 - `tests.html`, `tests.js` — byte-equality test harness vs the Clojure server.
 - `src/`, `rels.js` — symlinks into `../svgiewer/`. Don't edit; they're shared.
-- `rigs/` — symlink into `../todaclj/toda-twist-maker/rigs/`. Lets the
-  workshop fetch example rigs from a path that stays inside the served root,
-  so it works on any deploy (not just one that serves all of `~/Dev`).
-- `deps.edn`, `clj/rigging_workshop/server.clj` — Clojure server. **Test-only
-  oracle.** The workshop runs entirely in the browser; the server is required
-  *only* if you want to run `tests.html`'s byte-equality checks against the
-  canonical `toda-twist-maker` implementation.
+- `rigs/` — symlink into `../todaclj/toda-twist-maker/rigs/`. Workshop's
+  primary example set, served from a path that stays inside the served root.
+- `tests/` — symlink into `../todaclj/toda-clj-tests/`. ~35 paired
+  `.trdl` / `.json` test rigs, organised by subdir.
+- `todatests/` — symlink into `../todatests/`. ~60 paired `.toda` / `.json`
+  rigging tests; `.toda` loads route through decompile.
+- `deps.edn`, `clj/rigging_workshop/server.clj`,
+  `clj/rigging_workshop/server_bb.clj` — two sidecar Clojure servers.
+  Optional: workshop runs entirely in the browser. Servers exist only
+  for `tests.html` byte-equality checks and the dual / triple rig-check
+  display in the rig-check panel.
 
 ## Running
 1. Static server serving `~/Dev` (already running per dev setup).
