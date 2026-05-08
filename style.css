@@ -408,6 +408,17 @@ body {
 .rig-check-list {
   display: flex; flex-direction: column; gap: 6px;
 }
+/* Rendered when a .toda load's decompile→recompile produced different
+   bytes than the original. Sits between the initial-pass rows and any
+   per-checker rows that disagree with the baseline. */
+.rig-diff-note {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--ink-3);
+  padding: 6px 10px 0 10px;
+  border-top: 1px dashed var(--line-2);
+  margin-top: 4px;
+}
 .rc-source {
   display: inline-block;
   margin-right: 6px;

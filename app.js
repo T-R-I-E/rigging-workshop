@@ -764,6 +764,39 @@ function update_check_row(checker_id, state, badge, detail) {
     row.outerHTML = render_check_row(c, state, badge, detail)
 }
 
+function bytes_equal(a, b) {
+    if (!a || !b || a.length !== b.length) return false
+    for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false
+    return true
+}
+
+function results_differ(a, b) {
+    if (!a || !b) return true
+    return a.state !== b.state || a.detail !== b.detail
+}
+
+function badge_for(state) {
+    return state === 'ok'   ? 'OK'
+         : state === 'warn' ? 'WARN'
+         : state === 'bad'  ? 'FAIL'
+         : '—'
+}
+
+// Determine which "pass" we're in for the current render. For .toda loads
+// we keep a baseline (the original bytes + the first-pass rig-check
+// results) so a lossy decompile→recompile cycle doesn't clobber the
+// baseline result; instead we surface the divergence below. The
+// load-rig lifecycle clears initial_toda_load whenever the user switches
+// rigs, so init being non-null already means "user hasn't moved on".
+function classify_pass(ctx) {
+    let init = window.workshop?.initial_toda_load
+    if (!init) return 'no-init'                         // .trdl / fresh editor / moved on
+    if (bytes_equal(ctx.bytes, init.bytes)) {
+        return init.results.size === 0 ? 'initial' : 'rebuild-same'
+    }
+    return 'rebuild-diff'
+}
+
 function show_abject_info(id) {
     let rc = el('rigcheck')
     if (!rc) return
@@ -800,7 +833,51 @@ function show_abject_info(id) {
         return
     }
 
-    // Render "checking…" rows then dispatch each checker independently.
+    let pass = classify_pass(ctx)
+
+    // Recompile produced the same bytes the user loaded — the first-pass
+    // results are still authoritative; clear any stale diff section from
+    // an earlier divergent rebuild and otherwise leave the rows alone.
+    if (pass === 'rebuild-same') {
+        rc.querySelectorAll('[data-section="diff"]').forEach(e => e.remove())
+        return
+    }
+
+    if (pass === 'rebuild-diff') {
+        // Append a divergence note + per-checker rows that differ from the
+        // initial pass. Don't touch the initial rows above. Replace any
+        // previously-rendered diff section so re-edits show fresh output.
+        let init = window.workshop.initial_toda_load
+        rc.querySelectorAll('[data-section="diff"]').forEach(e => e.remove())
+        rc.insertAdjacentHTML('beforeend',
+            `<div class="rig-diff-note" data-section="diff">` +
+            `recompiled bytes differ from the loaded .toda — re-running checkers</div>`)
+        for (let c of CHECKERS) {
+            let t0 = performance.now()
+            c.run(ctx)
+                .then(({state, detail}) => {
+                    let init_res = init.results.get(c.id)
+                    if (!results_differ(init_res, {state, detail})) return
+                    let dt = (performance.now() - t0).toFixed(0)
+                    rc.insertAdjacentHTML('beforeend',
+                        render_check_row(c, state, badge_for(state),
+                                         `${detail} · ${dt}ms`)
+                            .replace('class="rig-check',
+                                     'data-section="diff" class="rig-check'))
+                })
+                .catch(e => {
+                    let msg = escape_text((e?.message || String(e)).slice(0, 120))
+                    rc.insertAdjacentHTML('beforeend',
+                        render_check_row(c, 'bad', 'FAIL', msg)
+                            .replace('class="rig-check',
+                                     'data-section="diff" class="rig-check'))
+                    console.error(`[${c.label}]`, e)
+                })
+        }
+        return
+    }
+
+    // pass === 'initial' or 'no-init': fresh full render.
     rc.className = 'rig-check-list'
     rc.innerHTML = CHECKERS.map(c =>
         render_check_row(c, '', 'CHECK', 'verifying…')).join('')
@@ -810,15 +887,18 @@ function show_abject_info(id) {
         c.run(ctx)
             .then(({state, detail}) => {
                 let dt = (performance.now() - t0).toFixed(0)
-                let badge = state === 'ok'   ? 'OK'
-                          : state === 'warn' ? 'WARN'
-                          : state === 'bad'  ? 'FAIL'
-                          : '—'
-                update_check_row(c.id, state, badge, `${detail} · ${dt}ms`)
+                update_check_row(c.id, state, badge_for(state), `${detail} · ${dt}ms`)
+                // Snapshot the initial pass so future rebuilds can compare.
+                if (pass === 'initial') {
+                    window.workshop.initial_toda_load.results.set(c.id, {state, detail})
+                }
             })
             .catch(e => {
                 let msg = escape_text((e?.message || String(e)).slice(0, 120))
                 update_check_row(c.id, 'bad', 'FAIL', msg)
+                if (pass === 'initial') {
+                    window.workshop.initial_toda_load.results.set(c.id, {state: 'bad', detail: msg})
+                }
                 console.error(`[${c.label}]`, e)
             })
     }

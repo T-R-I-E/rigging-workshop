@@ -209,12 +209,23 @@ async function build() {
 async function load_bytes(buf) {
   // setting the doc fires the auto-build via the updateListener; render the
   // original bytes immediately for instant feedback while the rebuild runs.
+  // Also pin this as the "initial toda load" so the rig-check panel can
+  // detect lossy decompile→recompile round-trips: if the recompile produces
+  // different bytes, we want to surface that rather than overwriting the
+  // first-pass rig-check results.
   try {
     let text = await decompile(buf)
+    let bytes = new Uint8Array(buf)
+    window.workshop.initial_toda_load = {
+      bytes,
+      rig_id:  active_rig,
+      results: new Map(),       // checker_id → {state, badge, detail}
+    }
     set_doc(text)
     last_built_bytes = buf
     window.workshop.render(buf)
   } catch (e) {
+    window.workshop.initial_toda_load = null
     set_rigcheck('bad', 'FAIL', `decompile: ${e.message}`)
     console.error(e)
   }
@@ -224,6 +235,7 @@ function deselect_rig() {
   active_rig = null
   render_rigs_list()
   clear_rig_meta()
+  window.workshop.initial_toda_load = null
 }
 
 async function load_file(file) {
@@ -523,6 +535,9 @@ async function load_rig(path) {
   // JSON before load_bytes triggers an immediate render — otherwise the
   // .toda rig-check fires with no corkline yet.
   await load_rig_meta(path, entry?.[2])
+  // Stale .toda baseline must be cleared when switching rigs. load_bytes
+  // resets it for the new .toda load; .trdl loads have no baseline.
+  window.workshop.initial_toda_load = null
   try {
     let res = await fetch(path)
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
