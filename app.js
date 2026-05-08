@@ -692,7 +692,7 @@ async function check_rigs(line, corklineHash, twistHash) {
 const CHECKERS = [
     {
         id: 'js',
-        label: 'js · svgiewer',
+        label: 'js · todajs',
         async run(ctx) {
             let line   = Line.fromTwist(ctx.twist)
             let interp = new HalfHitchInterpreter(line, ctx.corklineHash)
@@ -704,33 +704,43 @@ const CHECKERS = [
     {
         id: 'clj',
         label: 'clj · toda-rig-checker',
-        async run(ctx) {
-            let url = `http://localhost:7878/rigcheck` +
-                      `?cork=${ctx.corklineHex}&twist=${ctx.twistHex}`
-            let res
-            try {
-                res = await fetch(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/octet-stream' },
-                    body: ctx.bytes,
-                })
-            } catch {
-                return { state: 'warn', detail: 'server offline' }
-            }
-            if (!res.ok) {
-                return { state: 'bad',
-                         detail: `HTTP ${res.status}: ${(await res.text()).slice(0,120)}` }
-            }
-            let { colour } = await res.json()
-            return {
-                state: colour === 'green'  ? 'ok'
-                     : colour === 'yellow' ? 'warn'
-                     : 'bad',
-                detail: colour,
-            }
-        },
+        async run(ctx) { return server_check(ctx, '/rigcheck') },
+    },
+    {
+        id: 'bb',
+        label: 'clj · toda-bb',
+        async run(ctx) { return server_check(ctx, '/rigcheck-bb') },
     },
 ]
+
+// Shared server-checker driver. Both endpoints take the same shape
+// (.toda bytes body + cork=&twist= query params) and return
+// {colour: green|yellow|red}, so the only thing varying is the path.
+async function server_check(ctx, path) {
+    let url = `http://localhost:7878${path}` +
+              `?cork=${ctx.corklineHex}&twist=${ctx.twistHex}`
+    let res
+    try {
+        res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/octet-stream' },
+            body: ctx.bytes,
+        })
+    } catch {
+        return { state: 'warn', detail: 'server offline' }
+    }
+    if (!res.ok) {
+        return { state: 'bad',
+                 detail: `HTTP ${res.status}: ${(await res.text()).slice(0,120)}` }
+    }
+    let { colour } = await res.json()
+    return {
+        state: colour === 'green'  ? 'ok'
+             : colour === 'yellow' ? 'warn'
+             : 'bad',
+        detail: colour,
+    }
+}
 
 function escape_text(s) {
     return String(s).replace(/[<&]/g, c => c === '<' ? '&lt;' : '&amp;')

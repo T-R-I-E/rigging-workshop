@@ -1,8 +1,11 @@
 (ns rigging-workshop.server
   "Tiny HTTP bridge between the browser editor and toda-twist-maker.
-   POST /compile   text/plain   TRDL JSONL → octet-stream of .toda bytes
-   POST /decompile octet-stream .toda bytes → text/plain TRDL JSONL
-   POST /rigcheck?cork=<hex>  octet-stream .toda bytes → {colour: ...}"
+   POST /compile      text/plain   TRDL JSONL → octet-stream of .toda bytes
+   POST /decompile    octet-stream .toda bytes → text/plain TRDL JSONL
+   POST /rigcheck?cork=<hex>     octet-stream .toda bytes → {colour: ...}
+                                  (canonical Clojure toda-rig-checker)
+   POST /rigcheck-bb?cork=<hex>  octet-stream .toda bytes → {colour: ...}
+                                  (toda-bb interpreter)"
   (:require [twist-maker.core      :as core]
             [twist-maker.trdl      :as trdl]
             [twist-maker.decompile :as decompile]
@@ -12,6 +15,10 @@
             [store.core            :as store]
             [interpreter.api       :as interp]
             [interpreter.result    :as r]
+            [toda.core             :as bb-core]
+            [toda.graph            :as bb-graph]
+            [toda.atom             :as bb-atom]
+            [toda.lat              :as bb-lat]
             [clojure.data.json     :as json]
             [clojure.java.io       :as io]
             [clojure.string        :as str])
@@ -143,6 +150,32 @@
       (.printStackTrace t)
       (send-error! ex 400 (.getMessage t)))))
 
+(defn- handle-rigcheck-bb
+  "Run toda-bb's interpreter over the .toda body. cork query param is
+   required (hex hash). twist query param is optional; defaults to the
+   first end-twist (a.k.a. focus) of the populated graph."
+  [^HttpExchange ex]
+  (try
+    (let [bytes (read-bytes ex)
+          query (parse-query (.getQuery (.getRequestURI ex)))
+          cork-hex  (:cork query)
+          ;; toda-bb reads atoms from an InputStream and builds a LAT,
+          ;; then populates a fresh graph for verification.
+          atoms (with-open [is (ByteArrayInputStream. bytes)]
+                  (bb-atom/multi-from-input-stream is))
+          lat   (bb-lat/lat atoms)
+          conn  (bb-core/create-graph)
+          _     (bb-graph/populate-twists conn lat)
+          focus-hex (or (:twist query)
+                        (some-> (bb-graph/get-end-twists conn) first :twist/id)
+                        cork-hex)
+          colour (bb-core/verify-rig conn cork-hex focus-hex)
+          payload (json/write-str {:colour (name colour)})]
+      (send-response! ex 200 "application/json; charset=utf-8" payload))
+    (catch Throwable t
+      (.printStackTrace t)
+      (send-error! ex 400 (.getMessage t)))))
+
 (defn- handle-health [^HttpExchange ex]
   (send-response! ex 200 "text/plain" "ok"))
 
@@ -169,7 +202,8 @@
   (let [server (HttpServer/create (InetSocketAddress. PORT) 0)]
     (.createContext server "/compile"   (make-handler handle-compile))
     (.createContext server "/decompile" (make-handler handle-decompile))
-    (.createContext server "/rigcheck"  (make-handler handle-rigcheck))
+    (.createContext server "/rigcheck"    (make-handler handle-rigcheck))
+    (.createContext server "/rigcheck-bb" (make-handler handle-rigcheck-bb))
     (.createContext server "/health"    (make-handler handle-health))
     (.createContext server "/spec"      (make-handler handle-spec))
     (.setExecutor server nil)

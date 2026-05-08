@@ -5,7 +5,8 @@
  :deps {org.clojure/clojure    {:mvn/version "1.11.1"}
         org.clojure/data.json  {:mvn/version "2.4.0"}
         toda/twist-maker       {:local/root "../todaclj/toda-twist-maker"}
-        todaq/toda-rig-checker {:local/root "../todaclj/toda-rig-checker"}}
+        todaq/toda-rig-checker {:local/root "../todaclj/toda-rig-checker"}
+        toda/toda-bb           {:local/root "../toda-bb"}}
 
  :aliases
  {:server
