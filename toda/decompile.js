@@ -95,8 +95,12 @@ function discover_lines(env, body_cache) {
   let genesis = []
   for (let th of twist_hashes) {
     let prev = body_cache.get(th)?.prev
-    if (is_null(prev)) genesis.push(th)
-    else if (prev) succ.set(prev, th)
+    // A line starts when prev is null OR when prev points to a hash that
+    // isn't in this file (dangling — the rig lives downstream of a larger
+    // graph). Without the dangling case, files whose every twist links
+    // upstream produce zero lines and an empty TRDL.
+    if (is_null(prev) || !env.index[prev]) genesis.push(th)
+    else succ.set(prev, th)
   }
   return genesis.map(g => {
     let chain = [g], cur = g
@@ -320,6 +324,15 @@ export async function decompile(buf, name = 'rig') {
     fastener: h.fastener, hoist: h.hoist,
   })
   for (let c of crosses) out.push(c)
+  // Mark dangling-genesis lines so the recompile produces a random-arb
+  // prev for the first twist rather than a null prev. Without this,
+  // round-trip turns "rig anchored upstream" into "rig with null genesis".
+  for (let { name: ln, twists } of named) {
+    let prev = body_cache.get(twists[0])?.prev
+    if (!is_null(prev) && !env.index[prev]) {
+      out.push({ id: `${ln}[0]`, prev: 'dangling' })
+    }
+  }
   return out
 }
 
