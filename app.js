@@ -707,12 +707,14 @@ const CHECKERS = [
     {
         id: 'clj',
         label: 'clj · toda-rig-checker',
-        async run(ctx) { return server_check(ctx, 7878, '/rigcheck') },
+        // async run(ctx) { return server_check(ctx, 'http://localhost:7878/rigcheck') },
+        async run(ctx) { return server_check(ctx, 'http://rigging-workshop-alb-194572444.us-east-1.elb.amazonaws.com/rigcheck-clj') },
     },
     {
         id: 'bb',
         label: 'clj · toda-bb',
-        async run(ctx) { return server_check(ctx, 7879, '/rigcheck-bb') },
+        // async run(ctx) { return server_check(ctx, 'http://localhost:7879/rigcheck-bb') },
+        async run(ctx) { return server_check(ctx, 'http://rigging-workshop-alb-194572444.us-east-1.elb.amazonaws.com/rigcheck-bb') },
     },
     {
         id: 'rust',
@@ -723,12 +725,11 @@ const CHECKERS = [
 
 // Shared server-checker driver. The two server endpoints take the same
 // shape (.toda bytes body + cork=&twist= query params, returning
-// {colour: green|yellow|red}) but live on different ports because they
+// {colour: green|yellow|red}) but live behind different paths because they
 // run in separate JVMs (toda-bb's namespaces conflict with toda-core's,
 // so they can't share a process).
-async function server_check(ctx, port, path) {
-    let url = `http://localhost:${port}${path}` +
-              `?cork=${ctx.corklineHex}&twist=${ctx.twistHex}`
+async function server_check(ctx, base) {
+    let url = `${base}?cork=${ctx.corklineHex}&twist=${ctx.twistHex}`
     let res
     try {
         res = await fetch(url, {
