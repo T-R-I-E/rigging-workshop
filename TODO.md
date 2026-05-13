@@ -16,7 +16,7 @@
   parallel, each rendering its own row in the Rig check panel:
     1. `js · todajs` — `HalfHitchInterpreter` (svgiewer base + half-hitch
        relaxations), in browser.
-    2. `clj · toda-rig-checker` — POSTs to `/rigcheck` on the main server
+    2. `clj · toda-rig-checker` — POSTs to `/rigcheck-clj` on the main server
        (`clj -M:server`, port 7878).
     3. `clj · toda-bb` — POSTs to `/rigcheck-bb` on the sidecar
        (`clj -M:server-bb`, port 7879). Sidecar exists because toda-bb's

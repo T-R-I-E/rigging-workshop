@@ -2,7 +2,7 @@
   "Main HTTP bridge: compile/decompile + canonical toda-rig-checker.
    POST /compile      text/plain   TRDL JSONL → octet-stream of .toda bytes
    POST /decompile    octet-stream .toda bytes → text/plain TRDL JSONL
-   POST /rigcheck?cork=<hex>     octet-stream .toda bytes → {colour: ...}
+   POST /rigcheck-clj?cork=<hex> octet-stream .toda bytes → {colour: ...}
                                   (toda-rig-checker via interpreter.api)
 
    toda-bb runs in a SEPARATE JVM (clj/rigging_workshop/server_bb.clj on
@@ -175,7 +175,7 @@
   (let [server (HttpServer/create (InetSocketAddress. PORT) 0)]
     (.createContext server "/compile"   (make-handler handle-compile))
     (.createContext server "/decompile" (make-handler handle-decompile))
-    (.createContext server "/rigcheck"  (make-handler handle-rigcheck))
+    (.createContext server "/rigcheck-clj" (make-handler handle-rigcheck))
     (.createContext server "/health"    (make-handler handle-health))
     (.createContext server "/spec"      (make-handler handle-spec))
     (.setExecutor server nil)

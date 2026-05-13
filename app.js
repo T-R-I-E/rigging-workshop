@@ -704,7 +704,7 @@ const CHECKERS = [
     {
         id: 'clj',
         label: 'clj · toda-rig-checker',
-        async run(ctx) { return server_check(ctx, 7878, '/rigcheck') },
+        async run(ctx) { return server_check(ctx, 7878, '/rigcheck-clj') },
     },
     {
         id: 'bb',
