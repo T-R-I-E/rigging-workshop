@@ -541,6 +541,18 @@ async function load_rig_meta(rig_url, explicit_json_url) {
     // the chevron used by the collapsible toggle.
     let title = header?.querySelector('.section-title')
     if (title) title.textContent = json_url.replace(/^.*\//, '')
+    // Mirror the rig's declared colour into the h4 status pill so it stays
+    // visible when the section is collapsed.
+    let status = header?.querySelector('.section-status')
+    if (status) {
+      status.classList.remove('green', 'yellow', 'red')
+      if (m.colour) {
+        status.classList.add(m.colour)
+        status.textContent = m.colour
+      } else {
+        status.textContent = ''
+      }
+    }
     host.innerHTML = parts.join('')
     section.hidden = parts.length === 0
     // Use the JSON's canonical corkline when available — for .toda loads
@@ -601,11 +613,19 @@ rigs_list_el?.addEventListener('keydown', e => {
   let path = items[next].dataset.file
   load_rig(path)
   // load_rig synchronously re-renders the list (active class moves), so
-  // the previous DOM nodes are detached. Scroll the *new* active item;
-  // 'center' keeps it visible with context above and below rather than
-  // pinning to whichever edge is nearest.
+  // the previous DOM nodes are detached. Scroll the *new* active item
+  // into view, but only within the rigs-list — using scrollIntoView would
+  // also scroll the surrounding panel and was jolting the page.
   let live = rigs_list_el.querySelector(`.rig-item[data-file="${CSS.escape(path)}"]`)
-  live?.scrollIntoView({ block: 'center' })
+  if (live) {
+    let list_rect = rigs_list_el.getBoundingClientRect()
+    let item_rect = live.getBoundingClientRect()
+    if (item_rect.top < list_rect.top) {
+      rigs_list_el.scrollTop += item_rect.top - list_rect.top
+    } else if (item_rect.bottom > list_rect.bottom) {
+      rigs_list_el.scrollTop += item_rect.bottom - list_rect.bottom
+    }
+  }
 })
 
 // Collapsible sections: clicking an H4.collapsible toggles a
@@ -614,6 +634,49 @@ for (let h4 of document.querySelectorAll('h4.collapsible')) {
   h4.addEventListener('click', () => {
     h4.closest('.section')?.classList.toggle('collapsed')
   })
+}
+
+// Mirror rig-check state into the rig-check h4's status pill so it remains
+// visible when the section is collapsed. Many code paths mutate #rigcheck
+// (set_rigcheck here, show_abject_info / update_check_row in app.js), so a
+// MutationObserver is the simplest way to stay in sync.
+function rigcheck_worst_state() {
+  let rc = document.getElementById('rigcheck')
+  if (!rc) return null
+  let state_of = el => el.classList.contains('bad')  ? 'bad'
+                     : el.classList.contains('warn') ? 'warn'
+                     : el.classList.contains('ok')   ? 'ok'
+                     : null
+  // Single-row mode: state is on rc itself.
+  if (!rc.classList.contains('rig-check-list')) return state_of(rc)
+  // List mode: worst-of all rig-check children.
+  let worst = null
+  for (let row of rc.querySelectorAll('.rig-check')) {
+    let s = state_of(row)
+    if (s === 'bad')  return 'bad'
+    if (s === 'warn') worst = 'warn'
+    else if (s === 'ok' && worst !== 'warn') worst = 'ok'
+  }
+  return worst
+}
+function refresh_rigcheck_status_indicator() {
+  let pill = document.querySelector('#rig-check-section .section-status')
+  if (!pill) return
+  let state = rigcheck_worst_state()
+  pill.classList.remove('ok', 'warn', 'bad')
+  pill.textContent = ''
+  if (state) {
+    pill.classList.add(state)
+    pill.textContent = state === 'ok' ? 'PASS' : state === 'warn' ? 'WARN' : 'FAIL'
+  }
+}
+let rc_el = document.getElementById('rigcheck')
+if (rc_el) {
+  new MutationObserver(refresh_rigcheck_status_indicator).observe(rc_el, {
+    childList: true, subtree: true,
+    attributes: true, attributeFilter: ['class'],
+  })
+  refresh_rigcheck_status_indicator()
 }
 
 render_rigs_list()
