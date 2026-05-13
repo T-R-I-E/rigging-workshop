@@ -189,7 +189,11 @@ function set_rigcheck(klass, label, msg) {
   if (rc.classList.contains('rig-check-list')) {
     let existing = rc.querySelector('[data-section="workshop-status"]')
     if (existing) existing.remove()
-    rc.insertAdjacentHTML('afterbegin',
+    // Insert at the end so the workshop status always sits visually
+    // *after* the per-checker rows, regardless of whether the initial
+    // pass has finished rendering. The user reads the rig-check results
+    // first; the compile/render error is secondary context below them.
+    rc.insertAdjacentHTML('beforeend',
       `<div class="rig-check ${klass}" data-section="workshop-status">` +
       `<span class="badge">${label}</span>` +
       `<div>${escape_html(msg)}</div></div>`)
@@ -201,20 +205,27 @@ function set_rigcheck(klass, label, msg) {
 
 async function build() {
   let my = ++build_seq
+  let bytes, lineHashes, corkline
   try {
-    let { bytes, lineHashes, corkline } = await compile(get_doc())
-    if (my !== build_seq) return                // stale: a newer build is queued
-    last_built_bytes = bytes
-    line_hashes = lineHashes
-    // Only overwrite corkline when compile produced one. For .toda loads
-    // the canonical corkline is set up-front from the sibling .json; if
-    // the decompile→recompile cycle produces a null corkline we keep the
-    // canonical value rather than blanking it out.
-    if (corkline) window.workshop.corkline = corkline
-    window.workshop.render(bytes)
+    ({ bytes, lineHashes, corkline } = await compile(get_doc()))
   } catch (e) {
     if (my !== build_seq) return
     set_rigcheck('bad', 'FAIL', `compile: ${e.message}`)
+    console.error(e)
+    return
+  }
+  if (my !== build_seq) return                  // stale: a newer build is queued
+  last_built_bytes = bytes
+  line_hashes = lineHashes
+  // Only overwrite corkline when compile produced one. For .toda loads
+  // the canonical corkline is set up-front from the sibling .json; if
+  // the decompile→recompile cycle produces a null corkline we keep the
+  // canonical value rather than blanking it out.
+  if (corkline) window.workshop.corkline = corkline
+  try {
+    window.workshop.render(bytes)
+  } catch (e) {
+    set_rigcheck('bad', 'FAIL', `render: ${e.message}`)
     console.error(e)
   }
 }

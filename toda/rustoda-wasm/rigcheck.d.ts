@@ -5,14 +5,17 @@
  * Wasm entry point. Returns a JSON string of shape
  * `{"state":"ok|warn|bad","detail":"..."}` so the JS side can
  * `JSON.parse` it without needing js_sys/serde-wasm-bindgen glue.
+ * `focus_hex` may be empty to default to the file's last-twist focus
+ * (the CLI behaviour); pass a non-empty hex to pivot the check around
+ * a specific twist instead.
  */
-export function check_rig(bytes: Uint8Array, poptop_hex: string): string;
+export function check_rig(bytes: Uint8Array, poptop_hex: string, focus_hex: string): string;
 
 export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
 
 export interface InitOutput {
     readonly memory: WebAssembly.Memory;
-    readonly check_rig: (a: number, b: number, c: number, d: number) => [number, number];
+    readonly check_rig: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number];
     readonly __wbindgen_externrefs: WebAssembly.Table;
     readonly __wbindgen_malloc: (a: number, b: number) => number;
     readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;

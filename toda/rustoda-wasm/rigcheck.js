@@ -4,24 +4,30 @@
  * Wasm entry point. Returns a JSON string of shape
  * `{"state":"ok|warn|bad","detail":"..."}` so the JS side can
  * `JSON.parse` it without needing js_sys/serde-wasm-bindgen glue.
+ * `focus_hex` may be empty to default to the file's last-twist focus
+ * (the CLI behaviour); pass a non-empty hex to pivot the check around
+ * a specific twist instead.
  * @param {Uint8Array} bytes
  * @param {string} poptop_hex
+ * @param {string} focus_hex
  * @returns {string}
  */
-export function check_rig(bytes, poptop_hex) {
-    let deferred3_0;
-    let deferred3_1;
+export function check_rig(bytes, poptop_hex, focus_hex) {
+    let deferred4_0;
+    let deferred4_1;
     try {
         const ptr0 = passArray8ToWasm0(bytes, wasm.__wbindgen_malloc);
         const len0 = WASM_VECTOR_LEN;
         const ptr1 = passStringToWasm0(poptop_hex, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
         const len1 = WASM_VECTOR_LEN;
-        const ret = wasm.check_rig(ptr0, len0, ptr1, len1);
-        deferred3_0 = ret[0];
-        deferred3_1 = ret[1];
+        const ptr2 = passStringToWasm0(focus_hex, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len2 = WASM_VECTOR_LEN;
+        const ret = wasm.check_rig(ptr0, len0, ptr1, len1, ptr2, len2);
+        deferred4_0 = ret[0];
+        deferred4_1 = ret[1];
         return getStringFromWasm0(ret[0], ret[1]);
     } finally {
-        wasm.__wbindgen_free(deferred3_0, deferred3_1, 1);
+        wasm.__wbindgen_free(deferred4_0, deferred4_1, 1);
     }
 }
 function __wbg_get_imports() {

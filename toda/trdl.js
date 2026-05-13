@@ -212,7 +212,15 @@ export function trdl_to_spec(entities) {
     output: {
       merge:    last_ids,
       exclude:  [],
-      corkline: lines_map.get(poptop_name)?.ids[0] ?? null,
+      // Resolve the corkline ID to the named poptop line when present;
+      // fall back to the first real line in lines_map otherwise. Without
+      // this, single-line rigs (or anything whose corkline isn't called
+      // "poptop") returned corkline:null, so `workshop.corkline` after
+      // recompile stayed pinned to the .json sidecar's canonical hash,
+      // which doesn't appear in the recompiled bytes — and every checker
+      // got handed a corkline twist that wasn't in the file.
+      corkline: (lines_map.get(poptop_name) ?? [...lines_map.values()][0])
+                ?.ids[0] ?? null,
     },
   }
 }

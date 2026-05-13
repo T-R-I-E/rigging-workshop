@@ -156,7 +156,10 @@ function twist_list(env) {
 
 function have_successors(env) {
     env.shapes[TWIST]?.forEach(t => {
-        if(!t.prev) return 0
+        // Skip when prev isn't a real twist with a successor list — happens
+        // for "dangling" prevs in TRDL "missing" rigs, where the body's
+        // prev hash points to an arb placeholder instead of a twist atom.
+        if(!t.prev || !Array.isArray(t.prev.succ)) return 0
         t.prev.succ.push(t)
         if(t.prev.succ.length > 1)
             env.errors.push({twist: t, message: `Equivocation in "${t.prev.hash}"`})
@@ -773,7 +776,12 @@ async function rust_check(ctx) {
     if (error) return { state: 'warn', detail: `wasm load failed: ${error.message || error}` }
     try {
         let bytes = ctx.bytes instanceof Uint8Array ? ctx.bytes : new Uint8Array(ctx.bytes)
-        let { state, detail } = JSON.parse(mod.check_rig(bytes, ctx.corklineHex))
+        // Pass ctx.twistHex as the focus so the rust checker pivots around
+        // the user-selected twist, matching the js / clj / bb checkers.
+        // Without this it falls back to parse_lat's last-twist heuristic
+        // (the CLI default) and reports "rig supports up to X but focus is Y"
+        // whenever the user clicks anything other than the file's tail twist.
+        let { state, detail } = JSON.parse(mod.check_rig(bytes, ctx.corklineHex, ctx.twistHex))
         return { state, detail }
     } catch (e) {
         return { state: 'bad', detail: e.message || String(e) }
