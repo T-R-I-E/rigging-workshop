@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 
 <script type="importmap">
@@ -32,16 +32,15 @@
   <!-- ============ NAV ============ -->
   <header class="nav">
     <a class="brand" href="https://trie.site" target="_blank" rel="noopener">
-      <svg class="brand-mark" viewBox="0 0 24 24" aria-hidden="true">
-        <circle cx="12" cy="5" r="2.2" fill="#1a1a1a"/>
-        <circle cx="5" cy="13" r="2.2" fill="#1a1a1a"/>
-        <circle cx="12" cy="13" r="2.2" fill="#1a1a1a"/>
-        <circle cx="19" cy="13" r="2.2" fill="#1a1a1a"/>
-        <circle cx="8.5" cy="20" r="2" fill="#1a1a1a"/>
-        <circle cx="15.5" cy="20" r="2" fill="#1a1a1a"/>
-        <path d="M12 7L5 11M12 7L12 11M12 7L19 11M5 15L8.5 18M12 15L8.5 18M12 15L15.5 18M19 15L15.5 18" stroke="#1a1a1a" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+      <!-- Triangle mark, lifted from the T.R.I.E. Visualizer brand block.
+           Two stacked triangles: a soft inked shadow under a thin-stroke
+           outlined pair, with a single hash mark dropping from the apex. -->
+      <svg class="brand-mark" viewBox="-2 -2 154 92" aria-hidden="true">
+        <path d="M 0 0 L 100 0 L 50 86.6 Z" class="tri-shadow"></path>
+        <path d="M 100 0 L 50 86.6 L 150 86.6 Z" fill="none" stroke="currentColor" stroke-width="3"></path>
+        <path d="M 100 0 L 88.2 86.6" fill="none" stroke="currentColor" stroke-width="3"></path>
       </svg>
-      <span>T.R.I.E.</span>
+      <span class="wordmark">T.R.I.E.</span>
       <small>rigging workshop</small>
     </a>
 
