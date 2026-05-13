@@ -344,7 +344,11 @@ body {
   min-height: 0;
 }
 .stack > .section { flex: 0 0 auto; }
-.stack > .rigs-section { flex: 1 1 auto; min-height: 0; }
+/* Floor the examples list so a tall rig-check column doesn't squash it
+   to zero. The panel-body is `overflow: auto`, so if total content
+   exceeds the available height the panel scrolls — that's fine,
+   scrolling a bit to reach the examples beats them disappearing. */
+.stack > .rigs-section { flex: 1 1 auto; min-height: 240px; }
 .section {
   padding: 10px 12px;
   border-bottom: 1px solid var(--line);
