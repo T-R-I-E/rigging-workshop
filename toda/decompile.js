@@ -29,7 +29,7 @@ function read_be32(bytes, i) {
   return ((bytes[i] << 24) | (bytes[i+1] << 16) | (bytes[i+2] << 8) | bytes[i+3]) >>> 0
 }
 
-function parse_atoms(buf) {
+export function parse_atoms(buf) {
   let bytes = buf instanceof Uint8Array ? buf : new Uint8Array(buf)
   let atoms = [], index = {}, shapes = {}
   let i = 0
