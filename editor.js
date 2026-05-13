@@ -177,11 +177,24 @@ function escape_html(s) {
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))
 }
 
-// Workshop-level status (compile / load failures, idle). Rendered as a
-// single full-width row above the per-checker rows; clearing the
-// rig-check-list layout signals "no per-checker results yet".
+// Workshop-level status (compile / load failures, idle). When the panel
+// is already showing per-checker rows (rig-check-list mode), the status
+// is rendered as a banner above them rather than replacing them — so an
+// edit-time compile error doesn't wipe out the prior pass's results,
+// which is the user-visible "flash". When the panel hasn't rendered any
+// per-checker rows yet (initial load, fresh editor) we fall back to the
+// original single full-width row.
 function set_rigcheck(klass, label, msg) {
   let rc = document.getElementById('rigcheck')
+  if (rc.classList.contains('rig-check-list')) {
+    let existing = rc.querySelector('[data-section="workshop-status"]')
+    if (existing) existing.remove()
+    rc.insertAdjacentHTML('afterbegin',
+      `<div class="rig-check ${klass}" data-section="workshop-status">` +
+      `<span class="badge">${label}</span>` +
+      `<div>${escape_html(msg)}</div></div>`)
+    return
+  }
   rc.className = 'rig-check ' + klass
   rc.innerHTML = `<span class="badge">${label}</span><div>${escape_html(msg)}</div>`
 }

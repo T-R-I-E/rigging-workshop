@@ -873,43 +873,55 @@ function show_abject_info(id) {
 
     // Recompile produced the same bytes the user loaded — the first-pass
     // results are still authoritative; clear any stale diff section from
-    // an earlier divergent rebuild and otherwise leave the rows alone.
+    // an earlier divergent rebuild plus any workshop-status banner left
+    // behind by a transient compile error, and otherwise leave the rows
+    // alone.
     if (pass === 'rebuild-same') {
-        rc.querySelectorAll('[data-section="diff"]').forEach(e => e.remove())
+        rc.querySelectorAll('[data-section="diff"], [data-section="workshop-status"]')
+            .forEach(e => e.remove())
         return
     }
 
     if (pass === 'rebuild-diff') {
         // Append a divergence note + per-checker rows that differ from the
         // initial pass. Don't touch the initial rows above. Replace any
-        // previously-rendered diff section so re-edits show fresh output.
+        // previously-rendered diff section so re-edits show fresh output,
+        // and drop any stale workshop-status banner now that we have new
+        // results to show.
         let init = window.workshop.initial_toda_load
-        rc.querySelectorAll('[data-section="diff"]').forEach(e => e.remove())
+        rc.querySelectorAll('[data-section="diff"], [data-section="workshop-status"]')
+            .forEach(e => e.remove())
         rc.insertAdjacentHTML('beforeend',
             `<div class="rig-diff-note" data-section="diff">` +
             `recompiled bytes differ from the loaded .toda — re-running checkers</div>`)
-        for (let c of CHECKERS) {
+        // Run all checkers in parallel, render the differing rows in
+        // CHECKERS registry order. Pre-Promise.all this appended rows in
+        // finish-time order, so the panel reshuffled across re-edits as
+        // some checkers warmed up faster than others.
+        Promise.all(CHECKERS.map(async c => {
             let t0 = performance.now()
-            c.run(ctx)
-                .then(({state, detail}) => {
-                    let init_res = init.results.get(c.id)
-                    if (!results_differ(init_res, {state, detail})) return
-                    let dt = (performance.now() - t0).toFixed(0)
-                    rc.insertAdjacentHTML('beforeend',
-                        render_check_row(c, state, badge_for(state),
-                                         `${detail} · ${dt}ms`)
-                            .replace('class="rig-check',
-                                     'data-section="diff" class="rig-check'))
-                })
-                .catch(e => {
-                    let msg = escape_text((e?.message || String(e)).slice(0, 120))
-                    rc.insertAdjacentHTML('beforeend',
-                        render_check_row(c, 'bad', 'FAIL', msg)
-                            .replace('class="rig-check',
-                                     'data-section="diff" class="rig-check'))
-                    console.error(`[${c.label}]`, e)
-                })
-        }
+            try {
+                let { state, detail } = await c.run(ctx)
+                return { c, state, detail, dt: performance.now() - t0 }
+            } catch (e) {
+                console.error(`[${c.label}]`, e)
+                return {
+                    c, state: 'bad',
+                    detail: (e?.message || String(e)).slice(0, 120),
+                    dt: performance.now() - t0,
+                }
+            }
+        })).then(results => {
+            for (let { c, state, detail, dt } of results) {
+                let init_res = init.results.get(c.id)
+                if (!results_differ(init_res, { state, detail })) continue
+                rc.insertAdjacentHTML('beforeend',
+                    render_check_row(c, state, badge_for(state),
+                                     `${detail} · ${dt.toFixed(0)}ms`)
+                        .replace('class="rig-check',
+                                 'data-section="diff" class="rig-check'))
+            }
+        })
         return
     }
 
