@@ -29,6 +29,20 @@ See [TODO.md](TODO.md) for current plan, tasks, and deferred items.
   `.trdl` / `.json` test rigs, organised by subdir.
 - `todatests/` — symlink into `../todatests/`. ~60 paired `.toda` / `.json`
   rigging tests; `.toda` loads route through decompile.
+- `toda/rustoda-wasm/` — `wasm-pack build --target web --release` output
+  of `../rustoda` (the Rust rig-checker). Bundle is `rigcheck.js` (glue)
+  + `rigcheck_bg.wasm` (~223 KB). Rebuild after changes to `../rustoda`
+  with:
+  ```
+  cd ../rustoda && wasm-pack build --target web --release \
+      --out-dir ../riggingworkshop/toda/rustoda-wasm && \
+      trash ../riggingworkshop/toda/rustoda-wasm/.gitignore
+  ```
+  The trailing `trash` is needed because wasm-pack writes a `*` gitignore
+  into the out-dir to treat it as a build artifact; we want the bundle
+  committed instead. Wired into `app.js` as the 4th `CHECKERS` entry
+  (`id: 'rust'`); loaded lazily, falls back to `warn` if the bundle is
+  missing or fails to instantiate.
 - `deps.edn`, `clj/rigging_workshop/server.clj`,
   `clj/rigging_workshop/server_bb.clj` — two sidecar Clojure servers.
   Optional: workshop runs entirely in the browser. Servers exist only
@@ -97,14 +111,6 @@ clj -M:server-bb
   saying "both failing the same way"). Means a JS-only or server-only
   failure currently masquerades as a skip. Tighten the harness to require
   both sides to error symmetrically before skipping; otherwise FAIL.
-- **Add the Rust toda rig-checker via WASM** as a fourth checker. Would
-  give us four independent implementations comparing notes per rig (JS
-  todajs / Clojure toda-rig-checker / Clojure toda-bb / Rust). Pure
-  in-browser via `wasm-bindgen`, no extra server process. Pattern: drop
-  the .wasm bundle in `toda/`, register a fourth entry in `CHECKERS` in
-  `app.js` that calls into it. The registry is already shape-correct
-  (`async run(ctx) → {state, detail}`); each existing checker is one
-  entry, so this slots in cleanly.
 ## Git policy (overrides global)
 You manage git directly in this project. The global "manual git" rule does
 NOT apply here. `git push` remains denied at the permission layer; the user

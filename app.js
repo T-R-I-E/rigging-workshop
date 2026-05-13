@@ -711,6 +711,11 @@ const CHECKERS = [
         label: 'clj · toda-bb',
         async run(ctx) { return server_check(ctx, 7879, '/rigcheck-bb') },
     },
+    {
+        id: 'rust',
+        label: 'rust · rustoda',
+        async run(ctx) { return rust_check(ctx) },
+    },
 ]
 
 // Shared server-checker driver. The two server endpoints take the same
@@ -741,6 +746,37 @@ async function server_check(ctx, port, path) {
              : colour === 'yellow' ? 'warn'
              : 'bad',
         detail: colour,
+    }
+}
+
+// Rust-backed checker. Runs rustoda's `check_rig` inside the page via
+// wasm-bindgen — no server, no extra process. Bundle lives at
+// toda/rustoda-wasm/ (output of `wasm-pack build --target web` over the
+// rustoda crate). Loaded lazily on first invocation so it doesn't slow
+// down initial paint. A failed load degrades to a `warn` row instead of
+// breaking the panel, mirroring server_check's offline handling.
+let _rustoda_load
+async function load_rustoda() {
+    if (!_rustoda_load) _rustoda_load = (async () => {
+        try {
+            let mod = await import('./toda/rustoda-wasm/rigcheck.js')
+            await mod.default()
+            return { mod }
+        } catch (e) {
+            return { error: e }
+        }
+    })()
+    return _rustoda_load
+}
+async function rust_check(ctx) {
+    let { mod, error } = await load_rustoda()
+    if (error) return { state: 'warn', detail: `wasm load failed: ${error.message || error}` }
+    try {
+        let bytes = ctx.bytes instanceof Uint8Array ? ctx.bytes : new Uint8Array(ctx.bytes)
+        let { state, detail } = JSON.parse(mod.check_rig(bytes, ctx.corklineHex))
+        return { state, detail }
+    } catch (e) {
+        return { state: 'bad', detail: e.message || String(e) }
     }
 }
 
