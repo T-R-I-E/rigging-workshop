@@ -636,39 +636,35 @@ for (let h4 of document.querySelectorAll('h4.collapsible')) {
   })
 }
 
-// Mirror rig-check state into the rig-check h4's status pill so it remains
-// visible when the section is collapsed. Many code paths mutate #rigcheck
-// (set_rigcheck here, show_abject_info / update_check_row in app.js), so a
-// MutationObserver is the simplest way to stay in sync.
-function rigcheck_worst_state() {
+// Mirror rig-check state into the rig-check h4 so it remains visible when
+// the section is collapsed. In list mode, render one mini pill per checker
+// — at a glance the user sees pass/warn/fail for js, clj, bb, rust. In
+// single-row mode (workshop-status banner from set_rigcheck), render one
+// pill matching the global state.
+//
+// Many code paths mutate #rigcheck (set_rigcheck here, show_abject_info /
+// update_check_row in app.js), so a MutationObserver is the simplest way
+// to stay in sync.
+function refresh_rigcheck_status_indicator() {
+  let host = document.querySelector('#rig-check-section .section-checkers')
+  if (!host) return
   let rc = document.getElementById('rigcheck')
-  if (!rc) return null
+  if (!rc) { host.innerHTML = ''; return }
   let state_of = el => el.classList.contains('bad')  ? 'bad'
                      : el.classList.contains('warn') ? 'warn'
                      : el.classList.contains('ok')   ? 'ok'
-                     : null
-  // Single-row mode: state is on rc itself.
-  if (!rc.classList.contains('rig-check-list')) return state_of(rc)
-  // List mode: worst-of all rig-check children.
-  let worst = null
-  for (let row of rc.querySelectorAll('.rig-check')) {
-    let s = state_of(row)
-    if (s === 'bad')  return 'bad'
-    if (s === 'warn') worst = 'warn'
-    else if (s === 'ok' && worst !== 'warn') worst = 'ok'
+                     : ''
+  let pills
+  if (rc.classList.contains('rig-check-list')) {
+    pills = [...rc.querySelectorAll('[data-checker]')].map(row =>
+      ({ label: row.dataset.checker, state: state_of(row) }))
+  } else {
+    pills = [{ label: rc.querySelector('.badge')?.textContent.trim() || '',
+               state: state_of(rc) }]
   }
-  return worst
-}
-function refresh_rigcheck_status_indicator() {
-  let pill = document.querySelector('#rig-check-section .section-status')
-  if (!pill) return
-  let state = rigcheck_worst_state()
-  pill.classList.remove('ok', 'warn', 'bad')
-  pill.textContent = ''
-  if (state) {
-    pill.classList.add(state)
-    pill.textContent = state === 'ok' ? 'PASS' : state === 'warn' ? 'WARN' : 'FAIL'
-  }
+  host.innerHTML = pills.map(p =>
+    `<span class="check-pill ${p.state}">${escape_html(p.label)}</span>`
+  ).join('')
 }
 let rc_el = document.getElementById('rigcheck')
 if (rc_el) {

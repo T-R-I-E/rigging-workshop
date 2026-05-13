@@ -521,13 +521,14 @@ body {
 }
 
 /* Rig-check row borrows the visualizer's chunky pill-badge for the
-   status indicator (PASS/IDLE/FAIL), but keeps the soft tinted card
-   background so it doesn't shout in a tool you use all day. */
+   status indicator (PASS/CHECK/FAIL), but keeps the soft tinted card
+   background so it doesn't shout in a tool you use all day. Neutral
+   by default — the in-progress CHECK state shouldn't look green. */
 .rig-check {
   display: flex; align-items: flex-start; gap: 10px;
   padding: 8px 10px;
-  background: color-mix(in oklab, var(--ok) 10%, var(--panel));
-  border: 1px solid color-mix(in oklab, var(--ok) 35%, var(--line-2));
+  background: var(--panel);
+  border: 1px solid var(--line-2);
   border-radius: var(--radius-sm);
   font-family: var(--mono);
   font-size: 11.5px;
@@ -535,27 +536,65 @@ body {
 }
 .rig-check .badge {
   flex: none;
-  background: var(--ok);
-  color: var(--ink);
+  background: var(--panel-2);
+  color: var(--ink-2);
   font-weight: 800;
   padding: 2px 7px;
-  border: 1.5px solid var(--ink);
+  border: 1.5px solid var(--ink-3);
   border-radius: 2px;
   font-size: 10px;
   letter-spacing: 1px;
   text-transform: uppercase;
   font-family: var(--sans);
 }
+.rig-check.ok {
+  background: color-mix(in oklab, var(--ok) 10%, var(--panel));
+  border-color: color-mix(in oklab, var(--ok) 35%, var(--line-2));
+}
+.rig-check.ok .badge { background: var(--ok); color: var(--ink); border-color: var(--ink); }
 .rig-check.warn {
   background: color-mix(in oklab, var(--warn) 12%, var(--panel));
   border-color: color-mix(in oklab, var(--warn) 40%, var(--line-2));
 }
-.rig-check.warn .badge { background: var(--warn); }
+.rig-check.warn .badge { background: var(--warn); color: var(--ink); border-color: var(--ink); }
 .rig-check.bad {
   background: color-mix(in oklab, var(--bad) 10%, var(--panel));
   border-color: color-mix(in oklab, var(--bad) 35%, var(--line-2));
 }
 .rig-check.bad .badge { background: var(--bad); color: #fff; border-color: var(--ink); }
+
+/* Per-checker status pills shown in the collapsed rig-check h4 (one
+   pill per checker so all four states are visible at a glance). */
+.section-checkers {
+  margin-left: auto;
+  display: flex;
+  gap: 3px;
+  flex: none;
+}
+.check-pill {
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  padding: 1px 5px;
+  border-radius: 6px;
+  border: 1px solid var(--line-2);
+  background: var(--panel-2);
+  color: var(--ink-3);
+  letter-spacing: 0.04em;
+  min-width: 16px;
+  text-align: center;
+  white-space: nowrap;
+}
+.check-pill.ok   { background: color-mix(in oklab, var(--ok)   25%, var(--panel-2));
+                   color: var(--ink);
+                   border-color: color-mix(in oklab, var(--ok)   45%, var(--line-2)); }
+.check-pill.warn { background: color-mix(in oklab, var(--warn) 25%, var(--panel-2));
+                   color: var(--ink);
+                   border-color: color-mix(in oklab, var(--warn) 45%, var(--line-2)); }
+.check-pill.bad  { background: color-mix(in oklab, var(--bad)  25%, var(--panel-2));
+                   color: var(--ink);
+                   border-color: color-mix(in oklab, var(--bad)  45%, var(--line-2)); }
 
 /* ---------- hex view toggle (panel header) ---------- */
 .hex-toggle {
