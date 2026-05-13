@@ -526,6 +526,34 @@ body {
 }
 .rig-check.bad .badge { background: var(--bad); color: #fff; border-color: var(--ink); }
 
+/* ---------- hex view toggle (panel header) ---------- */
+.hex-toggle {
+  margin-left: auto;
+  display: inline-flex;
+  font-family: var(--mono);
+}
+.hex-toggle button {
+  border: 1px solid var(--line-2);
+  background: var(--panel);
+  color: var(--ink-3);
+  padding: 1px 7px;
+  cursor: pointer;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  line-height: 1.4;
+}
+.hex-toggle button:hover { color: var(--ink); }
+.hex-toggle button.active {
+  background: var(--ink);
+  color: var(--bg);
+  border-color: var(--ink);
+}
+.hex-toggle button:first-child { border-radius: 2px 0 0 2px; }
+.hex-toggle button:last-child  { border-radius: 0 2px 2px 0; border-left-width: 0; }
+.hex-toggle button.active + button { border-left-width: 1px; }
+
 /* ---------- hex viewer ---------- */
 .hex {
   font-family: var(--mono);
@@ -555,6 +583,79 @@ body {
 .hex .b-content { color: var(--ink); }
 .hex .b-content.trie { background: var(--hl-a3); border-radius: 2px; padding: 0 2px; }
 .hex .empty { color: var(--ink-3); padding: 12px; }
+
+/* ---------- kiwanoed hex view ---------- */
+/* Shape-aware multi-line atom blocks. Atom = small panel: a header line
+   (algo + hash + name annotation), a shape line (shape + content size),
+   then per-shape content. Visual grouping comes from the atom panel's
+   own background + a thin left rule instead of blank-line separators. */
+.hex.kiwanoed {
+  font-size: 11.5px;
+  line-height: 1.55;
+  padding: 8px 8px;
+}
+.hex.kiwanoed .kx-atom {
+  /* Reset .atom's display:grid (used by the raw view) so rows stack
+     vertically; reset its grid-template too in case any cascade lingers. */
+  display: block;
+  grid-template-columns: none;
+  margin: 0 0 6px 0;
+  padding: 4px 6px 4px 8px;
+  background: color-mix(in oklab, var(--bg) 50%, #fff);
+  border-left: 2px solid var(--line);
+  border-radius: 2px;
+  cursor: default;
+  white-space: normal;
+}
+.hex.kiwanoed .kx-atom:hover  { background: oklch(0.95 0.05 75); }
+.hex.kiwanoed .kx-atom.hover  { background: oklch(0.95 0.05 75); }
+.hex.kiwanoed .kx-atom.select {
+  background: var(--accent-soft);
+  border-left-color: var(--accent);
+}
+/* Tint the left rule by shape so the eye can tell pairtrie / twist / body
+   / arb apart at a glance without the colour fighting the .select state. */
+.hex.kiwanoed .kx-atom[data-shape="48"] { border-left-color: oklch(0.65 0.10 200); }
+.hex.kiwanoed .kx-atom[data-shape="49"] { border-left-color: oklch(0.65 0.10 130); }
+.hex.kiwanoed .kx-atom[data-shape="60"] { border-left-color: oklch(0.65 0.10 75);  }
+.hex.kiwanoed .kx-atom[data-shape="63"] { border-left-color: oklch(0.65 0.10 295); }
+.hex.kiwanoed .kx-atom.select[data-shape] { border-left-color: var(--accent); }
+
+.hex.kiwanoed .kx-row {
+  display: flex; gap: 12px; align-items: baseline; white-space: pre;
+}
+.hex.kiwanoed .kx-header .kx-hash {
+  color: var(--teal);
+  cursor: pointer;
+  text-decoration: underline dotted;
+  text-underline-offset: 2px;
+  font-weight: 500;
+}
+.hex.kiwanoed .kx-shape {
+  color: oklch(0.45 0.13 295);
+  padding-left: 16px;
+}
+/* Body / twist named-field rows: field name in a fixed-width column so the
+   values line up vertically across the six body slots (prev/teth/shld/…). */
+.hex.kiwanoed .kx-field .kx-fieldname {
+  display: inline-block;
+  width: 4ch;
+  color: var(--ink-2);
+  font-weight: 500;
+}
+.hex.kiwanoed .kx-field .kx-value { color: var(--ink); }
+.hex.kiwanoed .kx-field .kx-null  { color: var(--ink-3); }
+/* Pairtrie pairs: key row + value row, value indented one space-equivalent
+   beyond the key (matches the reference). Both indent in from the shape
+   line. */
+.hex.kiwanoed .kx-pair { padding-left: 24px; }
+.hex.kiwanoed .kx-pair .kx-key { color: var(--ink); }
+.hex.kiwanoed .kx-pair .kx-val { color: var(--ink); padding-left: 1ch; }
+/* Hashes-list entries (single hash per row, no key/value pairing). */
+.hex.kiwanoed .kx-listitem { padding-left: 24px; color: var(--ink); }
+/* Arb raw bytes — indented under the shape line, no annotation column. */
+.hex.kiwanoed .kx-data { padding-left: 24px; color: var(--ink); }
+.hex.kiwanoed .kx-comment { color: var(--ink-3); }
 
 /* ---------- icons (inline svg helper) ---------- */
 .ic {
