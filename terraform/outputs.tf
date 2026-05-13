@@ -1,11 +1,11 @@
-output "alb_dns_name" {
-  description = "Public DNS for the load balancer. /rigcheck-bb* -> bb (7879), everything else -> main (7878)."
-  value       = aws_lb.this.dns_name
+output "cloudfront_url" {
+  description = "Public HTTPS URL. Hit this from browsers. /rigcheck-bb* -> bb, /rigcheck-clj* -> main, everything else -> main."
+  value       = "https://${aws_cloudfront_distribution.this.domain_name}"
 }
 
-output "alb_url" {
-  description = "Convenience HTTP URL."
-  value       = "http://${aws_lb.this.dns_name}"
+output "alb_dns_name" {
+  description = "Internal-only: ALB DNS. Direct hits are blocked by SG (CloudFront-only)."
+  value       = aws_lb.this.dns_name
 }
 
 output "ecr_repository_url" {

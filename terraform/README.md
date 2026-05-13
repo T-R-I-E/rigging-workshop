@@ -1,13 +1,21 @@
 # Rigging Workshop — AWS Deployment
 
 Deploys both Clojure servers (`clj -M:server` on 7878, `clj -M:server-bb` on 7879)
-to a single ECS Fargate task fronted by a public ALB.
+to a single ECS Fargate task. Traffic flows:
 
-## Routing
+```
+client → CloudFront (HTTPS, *.cloudfront.net cert) → ALB (HTTP) → task
+```
+
+CloudFront terminates TLS using the managed default certificate (no domain needed). The ALB security group only accepts traffic from CloudFront's managed prefix list, so direct ALB hits are blocked.
+
+## Routing (at the ALB)
 
 - `/rigcheck-clj`, `/rigcheck-clj/*` → main container (7878)
 - `/rigcheck-bb`,  `/rigcheck-bb/*`  → bb container   (7879)
 - everything else → main container: `/compile`, `/decompile`, `/health`, `/spec`
+
+CloudFront forwards every path through to the ALB (no caching, all HTTP methods).
 
 ## Prerequisites
 
