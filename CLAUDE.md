@@ -20,7 +20,12 @@ See [TODO.md](TODO.md) for current plan, tasks, and deferred items.
   - `ed25519.js` — keypair / sign / req-sat pairtrie helpers (raw 32-byte keys)
   - `trdl.js` — JSONL parser, classifier, trdl→spec, emit
   - `compile.js` — build pipeline (TRDL → bytes)
-  - `decompile.js` — bytes → TRDL entities (unshielded path only in v1)
+  - `decompile.js` — bytes → TRDL entities (unshielded path only in v1).
+    Exports `parse_atoms` for reuse by `bytes_struct.js`.
+  - `bytes_struct.js` — atom-level structural comparison of two .toda byte
+    streams (v1: per-shape atom counts). Used to assess decompile→recompile
+    round-trip fidelity when byte-equality isn't possible (random shields
+    / sigs / pubkeys).
 - `tests.html`, `tests.js` — byte-equality test harness vs the Clojure server.
 - `src/`, `rels.js` — symlinks into `../svgiewer/`. Don't edit; they're shared.
 - `rigs/` — symlink into `../todaclj/toda-twist-maker/rigs/`. Workshop's
@@ -45,9 +50,11 @@ See [TODO.md](TODO.md) for current plan, tasks, and deferred items.
   missing or fails to instantiate.
 - `deps.edn`, `clj/rigging_workshop/server.clj`,
   `clj/rigging_workshop/server_bb.clj` — two sidecar Clojure servers.
-  Optional: workshop runs entirely in the browser. Servers exist only
-  for `tests.html` byte-equality checks and the dual / triple rig-check
-  display in the rig-check panel.
+  Optional: the workshop's clj/bb rig-checkers now point at the
+  deployed ALB (`rigging-workshop-alb-…/rigcheck-clj` and `…/rigcheck-bb`),
+  so the local servers are only needed for `tests.html` byte-equality
+  parity checks. Localhost URLs are kept commented next to the live
+  ones in `app.js` as an offline-dev fallback.
 
 ## Running
 1. Static server serving `~/Dev` (already running per dev setup).
