@@ -106,7 +106,11 @@ function expand_hitches(hitch_entities, lines_map) {
     // same — the keys are never the raw lead hash.
     let hoist_rig = { [`s:${lead}`]: meet, [`ss:${lead}`]: `s:${meet}` }
 
-    let post_rig = post_kw ? { [lead]: hoist } : null
+    // A post-rig entry only makes sense when there's a hoist to point at;
+    // decompiled TRDL for "unit rig" .toda files emits hitches with only
+    // lead+meet (no fastener/hoist), and a {lead: null} entry crashed
+    // parse_rig_ref downstream.
+    let post_rig = (post_kw && hoist) ? { [lead]: hoist } : null
 
     set_in('tethers', lead, fastener)
     if (!all_leads.has(meet)) set_in('tethers', meet, fastener)
