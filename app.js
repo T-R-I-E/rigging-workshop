@@ -16,6 +16,9 @@ import { Twist } from './src/core/twist.js'
 import { Hash } from './src/core/hash.js'
 import { rels } from './rels.js'
 import { SECP256r1 } from './src/client/secp256r1.js'
+import { Abject } from './src/abject/abject.js'
+import { DelegableActionable } from './src/abject/actionable.js'
+import { DQ } from './src/abject/quantity.js'  // registers DQ interpreter
 
 const TWIST = 0x48
 const BODY  = 0x49
@@ -842,9 +845,57 @@ function classify_pass(ctx) {
     return 'rebuild-diff'
 }
 
+// Rigging Workshop is for single test rigs (TRDL authoring). Abjects and
+// large files need multi-rig validation (delegation chains, sub-rigs) which
+// belongs in abject-workshop — see abject-workshop.md. Detect and bail out
+// rather than running the single-rig checkers and reporting misleading
+// per-rig results.
+const WORKSHOP_TWIST_LIMIT = 500
+
+function workshop_bail_reason() {
+    let twistCount = env.shapes?.[TWIST]?.length || 0
+    if (twistCount > WORKSHOP_TWIST_LIMIT) {
+        return `Rigging Workshop supports rigs ≤ ${WORKSHOP_TWIST_LIMIT} twists. ` +
+               `This file has ${twistCount}. Use abject-workshop for larger files ` +
+               `(see abject-workshop.md).`
+    }
+    if (env.workshop_is_abject === undefined) {
+        try {
+            if (!env.abject_atoms) {
+                env.abject_atoms = Atoms.fromBytes(new Uint8Array(env.buff))
+            }
+            let focusHex = env.focus?.hash
+            let focusTwist = focusHex
+                ? new Twist(env.abject_atoms, Hash.fromHex(focusHex))
+                : null
+            env.workshop_is_abject = !!(focusTwist && Abject.fromTwist(focusTwist))
+        } catch (_e) {
+            env.workshop_is_abject = false
+        }
+    }
+    if (env.workshop_is_abject) {
+        return `This file looks like an abject. Rigging Workshop only checks ` +
+               `single rigs and does not implement full abject checking ` +
+               `(delegation chains, multi-rig walks). Use abject-workshop for ` +
+               `abjects (see abject-workshop.md).`
+    }
+    return null
+}
+
+function render_workshop_unsupported(rc, msg) {
+    rc.className = 'rig-check warn'
+    rc.innerHTML = `<span class="badge">N/A</span>` +
+                   `<div>${escape_text(msg)}</div>`
+}
+
 function show_abject_info(id) {
     let rc = el('rigcheck')
     if (!rc) return
+    let bail = workshop_bail_reason()
+    if (bail) {
+        render_workshop_unsupported(rc, bail)
+        return
+    }
     let corkline = window.workshop?.corkline
     if (!corkline) {
         rc.className = 'rig-check-list'
@@ -951,8 +1002,9 @@ function show_abject_info(id) {
                 }
             })
             .catch(e => {
+                let dt  = (performance.now() - t0).toFixed(0)
                 let msg = escape_text((e?.message || String(e)).slice(0, 120))
-                update_check_row(c.id, 'bad', 'FAIL', msg)
+                update_check_row(c.id, 'bad', 'FAIL', `${msg} · ${dt}ms`)
                 if (pass === 'initial') {
                     window.workshop.initial_toda_load.results.set(c.id, {state: 'bad', detail: msg})
                 }

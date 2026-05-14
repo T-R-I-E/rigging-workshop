@@ -4,6 +4,12 @@ Browser tool for authoring TODA rigs in TRDL (a JSONL format) and visualising
 the resulting `.toda` bytes. Editor is the source of truth. Compile / decompile
 run entirely in the browser via the modules under `toda/`.
 
+**Scope:** single test rigs (≤ ~500 twists). Abjects with delegation chains,
+sub-rigs, or external poptops are detected on load and bailed out with a
+banner in the rig-check panel — they need full multi-rig validation that
+the workshop doesn't implement. See [abject-workshop.md](abject-workshop.md)
+for the preliminary spec for the sibling tool that would handle those.
+
 ## Status
 See [TODO.md](TODO.md) for current plan, tasks, and deferred items.
 
