@@ -852,28 +852,39 @@ function classify_pass(ctx) {
 // per-rig results.
 const WORKSHOP_TWIST_LIMIT = 500
 
+// For .toda loads the originally-loaded bytes are the source of truth — the
+// recompile-after-decompile cycle produces different bytes that no longer
+// parse as an abject, so checking the current env on every render misses
+// the case after the first pass. Result is cached on initial_toda_load so
+// later renders share the answer. TRDL-authored rigs have no initial_toda_load
+// and aren't abjects, so the env-twist-count check is enough.
+function workshop_bail_check() {
+    let init = window.workshop?.initial_toda_load
+    if (init) {
+        if (init.workshop_check === undefined) {
+            try {
+                let atoms = Atoms.fromBytes(init.bytes)
+                let focusTwist = atoms.focus ? new Twist(atoms, atoms.focus) : null
+                let twistCount = Line.fromAtoms(atoms).twistList().length
+                let isAbject = !!(focusTwist && Abject.fromTwist(focusTwist))
+                init.workshop_check = { twistCount, isAbject }
+            } catch (_e) {
+                init.workshop_check = { twistCount: 0, isAbject: false }
+            }
+        }
+        return init.workshop_check
+    }
+    return { twistCount: env.shapes?.[TWIST]?.length || 0, isAbject: false }
+}
+
 function workshop_bail_reason() {
-    let twistCount = env.shapes?.[TWIST]?.length || 0
+    let { twistCount, isAbject } = workshop_bail_check()
     if (twistCount > WORKSHOP_TWIST_LIMIT) {
         return `Rigging Workshop supports rigs ≤ ${WORKSHOP_TWIST_LIMIT} twists. ` +
                `This file has ${twistCount}. Use abject-workshop for larger files ` +
                `(see abject-workshop.md).`
     }
-    if (env.workshop_is_abject === undefined) {
-        try {
-            if (!env.abject_atoms) {
-                env.abject_atoms = Atoms.fromBytes(new Uint8Array(env.buff))
-            }
-            let focusHex = env.focus?.hash
-            let focusTwist = focusHex
-                ? new Twist(env.abject_atoms, Hash.fromHex(focusHex))
-                : null
-            env.workshop_is_abject = !!(focusTwist && Abject.fromTwist(focusTwist))
-        } catch (_e) {
-            env.workshop_is_abject = false
-        }
-    }
-    if (env.workshop_is_abject) {
+    if (isAbject) {
         return `This file looks like an abject. Rigging Workshop only checks ` +
                `single rigs and does not implement full abject checking ` +
                `(delegation chains, multi-rig walks). Use abject-workshop for ` +
