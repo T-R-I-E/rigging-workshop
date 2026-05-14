@@ -45,8 +45,9 @@
 - **Neutral CHECK rows**: `.rig-check` default is panel-coloured;
   explicit `.rig-check.ok` carries the green styling. The in-progress
   CHECK state no longer reads as green.
-- **clj / bb checkers point at the deployed ALB**
-  (`rigging-workshop-alb-…/rigcheck-clj` and `…/rigcheck-bb`).
+- **clj / bb checkers point at the CloudFront HTTPS endpoint**
+  (`d3myckc3w6ekfv.cloudfront.net/rigcheck-clj` and `…/rigcheck-bb`,
+  fronting the deployed ALB).
   Localhost URLs commented next to them as the offline-dev fallback.
 - **Compile fix**: `expand_hitches` no longer emits `{lead: null}` as a
   post-rig entry when the hitch has no hoist (the shape decompile emits

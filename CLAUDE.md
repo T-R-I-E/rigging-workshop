@@ -51,7 +51,8 @@ See [TODO.md](TODO.md) for current plan, tasks, and deferred items.
 - `deps.edn`, `clj/rigging_workshop/server.clj`,
   `clj/rigging_workshop/server_bb.clj` — two sidecar Clojure servers.
   Optional: the workshop's clj/bb rig-checkers now point at the
-  deployed ALB (`rigging-workshop-alb-…/rigcheck-clj` and `…/rigcheck-bb`),
+  CloudFront distribution (`d3myckc3w6ekfv.cloudfront.net/rigcheck-clj`
+  and `…/rigcheck-bb`, HTTPS-fronted over the deployed ALB),
   so the local servers are only needed for `tests.html` byte-equality
   parity checks. Localhost URLs are kept commented next to the live
   ones in `app.js` as an offline-dev fallback.
