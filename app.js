@@ -852,33 +852,25 @@ function classify_pass(ctx) {
 // per-rig results.
 const WORKSHOP_TWIST_LIMIT = 500
 
-// For .toda loads the originally-loaded bytes are the source of truth — the
-// recompile-after-decompile cycle produces different bytes that no longer
-// parse as an abject, so checking the current env on every render misses
-// the case after the first pass. Result is cached on initial_toda_load so
-// later renders share the answer. TRDL-authored rigs have no initial_toda_load
-// and aren't abjects, so the env-twist-count check is enough.
-function workshop_bail_check() {
-    let init = window.workshop?.initial_toda_load
-    if (init) {
-        if (init.workshop_check === undefined) {
-            try {
-                let atoms = Atoms.fromBytes(init.bytes)
-                let focusTwist = atoms.focus ? new Twist(atoms, atoms.focus) : null
-                let twistCount = Line.fromAtoms(atoms).twistList().length
-                let isAbject = !!(focusTwist && Abject.fromTwist(focusTwist))
-                init.workshop_check = { twistCount, isAbject }
-            } catch (_e) {
-                init.workshop_check = { twistCount: 0, isAbject: false }
-            }
-        }
-        return init.workshop_check
+// Fail-fast check on raw .toda bytes. Used by editor.js load_bytes BEFORE
+// decompile / render run, so abjects and oversized files don't trigger any
+// of the expensive pipeline. Returns { twistCount, isAbject, bailReason }.
+// bailReason is non-null when the workshop cannot meaningfully handle the
+// file — caller should render the banner and stop.
+function check_workshop_supported(bytes) {
+    let twistCount = 0, isAbject = false
+    try {
+        let atoms = Atoms.fromBytes(bytes)
+        let focusTwist = atoms.focus ? new Twist(atoms, atoms.focus) : null
+        twistCount = Line.fromAtoms(atoms).twistList().length
+        isAbject = !!(focusTwist && Abject.fromTwist(focusTwist))
+    } catch (_e) {
+        // Malformed bytes — let the normal pipeline surface the error.
     }
-    return { twistCount: env.shapes?.[TWIST]?.length || 0, isAbject: false }
+    return { twistCount, isAbject, bailReason: bail_message(twistCount, isAbject) }
 }
 
-function workshop_bail_reason() {
-    let { twistCount, isAbject } = workshop_bail_check()
+function bail_message(twistCount, isAbject) {
     if (twistCount > WORKSHOP_TWIST_LIMIT) {
         return `Rigging Workshop supports rigs ≤ ${WORKSHOP_TWIST_LIMIT} twists. ` +
                `This file has ${twistCount}. Use abject-workshop for larger files ` +
@@ -891,6 +883,22 @@ function workshop_bail_reason() {
                `abjects (see abject-workshop.md).`
     }
     return null
+}
+
+// Defensive check for the show_abject_info path (TRDL author rebuilds; clicks
+// after a .toda load). Uses the cached check on initial_toda_load when present;
+// otherwise falls back to env.shapes for the count (TRDL-authored rigs aren't
+// abjects, so no abject check needed there).
+function workshop_bail_reason() {
+    let init = window.workshop?.initial_toda_load
+    if (init) {
+        if (init.workshop_check === undefined) {
+            init.workshop_check = check_workshop_supported(init.bytes)
+        }
+        return init.workshop_check.bailReason
+    }
+    let twistCount = env.shapes?.[TWIST]?.length || 0
+    return bail_message(twistCount, false)
 }
 
 function render_workshop_unsupported(rc, msg) {
@@ -1029,4 +1037,9 @@ function show_abject_info(id) {
 window.workshop = {
     render(buffer) { return showpipe(buffer) },
     select_node, highlight_node,
+    check_supported: check_workshop_supported,
+    render_unsupported(msg) {
+        let rc = el('rigcheck')
+        if (rc) render_workshop_unsupported(rc, msg)
+    },
 }

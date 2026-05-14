@@ -231,6 +231,18 @@ async function build() {
 }
 
 async function load_bytes(buf) {
+  // Fail-fast: detect abjects and oversized files BEFORE running decompile,
+  // the visualizer, or the hex dump. The workshop is for single test rigs;
+  // abjects and big files belong in abject-workshop (see abject-workshop.md).
+  // Even a multi-MB abject should bail in milliseconds — Atoms.fromBytes plus
+  // one Line walk is the only work done here.
+  let bytes = new Uint8Array(buf)
+  let check = window.workshop.check_supported(bytes)
+  if (check.bailReason) {
+    window.workshop.initial_toda_load = null
+    window.workshop.render_unsupported(check.bailReason)
+    return
+  }
   // setting the doc fires the auto-build via the updateListener; render the
   // original bytes immediately for instant feedback while the rebuild runs.
   // Also pin this as the "initial toda load" so the rig-check panel can
@@ -239,11 +251,11 @@ async function load_bytes(buf) {
   // first-pass rig-check results.
   try {
     let text = await decompile(buf)
-    let bytes = new Uint8Array(buf)
     window.workshop.initial_toda_load = {
       bytes,
       rig_id:  active_rig,
       results: new Map(),       // checker_id → {state, badge, detail}
+      workshop_check: check,    // reuse fail-fast result; show_abject_info caches off this
     }
     set_doc(text)
     last_built_bytes = buf
