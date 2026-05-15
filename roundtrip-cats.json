@@ -1,0 +1,571 @@
+{
+  "roughly-doubled": {
+    "count": 15,
+    "members": [
+      {
+        "path": "todatests/rigging/complex_bad_hoist_direct_to_indirect.toda",
+        "origLen": 2619,
+        "currLen": 4928,
+        "delta": 2309,
+        "ratio": "1.88",
+        "init": "js=warn,clj=warn,bb=bad,rust=bad",
+        "diff": "js=bad,bb=warn,rust=bad"
+      },
+      {
+        "path": "todatests/rigging/complex_bad_hoist_indirect_to_direct.toda",
+        "origLen": 2471,
+        "currLen": 4646,
+        "delta": 2175,
+        "ratio": "1.88",
+        "init": "js=warn,clj=warn,bb=bad,rust=bad",
+        "diff": "js=bad,bb=warn,rust=bad"
+      },
+      {
+        "path": "todatests/rigging/complex_direct_to_indirect_splice.toda",
+        "origLen": 2619,
+        "currLen": 4928,
+        "delta": 2309,
+        "ratio": "1.88",
+        "init": "js=ok,clj=ok,bb=ok,rust=ok",
+        "diff": "js=bad,clj=warn,bb=warn,rust=bad"
+      },
+      {
+        "path": "todatests/rigging/complex_indirect_to_direct_splice.toda",
+        "origLen": 2471,
+        "currLen": 4646,
+        "delta": 2175,
+        "ratio": "1.88",
+        "init": "js=ok,clj=ok,bb=ok,rust=ok",
+        "diff": "js=bad,clj=warn,bb=warn,rust=bad"
+      },
+      {
+        "path": "todatests/rigging/complex_maximal_time_crossing.toda",
+        "origLen": 3922,
+        "currLen": 7764,
+        "delta": 3842,
+        "ratio": "1.98",
+        "init": "js=ok,clj=ok,bb=ok,rust=ok",
+        "diff": "js=bad,clj=warn,bb=warn,rust=bad"
+      },
+      {
+        "path": "todatests/rigging/complex_maximal_time_crossing_complex.toda",
+        "origLen": 8365,
+        "currLen": 17104,
+        "delta": 8739,
+        "ratio": "2.04",
+        "init": "js=ok,clj=ok,bb=ok,rust=ok",
+        "diff": "js=bad,clj=warn,bb=bad,rust=bad"
+      },
+      {
+        "path": "todatests/rigging/complex_tether_direction_change.toda",
+        "origLen": 6841,
+        "currLen": 12686,
+        "delta": 5845,
+        "ratio": "1.85",
+        "init": "js=ok,clj=ok,bb=ok,rust=ok",
+        "diff": "js=bad,clj=warn,bb=bad,rust=bad"
+      },
+      {
+        "path": "todatests/rigging/hh_valid_shield_non_null.toda",
+        "origLen": 1627,
+        "currLen": 3010,
+        "delta": 1383,
+        "ratio": "1.85",
+        "init": "js=ok,clj=ok,bb=ok,rust=ok",
+        "diff": "js=bad,clj=warn,bb=warn,rust=bad"
+      },
+      {
+        "path": "todatests/rigging/hitch_splice_post_no_lead_entry.toda",
+        "origLen": 2664,
+        "currLen": 4928,
+        "delta": 2264,
+        "ratio": "1.85",
+        "init": "js=ok,clj=bad,bb=bad,rust=bad",
+        "diff": "js=bad,clj=warn,bb=warn,rust=bad"
+      },
+      {
+        "path": "todatests/rigging/hitch_splice_post_wrong_hoist.toda",
+        "origLen": 2528,
+        "currLen": 4646,
+        "delta": 2118,
+        "ratio": "1.84",
+        "init": "js=bad,clj=bad,bb=bad,rust=bad",
+        "diff": "js=bad,clj=warn,bb=warn,rust=bad"
+      },
+      {
+        "path": "todatests/rigging/hitch_valid_basic_splice.toda",
+        "origLen": 2658,
+        "currLen": 4928,
+        "delta": 2270,
+        "ratio": "1.85",
+        "init": "js=ok,clj=ok,bb=ok,rust=ok",
+        "diff": "js=bad,clj=warn,bb=warn,rust=bad"
+      },
+      {
+        "path": "todatests/rigging/post_rigging_missing_post_key.toda",
+        "origLen": 4903,
+        "currLen": 9414,
+        "delta": 4511,
+        "ratio": "1.92",
+        "init": "js=ok,clj=bad,bb=bad,rust=bad",
+        "diff": "js=bad,clj=warn,bb=warn,rust=bad"
+      },
+      {
+        "path": "todatests/rigging/self_referential.toda",
+        "origLen": 2379,
+        "currLen": 5250,
+        "delta": 2871,
+        "ratio": "2.21",
+        "init": "js=warn,clj=warn,bb=bad,rust=bad",
+        "diff": "js=bad,bb=warn,rust=bad"
+      },
+      {
+        "path": "todatests/rigging/simple_lash_f1.toda",
+        "origLen": 4862,
+        "currLen": 9414,
+        "delta": 4552,
+        "ratio": "1.94",
+        "init": "js=ok,clj=ok,bb=ok,rust=ok",
+        "diff": "js=bad,clj=warn,bb=warn,rust=bad"
+      },
+      {
+        "path": "todatests/rigging/simple_lash_f2.toda",
+        "origLen": 4862,
+        "currLen": 9414,
+        "delta": 4552,
+        "ratio": "1.94",
+        "init": "js=ok,clj=ok,bb=ok,rust=ok",
+        "diff": "js=bad,clj=warn,bb=warn,rust=bad"
+      }
+    ]
+  },
+  "modest-growth": {
+    "count": 8,
+    "members": [
+      {
+        "path": "todatests/rigging/cork_missing_rigging.toda",
+        "origLen": 5394,
+        "currLen": 6436,
+        "delta": 1042,
+        "ratio": "1.19",
+        "init": "js=warn,clj=warn,bb=warn,rust=bad",
+        "diff": "js=bad,bb=bad,rust=bad"
+      },
+      {
+        "path": "todatests/rigging/cork_reqsat_fail.toda",
+        "origLen": 5872,
+        "currLen": 6436,
+        "delta": 564,
+        "ratio": "1.10",
+        "init": "js=,clj=bad,bb=bad,rust=bad",
+        "diff": "js=bad,clj=warn,rust=bad"
+      },
+      {
+        "path": "todatests/rigging/corkline_incomplete_early_red.toda",
+        "origLen": 5214,
+        "currLen": 5448,
+        "delta": 234,
+        "ratio": "1.04",
+        "init": "js=warn,clj=bad,bb=warn,rust=bad",
+        "diff": "js=bad,bb=bad,rust=bad"
+      },
+      {
+        "path": "todatests/rigging/corkline_incomplete_early_yellow.toda",
+        "origLen": 5214,
+        "currLen": 5448,
+        "delta": 234,
+        "ratio": "1.04",
+        "init": "js=warn,clj=bad,bb=warn,rust=bad",
+        "diff": "js=bad,bb=bad,rust=bad"
+      },
+      {
+        "path": "todatests/rigging/hh_valid_shield_null.toda",
+        "origLen": 1526,
+        "currLen": 1552,
+        "delta": 26,
+        "ratio": "1.02",
+        "init": "js=ok,clj=ok,bb=ok,rust=ok",
+        "diff": "js=bad,clj=bad,bb=warn,rust=bad"
+      },
+      {
+        "path": "todatests/rigging/lash_succession_missing_prev.toda",
+        "origLen": 2768,
+        "currLen": 3358,
+        "delta": 590,
+        "ratio": "1.21",
+        "init": "js=warn,clj=warn,bb=warn,rust=bad",
+        "diff": "js=warn,clj=bad,bb=bad,rust=bad"
+      },
+      {
+        "path": "todatests/rigging/unit_rig.toda",
+        "origLen": 4497,
+        "currLen": 5672,
+        "delta": 1175,
+        "ratio": "1.26",
+        "init": "js=ok,clj=ok,bb=ok,rust=ok",
+        "diff": "js=warn,clj=bad,bb=warn,rust=bad"
+      },
+      {
+        "path": "todatests/rigging/unit_rig_multi.toda",
+        "origLen": 4992,
+        "currLen": 6390,
+        "delta": 1398,
+        "ratio": "1.28",
+        "init": "js=ok,clj=ok,bb=ok,rust=ok",
+        "diff": "js=warn,clj=bad,bb=bad,rust=bad"
+      }
+    ]
+  },
+  "shrunk": {
+    "count": 15,
+    "members": [
+      {
+        "path": "todatests/rigging/cork_prev_invalid_green.toda",
+        "origLen": 5041,
+        "currLen": 3248,
+        "delta": -1793,
+        "ratio": "0.64",
+        "init": "js=ok,clj=bad,bb=ok,rust=ok",
+        "diff": "js=warn,bb=bad,rust=bad"
+      },
+      {
+        "path": "todatests/rigging/cork_prev_invalid_red.toda",
+        "origLen": 4916,
+        "currLen": 3988,
+        "delta": -928,
+        "ratio": "0.81",
+        "init": "js=warn,clj=bad,bb=bad,rust=bad",
+        "diff": "js=bad,clj=warn,rust=bad"
+      },
+      {
+        "path": "todatests/rigging/hh_corkline_twist_missing.toda",
+        "origLen": 1454,
+        "currLen": 1240,
+        "delta": -214,
+        "ratio": "0.85",
+        "init": "js=warn,clj=bad,bb=bad,rust=bad",
+        "diff": "js=warn,bb=warn,rust=bad"
+      },
+      {
+        "path": "todatests/rigging/hh_footline_prev_gap.toda",
+        "origLen": 1450,
+        "currLen": 1184,
+        "delta": -266,
+        "ratio": "0.82",
+        "init": "js=bad,clj=bad,bb=bad,rust=bad",
+        "diff": "rust=bad"
+      },
+      {
+        "path": "todatests/rigging/hh_mismatched_s_ss_values.toda",
+        "origLen": 1526,
+        "currLen": 1286,
+        "delta": -240,
+        "ratio": "0.84",
+        "init": "js=warn,clj=warn,bb=bad,rust=bad",
+        "diff": "js=bad,clj=bad,bb=warn,rust=bad"
+      },
+      {
+        "path": "todatests/rigging/hh_no_s_lead.toda",
+        "origLen": 1460,
+        "currLen": 1286,
+        "delta": -174,
+        "ratio": "0.88",
+        "init": "js=warn,clj=warn,bb=bad,rust=bad",
+        "diff": "js=bad,clj=bad,bb=warn,rust=bad"
+      },
+      {
+        "path": "todatests/rigging/hh_no_ss_lead.toda",
+        "origLen": 1460,
+        "currLen": 1286,
+        "delta": -174,
+        "ratio": "0.88",
+        "init": "js=warn,clj=warn,bb=bad,rust=bad",
+        "diff": "js=bad,clj=bad,bb=warn,rust=bad"
+      },
+      {
+        "path": "todatests/rigging/hh_non_fast_meet.toda",
+        "origLen": 1526,
+        "currLen": 1286,
+        "delta": -240,
+        "ratio": "0.84",
+        "init": "js=warn,clj=warn,bb=bad,rust=bad",
+        "diff": "js=bad,clj=bad,bb=warn,rust=bad"
+      },
+      {
+        "path": "todatests/rigging/hh_self_referential_rig.toda",
+        "origLen": 1526,
+        "currLen": 1286,
+        "delta": -240,
+        "ratio": "0.84",
+        "init": "js=warn,clj=warn,bb=bad,rust=bad",
+        "diff": "js=bad,clj=bad,bb=warn,rust=bad"
+      },
+      {
+        "path": "todatests/rigging/hh_tether_missing.toda",
+        "origLen": 1454,
+        "currLen": 1442,
+        "delta": -12,
+        "ratio": "0.99",
+        "init": "js=warn,clj=warn,bb=bad,rust=bad",
+        "diff": "js=bad,clj=bad,bb=warn,rust=bad"
+      },
+      {
+        "path": "todatests/rigging/hh_tether_not_twist.toda",
+        "origLen": 1584,
+        "currLen": 1286,
+        "delta": -298,
+        "ratio": "0.81",
+        "init": "js=warn,clj=warn,bb=bad,rust=bad",
+        "diff": "js=bad,clj=bad,bb=warn,rust=bad"
+      },
+      {
+        "path": "todatests/rigging/hh_tether_null.toda",
+        "origLen": 1494,
+        "currLen": 1286,
+        "delta": -208,
+        "ratio": "0.86",
+        "init": "js=warn,clj=warn,bb=bad,rust=bad",
+        "diff": "js=bad,clj=bad,bb=warn,rust=bad"
+      },
+      {
+        "path": "todatests/rigging/hh_tether_symbol.toda",
+        "origLen": 1526,
+        "currLen": 1286,
+        "delta": -240,
+        "ratio": "0.84",
+        "init": "js=warn,clj=warn,bb=bad,rust=bad",
+        "diff": "js=bad,clj=bad,bb=warn,rust=bad"
+      },
+      {
+        "path": "todatests/rigging/hitch_hoist_rigs_missing.toda",
+        "origLen": 1356,
+        "currLen": 1286,
+        "delta": -70,
+        "ratio": "0.95",
+        "init": "js=warn,clj=warn,bb=warn,rust=warn",
+        "diff": "js=bad,clj=bad,rust=bad"
+      },
+      {
+        "path": "todatests/rigging/hitch_meet_tether_null.toda",
+        "origLen": 1494,
+        "currLen": 1286,
+        "delta": -208,
+        "ratio": "0.86",
+        "init": "js=warn,clj=bad,bb=bad,rust=bad",
+        "diff": "js=bad,rust=bad"
+      }
+    ]
+  },
+  "big-growth": {
+    "count": 20,
+    "members": [
+      {
+        "path": "todatests/rigging/corkline_incomplete_late.toda",
+        "origLen": 4498,
+        "currLen": 6176,
+        "delta": 1678,
+        "ratio": "1.37",
+        "init": "js=warn,clj=bad,bb=bad,rust=bad",
+        "diff": "bb=warn,rust=bad"
+      },
+      {
+        "path": "todatests/rigging/hh_valid_self_ref_subsequent_valid.toda",
+        "origLen": 1977,
+        "currLen": 3158,
+        "delta": 1181,
+        "ratio": "1.60",
+        "init": "js=ok,clj=ok,bb=ok,rust=ok",
+        "diff": "js=bad,clj=warn,bb=warn,rust=bad"
+      },
+      {
+        "path": "todatests/rigging/hh_wrong_hoist_values.toda",
+        "origLen": 1627,
+        "currLen": 2540,
+        "delta": 913,
+        "ratio": "1.56",
+        "init": "js=warn,clj=warn,bb=bad,rust=bad",
+        "diff": "js=bad,bb=warn,rust=bad"
+      },
+      {
+        "path": "todatests/rigging/hh_wrong_shield.toda",
+        "origLen": 1728,
+        "currLen": 2540,
+        "delta": 812,
+        "ratio": "1.47",
+        "init": "js=warn,clj=warn,bb=bad,rust=bad",
+        "diff": "js=bad,bb=warn,rust=bad"
+      },
+      {
+        "path": "todatests/rigging/invalid_shielding_green.toda",
+        "origLen": 3118,
+        "currLen": 5224,
+        "delta": 2106,
+        "ratio": "1.68",
+        "init": "js=ok,clj=ok,bb=ok,rust=ok",
+        "diff": "js=bad,clj=warn,bb=warn,rust=bad"
+      },
+      {
+        "path": "todatests/rigging/lash_succession_no_fast_twist.toda",
+        "origLen": 2884,
+        "currLen": 4754,
+        "delta": 1870,
+        "ratio": "1.65",
+        "init": "js=bad,clj=bad,bb=bad,rust=bad",
+        "diff": "js=warn,rust=bad"
+      },
+      {
+        "path": "todatests/rigging/lash_succession_reqsat_fail.toda",
+        "origLen": 3407,
+        "currLen": 5224,
+        "delta": 1817,
+        "ratio": "1.53",
+        "init": "js=bad,clj=bad,bb=bad,rust=bad",
+        "diff": "js=warn,rust=bad"
+      },
+      {
+        "path": "todatests/rigging/lashed_non_colinear.toda",
+        "origLen": 3621,
+        "currLen": 4754,
+        "delta": 1133,
+        "ratio": "1.31",
+        "init": "js=bad,clj=warn,bb=bad,rust=bad",
+        "diff": "js=bad,rust=bad"
+      },
+      {
+        "path": "todatests/rigging/meets_do_not_match.toda",
+        "origLen": 6743,
+        "currLen": 8916,
+        "delta": 2173,
+        "ratio": "1.32",
+        "init": "js=warn,clj=bad,bb=bad,rust=bad",
+        "diff": "js=bad,clj=warn,rust=bad"
+      },
+      {
+        "path": "todatests/rigging/missing_rigging.toda",
+        "origLen": 2948,
+        "currLen": 5224,
+        "delta": 2276,
+        "ratio": "1.77",
+        "init": "js=warn,clj=warn,bb=warn,rust=warn",
+        "diff": "js=bad,rust=bad"
+      },
+      {
+        "path": "todatests/rigging/missing_shield.toda",
+        "origLen": 2869,
+        "currLen": 4754,
+        "delta": 1885,
+        "ratio": "1.66",
+        "init": "js=warn,clj=warn,bb=warn,rust=warn",
+        "diff": "js=warn,clj=bad,bb=bad,rust=bad"
+      },
+      {
+        "path": "todatests/rigging/multiple_hoists_green.toda",
+        "origLen": 2948,
+        "currLen": 5224,
+        "delta": 2276,
+        "ratio": "1.77",
+        "init": "js=ok,clj=ok,bb=ok,rust=ok",
+        "diff": "js=bad,clj=warn,bb=warn,rust=bad"
+      },
+      {
+        "path": "todatests/rigging/simple_last.toda",
+        "origLen": 2916,
+        "currLen": 5224,
+        "delta": 2308,
+        "ratio": "1.79",
+        "init": "js=ok,clj=ok,bb=ok,rust=ok",
+        "diff": "js=bad,clj=warn,bb=warn,rust=bad"
+      },
+      {
+        "path": "todatests/rigging/splice_mismatch.toda",
+        "origLen": 16353,
+        "currLen": 26640,
+        "delta": 10287,
+        "ratio": "1.63",
+        "init": "js=bad,clj=warn,bb=bad,rust=bad",
+        "diff": "js=bad,bb=warn,rust=bad"
+      },
+      {
+        "path": "todatests/rigging/valid_kiwano.toda",
+        "origLen": 15946,
+        "currLen": 27528,
+        "delta": 11582,
+        "ratio": "1.73",
+        "init": "js=ok,clj=ok,bb=ok,rust=ok",
+        "diff": "js=bad,clj=warn,bb=warn,rust=bad"
+      },
+      {
+        "path": "todatests/rigging/valid_kiwano_0.toda",
+        "origLen": 15946,
+        "currLen": 27528,
+        "delta": 11582,
+        "ratio": "1.73",
+        "init": "js=ok,clj=ok,bb=ok,rust=ok",
+        "diff": "js=bad,clj=warn,bb=warn,rust=bad"
+      },
+      {
+        "path": "todatests/rigging/valid_kiwano_1.toda",
+        "origLen": 15946,
+        "currLen": 27528,
+        "delta": 11582,
+        "ratio": "1.73",
+        "init": "js=ok,clj=ok,bb=ok,rust=ok",
+        "diff": "js=bad,clj=warn,bb=warn,rust=bad"
+      },
+      {
+        "path": "todatests/rigging/valid_kiwano_f1.toda",
+        "origLen": 15946,
+        "currLen": 27528,
+        "delta": 11582,
+        "ratio": "1.73",
+        "init": "js=ok,clj=ok,bb=ok,rust=ok",
+        "diff": "js=bad,clj=warn,bb=warn,rust=bad"
+      },
+      {
+        "path": "todatests/rigging/valid_kiwano_f2.toda",
+        "origLen": 15946,
+        "currLen": 27528,
+        "delta": 11582,
+        "ratio": "1.73",
+        "init": "js=ok,clj=ok,bb=ok,rust=ok",
+        "diff": "js=bad,clj=warn,bb=warn,rust=bad"
+      },
+      {
+        "path": "todatests/rigging/valid_kiwano_f5.toda",
+        "origLen": 15946,
+        "currLen": 27528,
+        "delta": 11582,
+        "ratio": "1.73",
+        "init": "js=ok,clj=ok,bb=ok,rust=ok",
+        "diff": "js=bad,clj=warn,bb=warn,rust=bad"
+      }
+    ]
+  },
+  "same-len-diff-bytes": {
+    "count": 1,
+    "members": [
+      {
+        "path": "todatests/rigging/hh_valid_lead_root.toda",
+        "origLen": 1450,
+        "currLen": 1450,
+        "delta": 0,
+        "ratio": "1.00",
+        "init": "js=ok,clj=ok,bb=ok,rust=ok",
+        "diff": "js=bad,clj=bad,bb=bad,rust=bad"
+      }
+    ]
+  },
+  "no-init": {
+    "count": 1,
+    "members": [
+      {
+        "path": "todatests/rigging/invalid_rigging_green.toda",
+        "currLen": 5224,
+        "delta": 5224,
+        "ratio": "0.00",
+        "init": "js=bad,clj=warn,bb=warn,rust=bad",
+        "diff": ""
+      }
+    ]
+  }
+}

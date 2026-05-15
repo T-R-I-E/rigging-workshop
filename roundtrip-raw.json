@@ -1,0 +1,3128 @@
+[
+  {
+    "idx": 0,
+    "path": "todatests/rigging/complex_bad_hoist_direct_to_indirect.toda",
+    "bailKind": "rows",
+    "origLen": 2619,
+    "currLen": 4928,
+    "origHash": "64bd0ac593ed4751",
+    "currHash": "55edda0a42e4d13f",
+    "bytesEqual": false,
+    "diffNote": true,
+    "initRows": [
+      {
+        "id": "js",
+        "state": "warn",
+        "detail": "js · todajs Missing topline hash · 1ms"
+      },
+      {
+        "id": "clj",
+        "state": "warn",
+        "detail": "clj · toda-rig-checker yellow · 147ms"
+      },
+      {
+        "id": "bb",
+        "state": "bad",
+        "detail": "clj · toda-bb red · 144ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda poptop 4147699aee17b44e582d22f73047345fefd9b00ee298611f2d1d2e11cfcf19d1e8 not found in file · 0ms"
+      }
+    ],
+    "diffRows": [
+      {
+        "id": "js",
+        "state": "bad",
+        "detail": "js · todajs ReqSatError · 2ms"
+      },
+      {
+        "id": "bb",
+        "state": "warn",
+        "detail": "clj · toda-bb yellow · 106ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda {\n  \"structype\": \"rig\",\n  \"colour\": \"red\",\n  \"reference\": \"41bd8ea43990cdf95fd030540739bba8baf31ee4eece761307b9ea076968cff332\",\n  \"children\": {\n    \"corkline\": {\n      \"structype\": \"cor"
+      }
+    ]
+  },
+  {
+    "idx": 1,
+    "path": "todatests/rigging/complex_bad_hoist_indirect_to_direct.toda",
+    "bailKind": "rows",
+    "origLen": 2471,
+    "currLen": 4646,
+    "origHash": "861508429edc2b19",
+    "currHash": "f6c30a89063ee581",
+    "bytesEqual": false,
+    "diffNote": true,
+    "initRows": [
+      {
+        "id": "js",
+        "state": "warn",
+        "detail": "js · todajs Missing topline hash · 1ms"
+      },
+      {
+        "id": "clj",
+        "state": "warn",
+        "detail": "clj · toda-rig-checker yellow · 119ms"
+      },
+      {
+        "id": "bb",
+        "state": "bad",
+        "detail": "clj · toda-bb red · 94ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda poptop 410730000ca59fd94043810b6bd026c87dace3a31bc4df0becaabead427545b0d2 not found in file · 0ms"
+      }
+    ],
+    "diffRows": [
+      {
+        "id": "js",
+        "state": "bad",
+        "detail": "js · todajs ReqSatError · 1ms"
+      },
+      {
+        "id": "bb",
+        "state": "warn",
+        "detail": "clj · toda-bb yellow · 114ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda {\n  \"structype\": \"rig\",\n  \"colour\": \"red\",\n  \"reference\": \"41cb0446cb0ac6a8ab9866155582892ea1a1bcdf8ccce9f265ae7f7eed5a113bde\",\n  \"children\": {\n    \"corkline\": {\n      \"structype\": \"cor"
+      }
+    ]
+  },
+  {
+    "idx": 2,
+    "path": "todatests/rigging/complex_direct_to_indirect_splice.toda",
+    "bailKind": "rows",
+    "origLen": 2619,
+    "currLen": 4928,
+    "origHash": "d543cc6abf885885",
+    "currHash": "876e51a7b30840ed",
+    "bytesEqual": false,
+    "diffNote": true,
+    "initRows": [
+      {
+        "id": "js",
+        "state": "ok",
+        "detail": "js · todajs verified · 2ms"
+      },
+      {
+        "id": "clj",
+        "state": "ok",
+        "detail": "clj · toda-rig-checker green · 141ms"
+      },
+      {
+        "id": "bb",
+        "state": "ok",
+        "detail": "clj · toda-bb green · 131ms"
+      },
+      {
+        "id": "rust",
+        "state": "ok",
+        "detail": "rust · rustoda verified · 1ms"
+      }
+    ],
+    "diffRows": [
+      {
+        "id": "js",
+        "state": "bad",
+        "detail": "js · todajs ReqSatError · 1ms"
+      },
+      {
+        "id": "clj",
+        "state": "warn",
+        "detail": "clj · toda-rig-checker yellow · 126ms"
+      },
+      {
+        "id": "bb",
+        "state": "warn",
+        "detail": "clj · toda-bb yellow · 99ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda {\n  \"structype\": \"rig\",\n  \"colour\": \"red\",\n  \"reference\": \"41136a6354f068466e69c28bbf9fd8a0da92e300a00c92ae976c7e01120ee539a7\",\n  \"children\": {\n    \"corkline\": {\n      \"structype\": \"cor"
+      }
+    ]
+  },
+  {
+    "idx": 3,
+    "path": "todatests/rigging/complex_indirect_to_direct_splice.toda",
+    "bailKind": "rows",
+    "origLen": 2471,
+    "currLen": 4646,
+    "origHash": "7b8581628c9bdda4",
+    "currHash": "7d70aa72d042326b",
+    "bytesEqual": false,
+    "diffNote": true,
+    "initRows": [
+      {
+        "id": "js",
+        "state": "ok",
+        "detail": "js · todajs verified · 1ms"
+      },
+      {
+        "id": "clj",
+        "state": "ok",
+        "detail": "clj · toda-rig-checker green · 106ms"
+      },
+      {
+        "id": "bb",
+        "state": "ok",
+        "detail": "clj · toda-bb green · 111ms"
+      },
+      {
+        "id": "rust",
+        "state": "ok",
+        "detail": "rust · rustoda verified · 0ms"
+      }
+    ],
+    "diffRows": [
+      {
+        "id": "js",
+        "state": "bad",
+        "detail": "js · todajs ReqSatError · 1ms"
+      },
+      {
+        "id": "clj",
+        "state": "warn",
+        "detail": "clj · toda-rig-checker yellow · 155ms"
+      },
+      {
+        "id": "bb",
+        "state": "warn",
+        "detail": "clj · toda-bb yellow · 113ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda {\n  \"structype\": \"rig\",\n  \"colour\": \"red\",\n  \"reference\": \"41cb0446cb0ac6a8ab9866155582892ea1a1bcdf8ccce9f265ae7f7eed5a113bde\",\n  \"children\": {\n    \"corkline\": {\n      \"structype\": \"cor"
+      }
+    ]
+  },
+  {
+    "idx": 4,
+    "path": "todatests/rigging/complex_maximal_time_crossing.toda",
+    "bailKind": "rows",
+    "origLen": 3922,
+    "currLen": 7764,
+    "origHash": "c61a92bceb20df18",
+    "currHash": "8791fd24dc06f237",
+    "bytesEqual": false,
+    "diffNote": true,
+    "initRows": [
+      {
+        "id": "js",
+        "state": "ok",
+        "detail": "js · todajs verified · 1ms"
+      },
+      {
+        "id": "clj",
+        "state": "ok",
+        "detail": "clj · toda-rig-checker green · 120ms"
+      },
+      {
+        "id": "bb",
+        "state": "ok",
+        "detail": "clj · toda-bb green · 127ms"
+      },
+      {
+        "id": "rust",
+        "state": "ok",
+        "detail": "rust · rustoda verified · 1ms"
+      }
+    ],
+    "diffRows": [
+      {
+        "id": "js",
+        "state": "bad",
+        "detail": "js · todajs ReqSatError · 1ms"
+      },
+      {
+        "id": "clj",
+        "state": "warn",
+        "detail": "clj · toda-rig-checker yellow · 115ms"
+      },
+      {
+        "id": "bb",
+        "state": "warn",
+        "detail": "clj · toda-bb yellow · 109ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda {\n  \"structype\": \"rig\",\n  \"colour\": \"red\",\n  \"reference\": \"4102a4f32def673ebf9ebb4dc9c94f032ec12e7052b54f3e9f7434e56c61159f22\",\n  \"children\": {\n    \"corkline\": {\n      \"structype\": \"cor"
+      }
+    ]
+  },
+  {
+    "idx": 5,
+    "path": "todatests/rigging/complex_maximal_time_crossing_complex.toda",
+    "bailKind": "rows",
+    "origLen": 8365,
+    "currLen": 17104,
+    "origHash": "43d0a712ccc55e23",
+    "currHash": "f42c872cd1b076d7",
+    "bytesEqual": false,
+    "diffNote": true,
+    "initRows": [
+      {
+        "id": "js",
+        "state": "ok",
+        "detail": "js · todajs verified · 2ms"
+      },
+      {
+        "id": "clj",
+        "state": "ok",
+        "detail": "clj · toda-rig-checker green · 181ms"
+      },
+      {
+        "id": "bb",
+        "state": "ok",
+        "detail": "clj · toda-bb green · 129ms"
+      },
+      {
+        "id": "rust",
+        "state": "ok",
+        "detail": "rust · rustoda verified · 1ms"
+      }
+    ],
+    "diffRows": [
+      {
+        "id": "js",
+        "state": "bad",
+        "detail": "js · todajs ReqSatError · 2ms"
+      },
+      {
+        "id": "clj",
+        "state": "warn",
+        "detail": "clj · toda-rig-checker yellow · 116ms"
+      },
+      {
+        "id": "bb",
+        "state": "bad",
+        "detail": "clj · toda-bb red · 88ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda {\n  \"structype\": \"rig\",\n  \"colour\": \"red\",\n  \"reference\": \"410498d4250cd9c6232a4be3a0da5e1873269dd60bac7cf6b8779c68b83695c8a3\",\n  \"children\": {\n    \"corkline\": {\n      \"structype\": \"cor"
+      }
+    ]
+  },
+  {
+    "idx": 6,
+    "path": "todatests/rigging/complex_tether_direction_change.toda",
+    "bailKind": "rows",
+    "origLen": 6841,
+    "currLen": 12686,
+    "origHash": "56617099009b8897",
+    "currHash": "e180750c26a57357",
+    "bytesEqual": false,
+    "diffNote": true,
+    "initRows": [
+      {
+        "id": "js",
+        "state": "ok",
+        "detail": "js · todajs verified · 2ms"
+      },
+      {
+        "id": "clj",
+        "state": "ok",
+        "detail": "clj · toda-rig-checker green · 284ms"
+      },
+      {
+        "id": "bb",
+        "state": "ok",
+        "detail": "clj · toda-bb green · 130ms"
+      },
+      {
+        "id": "rust",
+        "state": "ok",
+        "detail": "rust · rustoda verified · 1ms"
+      }
+    ],
+    "diffRows": [
+      {
+        "id": "js",
+        "state": "bad",
+        "detail": "js · todajs ReqSatError · 2ms"
+      },
+      {
+        "id": "clj",
+        "state": "warn",
+        "detail": "clj · toda-rig-checker yellow · 128ms"
+      },
+      {
+        "id": "bb",
+        "state": "bad",
+        "detail": "clj · toda-bb red · 108ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda {\n  \"structype\": \"rig\",\n  \"colour\": \"red\",\n  \"reference\": \"41f6352f601df3b4a2c04d77e83d069ae13db6be51b2041f1d303b22ab73d71379\",\n  \"children\": {\n    \"corkline\": {\n      \"structype\": \"cor"
+      }
+    ]
+  },
+  {
+    "idx": 7,
+    "path": "todatests/rigging/cork_missing_rigging.toda",
+    "bailKind": "rows",
+    "origLen": 5394,
+    "currLen": 6436,
+    "origHash": "021db67038ccea09",
+    "currHash": "479df5f92d030449",
+    "bytesEqual": false,
+    "diffNote": true,
+    "initRows": [
+      {
+        "id": "js",
+        "state": "warn",
+        "detail": "js · todajs MissingHashPacketError · 1ms"
+      },
+      {
+        "id": "clj",
+        "state": "warn",
+        "detail": "clj · toda-rig-checker yellow · 101ms"
+      },
+      {
+        "id": "bb",
+        "state": "warn",
+        "detail": "clj · toda-bb yellow · 112ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda rig supports up to 41c384879370a6bdfb360865f6b604ac107d9c2afba8ce7f81d2049ac2e1c5979f but focus is 413558dc11354eb97dfd86ad3a55d69f3b713d94fed3174aba523b8bc275492293 · 1ms"
+      }
+    ],
+    "diffRows": [
+      {
+        "id": "js",
+        "state": "bad",
+        "detail": "js · todajs ReqSatError · 2ms"
+      },
+      {
+        "id": "bb",
+        "state": "bad",
+        "detail": "clj · toda-bb red · 104ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda {\n  \"structype\": \"rig\",\n  \"colour\": \"red\",\n  \"reference\": \"412b162738a19c38ccfb3848695fe760ad2571bb97c7124001ed441c04d9b808e1\",\n  \"children\": {\n    \"corkline\": {\n      \"structype\": \"cor"
+      }
+    ]
+  },
+  {
+    "idx": 8,
+    "path": "todatests/rigging/cork_prev_invalid_green.toda",
+    "bailKind": "rows",
+    "origLen": 5041,
+    "currLen": 3248,
+    "origHash": "19aa890a3cf7f93a",
+    "currHash": "4eb0cb46f402471a",
+    "bytesEqual": false,
+    "diffNote": true,
+    "initRows": [
+      {
+        "id": "js",
+        "state": "ok",
+        "detail": "js · todajs verified · 1ms"
+      },
+      {
+        "id": "clj",
+        "state": "bad",
+        "detail": "clj · toda-rig-checker red · 158ms"
+      },
+      {
+        "id": "bb",
+        "state": "ok",
+        "detail": "clj · toda-bb green · 135ms"
+      },
+      {
+        "id": "rust",
+        "state": "ok",
+        "detail": "rust · rustoda verified · 1ms"
+      }
+    ],
+    "diffRows": [
+      {
+        "id": "js",
+        "state": "warn",
+        "detail": "js · todajs Missing topline successor · 1ms"
+      },
+      {
+        "id": "bb",
+        "state": "bad",
+        "detail": "clj · toda-bb red · 125ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda {\n  \"structype\": \"rig\",\n  \"colour\": \"red\",\n  \"reference\": \"41509c019ca748bfb845e538400c3ffd0a06e15d53dcecd02707e12d2fbc4aafc7\",\n  \"children\": {\n    \"corkline\": {\n      \"structype\": \"cor"
+      }
+    ]
+  },
+  {
+    "idx": 9,
+    "path": "todatests/rigging/cork_prev_invalid_red.toda",
+    "bailKind": "rows",
+    "origLen": 4916,
+    "currLen": 3988,
+    "origHash": "6599a4399f5ac20d",
+    "currHash": "c7f97e97cca4ca6d",
+    "bytesEqual": false,
+    "diffNote": true,
+    "initRows": [
+      {
+        "id": "js",
+        "state": "warn",
+        "detail": "js · todajs Missing topline successor · 1ms"
+      },
+      {
+        "id": "clj",
+        "state": "bad",
+        "detail": "clj · toda-rig-checker red · 107ms"
+      },
+      {
+        "id": "bb",
+        "state": "bad",
+        "detail": "clj · toda-bb red · 140ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda {\n  \"structype\": \"rig\",\n  \"colour\": \"red\",\n  \"reference\": \"41e3774abe670c3991a4a7377094cf8fcd876340ef594651fb2d966e9f8440f134\",\n  \"children\": {\n    \"corkline\": {\n      \"structype\": \"cor"
+      }
+    ],
+    "diffRows": [
+      {
+        "id": "js",
+        "state": "bad",
+        "detail": "js · todajs ReqSatError · 1ms"
+      },
+      {
+        "id": "clj",
+        "state": "warn",
+        "detail": "clj · toda-rig-checker yellow · 101ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda {\n  \"structype\": \"rig\",\n  \"colour\": \"red\",\n  \"reference\": \"412b162738a19c38ccfb3848695fe760ad2571bb97c7124001ed441c04d9b808e1\",\n  \"children\": {\n    \"corkline\": {\n      \"structype\": \"cor"
+      }
+    ]
+  },
+  {
+    "idx": 10,
+    "path": "todatests/rigging/cork_reqsat_fail.toda",
+    "bailKind": "rows",
+    "origLen": 5872,
+    "currLen": 6436,
+    "origHash": "6c8e161c0a922cc3",
+    "currHash": "a1cec7349fb2eedf",
+    "bytesEqual": false,
+    "diffNote": true,
+    "initRows": [
+      {
+        "id": "js",
+        "state": "",
+        "detail": "js · todajs verifying…"
+      },
+      {
+        "id": "clj",
+        "state": "bad",
+        "detail": "clj · toda-rig-checker red · 209ms"
+      },
+      {
+        "id": "bb",
+        "state": "bad",
+        "detail": "clj · toda-bb red · 209ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda rig supports up to 412d9ba2d1fea006b00ac096bdac26e6c5d142445bc579f593caea25d6def7d7d1 but focus is 415170408aeb5c2f76e98bf4407918ce6b0bc3b7b6872ff3a1dd402471438eb164 · 3ms"
+      }
+    ],
+    "diffRows": [
+      {
+        "id": "js",
+        "state": "bad",
+        "detail": "js · todajs ReqSatError · 1ms"
+      },
+      {
+        "id": "clj",
+        "state": "warn",
+        "detail": "clj · toda-rig-checker yellow · 110ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda {\n  \"structype\": \"rig\",\n  \"colour\": \"red\",\n  \"reference\": \"412b162738a19c38ccfb3848695fe760ad2571bb97c7124001ed441c04d9b808e1\",\n  \"children\": {\n    \"corkline\": {\n      \"structype\": \"cor"
+      }
+    ]
+  },
+  {
+    "idx": 11,
+    "path": "todatests/rigging/corkline_incomplete_early_red.toda",
+    "bailKind": "rows",
+    "origLen": 5214,
+    "currLen": 5448,
+    "origHash": "91a4463abf078c3e",
+    "currHash": "f772e870ace76529",
+    "bytesEqual": false,
+    "diffNote": true,
+    "initRows": [
+      {
+        "id": "js",
+        "state": "warn",
+        "detail": "js · todajs MissingHoistError · 1ms"
+      },
+      {
+        "id": "clj",
+        "state": "bad",
+        "detail": "clj · toda-rig-checker red · 136ms"
+      },
+      {
+        "id": "bb",
+        "state": "warn",
+        "detail": "clj · toda-bb yellow · 130ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda {\n  \"structype\": \"rig\",\n  \"colour\": \"red\",\n  \"reference\": \"4177e80a1d6f83a6dc83bc93c9ab43db6ee6590ebf31b3464440349625dfe57557\",\n  \"children\": {\n    \"corkline\": {\n      \"structype\": \"cor"
+      }
+    ],
+    "diffRows": [
+      {
+        "id": "js",
+        "state": "bad",
+        "detail": "js · todajs Cannot read properties of undefined (reading 'getTetherHash') · 1ms"
+      },
+      {
+        "id": "bb",
+        "state": "bad",
+        "detail": "clj · toda-bb red · 113ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda {\n  \"structype\": \"rig\",\n  \"colour\": \"red\",\n  \"reference\": \"415dc150a7ce2788e2b76de81cee7386ea88bd6b57dbd1c02593ebdb15d410827b\",\n  \"children\": {\n    \"corkline\": {\n      \"structype\": \"cor"
+      }
+    ]
+  },
+  {
+    "idx": 12,
+    "path": "todatests/rigging/corkline_incomplete_early_yellow.toda",
+    "bailKind": "rows",
+    "origLen": 5214,
+    "currLen": 5448,
+    "origHash": "91a4463abf078c3e",
+    "currHash": "82fa0b8b8f2bc8fd",
+    "bytesEqual": false,
+    "diffNote": true,
+    "initRows": [
+      {
+        "id": "js",
+        "state": "warn",
+        "detail": "js · todajs MissingHoistError · 1ms"
+      },
+      {
+        "id": "clj",
+        "state": "bad",
+        "detail": "clj · toda-rig-checker red · 53ms"
+      },
+      {
+        "id": "bb",
+        "state": "warn",
+        "detail": "clj · toda-bb yellow · 70ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda {\n  \"structype\": \"rig\",\n  \"colour\": \"red\",\n  \"reference\": \"4177e80a1d6f83a6dc83bc93c9ab43db6ee6590ebf31b3464440349625dfe57557\",\n  \"children\": {\n    \"corkline\": {\n      \"structype\": \"cor"
+      }
+    ],
+    "diffRows": [
+      {
+        "id": "js",
+        "state": "bad",
+        "detail": "js · todajs Cannot read properties of undefined (reading 'getTetherHash') · 1ms"
+      },
+      {
+        "id": "bb",
+        "state": "bad",
+        "detail": "clj · toda-bb red · 114ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda {\n  \"structype\": \"rig\",\n  \"colour\": \"red\",\n  \"reference\": \"4190490c2906f863c02d91fa7c5a11f88826797ada0bbb787715de4cc7d2c8ed55\",\n  \"children\": {\n    \"corkline\": {\n      \"structype\": \"cor"
+      }
+    ]
+  },
+  {
+    "idx": 13,
+    "path": "todatests/rigging/corkline_incomplete_late.toda",
+    "bailKind": "rows",
+    "origLen": 4498,
+    "currLen": 6176,
+    "origHash": "74925d6b25e688fa",
+    "currHash": "d42befb6f5be6657",
+    "bytesEqual": false,
+    "diffNote": true,
+    "initRows": [
+      {
+        "id": "js",
+        "state": "warn",
+        "detail": "js · todajs MissingHoistError · 1ms"
+      },
+      {
+        "id": "clj",
+        "state": "bad",
+        "detail": "clj · toda-rig-checker red · 411ms"
+      },
+      {
+        "id": "bb",
+        "state": "bad",
+        "detail": "clj · toda-bb red · 410ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda rig supports up to 419ac8c3cb22e5cc02b7c8891e0a662d3b9606b9f7c47c6c5d0d1e1613cbd885c7 but focus is 41bc92f42eede98bf548855e54abcf1594be177ebbcb602f5dfd7f83ec0c4427cb · 0ms"
+      }
+    ],
+    "diffRows": [
+      {
+        "id": "bb",
+        "state": "warn",
+        "detail": "clj · toda-bb yellow · 176ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda {\n  \"structype\": \"rig\",\n  \"colour\": \"red\",\n  \"reference\": \"41b39b7885d80f17dc9b2fb3d85bce2034675f4f5b01f278f29ec5b98496db89a0\",\n  \"children\": {\n    \"corkline\": {\n      \"structype\": \"cor"
+      }
+    ]
+  },
+  {
+    "idx": 14,
+    "path": "todatests/rigging/hh_corkline_twist_missing.toda",
+    "bailKind": "rows",
+    "origLen": 1454,
+    "currLen": 1240,
+    "origHash": "3508b6452f84cc36",
+    "currHash": "3605f770621cb1e6",
+    "bytesEqual": false,
+    "diffNote": true,
+    "initRows": [
+      {
+        "id": "js",
+        "state": "warn",
+        "detail": "js · todajs MissingHoistError · 1ms"
+      },
+      {
+        "id": "clj",
+        "state": "bad",
+        "detail": "clj · toda-rig-checker red · 88ms"
+      },
+      {
+        "id": "bb",
+        "state": "bad",
+        "detail": "clj · toda-bb red · 126ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda {\n  \"structype\": \"rig\",\n  \"colour\": \"red\",\n  \"reference\": \"41cb5fc47e696ec6877eaac274c9b1951a851e7b0006e4b088322caddf45900dd1\",\n  \"children\": {\n    \"corkline\": {\n      \"structype\": \"cor"
+      }
+    ],
+    "diffRows": [
+      {
+        "id": "js",
+        "state": "warn",
+        "detail": "js · todajs Missing topline successor · 1ms"
+      },
+      {
+        "id": "bb",
+        "state": "warn",
+        "detail": "clj · toda-bb yellow · 124ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda {\n  \"structype\": \"rig\",\n  \"colour\": \"red\",\n  \"reference\": \"41cb0446cb0ac6a8ab9866155582892ea1a1bcdf8ccce9f265ae7f7eed5a113bde\",\n  \"children\": {\n    \"corkline\": {\n      \"structype\": \"cor"
+      }
+    ]
+  },
+  {
+    "idx": 15,
+    "path": "todatests/rigging/hh_footline_prev_gap.toda",
+    "bailKind": "rows",
+    "origLen": 1450,
+    "currLen": 1184,
+    "origHash": "39e7dc5ffec55052",
+    "currHash": "1c6c91fb0f3181b1",
+    "bytesEqual": false,
+    "diffNote": true,
+    "initRows": [
+      {
+        "id": "js",
+        "state": "bad",
+        "detail": "js · todajs Cannot read properties of null (reading 'hash') · 1ms"
+      },
+      {
+        "id": "clj",
+        "state": "bad",
+        "detail": "clj · toda-rig-checker red · 242ms"
+      },
+      {
+        "id": "bb",
+        "state": "bad",
+        "detail": "clj · toda-bb red · 245ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda rig supports up to 41bef7d7a2c06f462a0d92b798e18e026ed2d02ea18ed50ac4ca40e750f8aa7ec3 but focus is 41dce2f2ecb040be13d598cdf252f5f088e97d32ba6489799d2fc4e3d6fb6b79f9 · 0ms"
+      }
+    ],
+    "diffRows": [
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda {\n  \"structype\": \"rig\",\n  \"colour\": \"red\",\n  \"reference\": \"41cb0446cb0ac6a8ab9866155582892ea1a1bcdf8ccce9f265ae7f7eed5a113bde\",\n  \"children\": {\n    \"corkline\": {\n      \"structype\": \"cor"
+      }
+    ]
+  },
+  {
+    "idx": 16,
+    "path": "todatests/rigging/hh_mismatched_s_ss_values.toda",
+    "bailKind": "rows",
+    "origLen": 1526,
+    "currLen": 1286,
+    "origHash": "bb5f7a19f0608406",
+    "currHash": "d8bae540518bbb28",
+    "bytesEqual": false,
+    "diffNote": true,
+    "initRows": [
+      {
+        "id": "js",
+        "state": "warn",
+        "detail": "js · todajs Missing topline hash · 1ms"
+      },
+      {
+        "id": "clj",
+        "state": "warn",
+        "detail": "clj · toda-rig-checker yellow · 137ms"
+      },
+      {
+        "id": "bb",
+        "state": "bad",
+        "detail": "clj · toda-bb red · 139ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda poptop 414ce9ae370b17ee59aab92d4a24c1784ad4adbc0ffadf2732f68dc7ae3cf6adc2 not found in file · 0ms"
+      }
+    ],
+    "diffRows": [
+      {
+        "id": "js",
+        "state": "bad",
+        "detail": "js · todajs Cannot read properties of null (reading 'hash') · 1ms"
+      },
+      {
+        "id": "clj",
+        "state": "bad",
+        "detail": "clj · toda-rig-checker red · 85ms"
+      },
+      {
+        "id": "bb",
+        "state": "warn",
+        "detail": "clj · toda-bb yellow · 102ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda {\n  \"structype\": \"rig\",\n  \"colour\": \"red\",\n  \"reference\": \"412b162738a19c38ccfb3848695fe760ad2571bb97c7124001ed441c04d9b808e1\",\n  \"children\": {\n    \"corkline\": {\n      \"structype\": \"cor"
+      }
+    ]
+  },
+  {
+    "idx": 17,
+    "path": "todatests/rigging/hh_no_s_lead.toda",
+    "bailKind": "rows",
+    "origLen": 1460,
+    "currLen": 1286,
+    "origHash": "33cc1b6dc5cfa92b",
+    "currHash": "5cc46e892b512573",
+    "bytesEqual": false,
+    "diffNote": true,
+    "initRows": [
+      {
+        "id": "js",
+        "state": "warn",
+        "detail": "js · todajs Missing topline hash · 1ms"
+      },
+      {
+        "id": "clj",
+        "state": "warn",
+        "detail": "clj · toda-rig-checker yellow · 98ms"
+      },
+      {
+        "id": "bb",
+        "state": "bad",
+        "detail": "clj · toda-bb red · 119ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda poptop 41d725e3acecac9e5fe2605beff49d3b5d2fb25c722b7f75391fe96b13b576ad88 not found in file · 0ms"
+      }
+    ],
+    "diffRows": [
+      {
+        "id": "js",
+        "state": "bad",
+        "detail": "js · todajs Cannot read properties of null (reading 'hash') · 1ms"
+      },
+      {
+        "id": "clj",
+        "state": "bad",
+        "detail": "clj · toda-rig-checker red · 117ms"
+      },
+      {
+        "id": "bb",
+        "state": "warn",
+        "detail": "clj · toda-bb yellow · 78ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda {\n  \"structype\": \"rig\",\n  \"colour\": \"red\",\n  \"reference\": \"412b162738a19c38ccfb3848695fe760ad2571bb97c7124001ed441c04d9b808e1\",\n  \"children\": {\n    \"corkline\": {\n      \"structype\": \"cor"
+      }
+    ]
+  },
+  {
+    "idx": 18,
+    "path": "todatests/rigging/hh_no_ss_lead.toda",
+    "bailKind": "rows",
+    "origLen": 1460,
+    "currLen": 1286,
+    "origHash": "5935ea287f674cf8",
+    "currHash": "3ffe49367338c96d",
+    "bytesEqual": false,
+    "diffNote": true,
+    "initRows": [
+      {
+        "id": "js",
+        "state": "warn",
+        "detail": "js · todajs Missing topline hash · 1ms"
+      },
+      {
+        "id": "clj",
+        "state": "warn",
+        "detail": "clj · toda-rig-checker yellow · 137ms"
+      },
+      {
+        "id": "bb",
+        "state": "bad",
+        "detail": "clj · toda-bb red · 112ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda poptop 41c92100f506eb15032cfcf2a06f2be373329c159006574f2493b79d7443f4e2ab not found in file · 0ms"
+      }
+    ],
+    "diffRows": [
+      {
+        "id": "js",
+        "state": "bad",
+        "detail": "js · todajs Cannot read properties of null (reading 'hash') · 1ms"
+      },
+      {
+        "id": "clj",
+        "state": "bad",
+        "detail": "clj · toda-rig-checker red · 126ms"
+      },
+      {
+        "id": "bb",
+        "state": "warn",
+        "detail": "clj · toda-bb yellow · 94ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda {\n  \"structype\": \"rig\",\n  \"colour\": \"red\",\n  \"reference\": \"412b162738a19c38ccfb3848695fe760ad2571bb97c7124001ed441c04d9b808e1\",\n  \"children\": {\n    \"corkline\": {\n      \"structype\": \"cor"
+      }
+    ]
+  },
+  {
+    "idx": 19,
+    "path": "todatests/rigging/hh_non_fast_meet.toda",
+    "bailKind": "rows",
+    "origLen": 1526,
+    "currLen": 1286,
+    "origHash": "3cfba48d3074453d",
+    "currHash": "e9e7d49832646b92",
+    "bytesEqual": false,
+    "diffNote": true,
+    "initRows": [
+      {
+        "id": "js",
+        "state": "warn",
+        "detail": "js · todajs Missing topline hash · 1ms"
+      },
+      {
+        "id": "clj",
+        "state": "warn",
+        "detail": "clj · toda-rig-checker yellow · 95ms"
+      },
+      {
+        "id": "bb",
+        "state": "bad",
+        "detail": "clj · toda-bb red · 92ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda poptop 418b1af918390400fe89ec5612f4493347becef4500c3498b1b9bcd90ae4985473 not found in file · 0ms"
+      }
+    ],
+    "diffRows": [
+      {
+        "id": "js",
+        "state": "bad",
+        "detail": "js · todajs Cannot read properties of null (reading 'hash') · 2ms"
+      },
+      {
+        "id": "clj",
+        "state": "bad",
+        "detail": "clj · toda-rig-checker red · 105ms"
+      },
+      {
+        "id": "bb",
+        "state": "warn",
+        "detail": "clj · toda-bb yellow · 84ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda {\n  \"structype\": \"rig\",\n  \"colour\": \"red\",\n  \"reference\": \"412b162738a19c38ccfb3848695fe760ad2571bb97c7124001ed441c04d9b808e1\",\n  \"children\": {\n    \"corkline\": {\n      \"structype\": \"cor"
+      }
+    ]
+  },
+  {
+    "idx": 20,
+    "path": "todatests/rigging/hh_self_referential_rig.toda",
+    "bailKind": "rows",
+    "origLen": 1526,
+    "currLen": 1286,
+    "origHash": "c211df7cbcf54f39",
+    "currHash": "c98302087fe5ddc2",
+    "bytesEqual": false,
+    "diffNote": true,
+    "initRows": [
+      {
+        "id": "js",
+        "state": "warn",
+        "detail": "js · todajs Missing topline hash · 1ms"
+      },
+      {
+        "id": "clj",
+        "state": "warn",
+        "detail": "clj · toda-rig-checker yellow · 93ms"
+      },
+      {
+        "id": "bb",
+        "state": "bad",
+        "detail": "clj · toda-bb red · 118ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda poptop 41ad86bf2e753845149749809e66072097741d8d3ea0d4a8fb433fdc7955919559 not found in file · 0ms"
+      }
+    ],
+    "diffRows": [
+      {
+        "id": "js",
+        "state": "bad",
+        "detail": "js · todajs Cannot read properties of null (reading 'hash') · 1ms"
+      },
+      {
+        "id": "clj",
+        "state": "bad",
+        "detail": "clj · toda-rig-checker red · 119ms"
+      },
+      {
+        "id": "bb",
+        "state": "warn",
+        "detail": "clj · toda-bb yellow · 110ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda {\n  \"structype\": \"rig\",\n  \"colour\": \"red\",\n  \"reference\": \"412b162738a19c38ccfb3848695fe760ad2571bb97c7124001ed441c04d9b808e1\",\n  \"children\": {\n    \"corkline\": {\n      \"structype\": \"cor"
+      }
+    ]
+  },
+  {
+    "idx": 21,
+    "path": "todatests/rigging/hh_tether_missing.toda",
+    "bailKind": "rows",
+    "origLen": 1454,
+    "currLen": 1442,
+    "origHash": "e7f06568ddec5693",
+    "currHash": "21e74ff26f1b7c16",
+    "bytesEqual": false,
+    "diffNote": true,
+    "initRows": [
+      {
+        "id": "js",
+        "state": "warn",
+        "detail": "js · todajs Missing topline hash · 1ms"
+      },
+      {
+        "id": "clj",
+        "state": "warn",
+        "detail": "clj · toda-rig-checker yellow · 102ms"
+      },
+      {
+        "id": "bb",
+        "state": "bad",
+        "detail": "clj · toda-bb red · 101ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda poptop 417d2b586103b086d2e6efc2f786d4a54f6c5aae88632b74c7258c34cac6db9693 not found in file · 0ms"
+      }
+    ],
+    "diffRows": [
+      {
+        "id": "js",
+        "state": "bad",
+        "detail": "js · todajs Cannot read properties of undefined (reading 'getTetherHash') · 1ms"
+      },
+      {
+        "id": "clj",
+        "state": "bad",
+        "detail": "clj · toda-rig-checker red · 93ms"
+      },
+      {
+        "id": "bb",
+        "state": "warn",
+        "detail": "clj · toda-bb yellow · 91ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda {\n  \"structype\": \"rig\",\n  \"colour\": \"red\",\n  \"reference\": \"412c74b97a79a06653edb046644b1f523b9d0bcca8b19f8a1a54edabdfd131e637\",\n  \"children\": {\n    \"corkline\": {\n      \"structype\": \"cor"
+      }
+    ]
+  },
+  {
+    "idx": 22,
+    "path": "todatests/rigging/hh_tether_not_twist.toda",
+    "bailKind": "rows",
+    "origLen": 1584,
+    "currLen": 1286,
+    "origHash": "97dbf307544da02e",
+    "currHash": "aeb1ed4b612a1c07",
+    "bytesEqual": false,
+    "diffNote": true,
+    "initRows": [
+      {
+        "id": "js",
+        "state": "warn",
+        "detail": "js · todajs Missing topline hash · 1ms"
+      },
+      {
+        "id": "clj",
+        "state": "warn",
+        "detail": "clj · toda-rig-checker yellow · 104ms"
+      },
+      {
+        "id": "bb",
+        "state": "bad",
+        "detail": "clj · toda-bb red · 128ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda poptop 419276c4820e96ca6d0c1bacfbd2c32ee1c350e67de35323ae018e918d37e76452 not found in file · 0ms"
+      }
+    ],
+    "diffRows": [
+      {
+        "id": "js",
+        "state": "bad",
+        "detail": "js · todajs Cannot read properties of null (reading 'hash') · 1ms"
+      },
+      {
+        "id": "clj",
+        "state": "bad",
+        "detail": "clj · toda-rig-checker red · 162ms"
+      },
+      {
+        "id": "bb",
+        "state": "warn",
+        "detail": "clj · toda-bb yellow · 162ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda {\n  \"structype\": \"rig\",\n  \"colour\": \"red\",\n  \"reference\": \"412b162738a19c38ccfb3848695fe760ad2571bb97c7124001ed441c04d9b808e1\",\n  \"children\": {\n    \"corkline\": {\n      \"structype\": \"cor"
+      }
+    ]
+  },
+  {
+    "idx": 23,
+    "path": "todatests/rigging/hh_tether_null.toda",
+    "bailKind": "rows",
+    "origLen": 1494,
+    "currLen": 1286,
+    "origHash": "d27e45202e6971e2",
+    "currHash": "09080ad13a672a32",
+    "bytesEqual": false,
+    "diffNote": true,
+    "initRows": [
+      {
+        "id": "js",
+        "state": "warn",
+        "detail": "js · todajs Missing topline hash · 1ms"
+      },
+      {
+        "id": "clj",
+        "state": "warn",
+        "detail": "clj · toda-rig-checker yellow · 162ms"
+      },
+      {
+        "id": "bb",
+        "state": "bad",
+        "detail": "clj · toda-bb red · 156ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda poptop 41c841d3bd72ddf68d9ecd8c71adbb80e98204b5cc9576cf7f47d087f4a7978f22 not found in file · 0ms"
+      }
+    ],
+    "diffRows": [
+      {
+        "id": "js",
+        "state": "bad",
+        "detail": "js · todajs Cannot read properties of null (reading 'hash') · 1ms"
+      },
+      {
+        "id": "clj",
+        "state": "bad",
+        "detail": "clj · toda-rig-checker red · 107ms"
+      },
+      {
+        "id": "bb",
+        "state": "warn",
+        "detail": "clj · toda-bb yellow · 103ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda {\n  \"structype\": \"rig\",\n  \"colour\": \"red\",\n  \"reference\": \"412b162738a19c38ccfb3848695fe760ad2571bb97c7124001ed441c04d9b808e1\",\n  \"children\": {\n    \"corkline\": {\n      \"structype\": \"cor"
+      }
+    ]
+  },
+  {
+    "idx": 24,
+    "path": "todatests/rigging/hh_tether_symbol.toda",
+    "bailKind": "rows",
+    "origLen": 1526,
+    "currLen": 1286,
+    "origHash": "7d95d6e497b0d302",
+    "currHash": "09ae9c1864b3a447",
+    "bytesEqual": false,
+    "diffNote": true,
+    "initRows": [
+      {
+        "id": "js",
+        "state": "warn",
+        "detail": "js · todajs Missing topline hash · 1ms"
+      },
+      {
+        "id": "clj",
+        "state": "warn",
+        "detail": "clj · toda-rig-checker yellow · 109ms"
+      },
+      {
+        "id": "bb",
+        "state": "bad",
+        "detail": "clj · toda-bb red · 113ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda poptop 41958eb7de5e80de884a7ea620a77b2e658aa5d7553292593557eb985f9a65afc3 not found in file · 0ms"
+      }
+    ],
+    "diffRows": [
+      {
+        "id": "js",
+        "state": "bad",
+        "detail": "js · todajs Cannot read properties of null (reading 'hash') · 1ms"
+      },
+      {
+        "id": "clj",
+        "state": "bad",
+        "detail": "clj · toda-rig-checker red · 106ms"
+      },
+      {
+        "id": "bb",
+        "state": "warn",
+        "detail": "clj · toda-bb yellow · 126ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda {\n  \"structype\": \"rig\",\n  \"colour\": \"red\",\n  \"reference\": \"412b162738a19c38ccfb3848695fe760ad2571bb97c7124001ed441c04d9b808e1\",\n  \"children\": {\n    \"corkline\": {\n      \"structype\": \"cor"
+      }
+    ]
+  },
+  {
+    "idx": 25,
+    "path": "todatests/rigging/hh_valid_lead_root.toda",
+    "bailKind": "rows",
+    "origLen": 1450,
+    "currLen": 1450,
+    "origHash": "382f66147ed17e6c",
+    "currHash": "d60df01b923694d5",
+    "bytesEqual": false,
+    "diffNote": true,
+    "initRows": [
+      {
+        "id": "js",
+        "state": "ok",
+        "detail": "js · todajs verified · 1ms"
+      },
+      {
+        "id": "clj",
+        "state": "ok",
+        "detail": "clj · toda-rig-checker green · 88ms"
+      },
+      {
+        "id": "bb",
+        "state": "ok",
+        "detail": "clj · toda-bb green · 135ms"
+      },
+      {
+        "id": "rust",
+        "state": "ok",
+        "detail": "rust · rustoda verified · 0ms"
+      }
+    ],
+    "diffRows": [
+      {
+        "id": "js",
+        "state": "bad",
+        "detail": "js · todajs Cannot read properties of null (reading 'hash') · 1ms"
+      },
+      {
+        "id": "clj",
+        "state": "bad",
+        "detail": "clj · toda-rig-checker red · 107ms"
+      },
+      {
+        "id": "bb",
+        "state": "bad",
+        "detail": "clj · toda-bb red · 102ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda {\n  \"structype\": \"rig\",\n  \"colour\": \"red\",\n  \"reference\": \"412b162738a19c38ccfb3848695fe760ad2571bb97c7124001ed441c04d9b808e1\",\n  \"children\": {\n    \"corkline\": {\n      \"structype\": \"cor"
+      }
+    ]
+  },
+  {
+    "idx": 26,
+    "path": "todatests/rigging/hh_valid_self_ref_subsequent_valid.toda",
+    "bailKind": "rows",
+    "origLen": 1977,
+    "currLen": 3158,
+    "origHash": "7cbb7329076e68da",
+    "currHash": "31496941056a2fc7",
+    "bytesEqual": false,
+    "diffNote": true,
+    "initRows": [
+      {
+        "id": "js",
+        "state": "ok",
+        "detail": "js · todajs verified · 1ms"
+      },
+      {
+        "id": "clj",
+        "state": "ok",
+        "detail": "clj · toda-rig-checker green · 141ms"
+      },
+      {
+        "id": "bb",
+        "state": "ok",
+        "detail": "clj · toda-bb green · 132ms"
+      },
+      {
+        "id": "rust",
+        "state": "ok",
+        "detail": "rust · rustoda verified · 0ms"
+      }
+    ],
+    "diffRows": [
+      {
+        "id": "js",
+        "state": "bad",
+        "detail": "js · todajs ReqSatError · 1ms"
+      },
+      {
+        "id": "clj",
+        "state": "warn",
+        "detail": "clj · toda-rig-checker yellow · 112ms"
+      },
+      {
+        "id": "bb",
+        "state": "warn",
+        "detail": "clj · toda-bb yellow · 106ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda {\n  \"structype\": \"rig\",\n  \"colour\": \"red\",\n  \"reference\": \"412b162738a19c38ccfb3848695fe760ad2571bb97c7124001ed441c04d9b808e1\",\n  \"children\": {\n    \"corkline\": {\n      \"structype\": \"cor"
+      }
+    ]
+  },
+  {
+    "idx": 27,
+    "path": "todatests/rigging/hh_valid_shield_non_null.toda",
+    "bailKind": "rows",
+    "origLen": 1627,
+    "currLen": 3010,
+    "origHash": "0a1d5d7d8bc2f3a6",
+    "currHash": "9e7d6ea99daa88ed",
+    "bytesEqual": false,
+    "diffNote": true,
+    "initRows": [
+      {
+        "id": "js",
+        "state": "ok",
+        "detail": "js · todajs verified · 1ms"
+      },
+      {
+        "id": "clj",
+        "state": "ok",
+        "detail": "clj · toda-rig-checker green · 72ms"
+      },
+      {
+        "id": "bb",
+        "state": "ok",
+        "detail": "clj · toda-bb green · 51ms"
+      },
+      {
+        "id": "rust",
+        "state": "ok",
+        "detail": "rust · rustoda verified · 0ms"
+      }
+    ],
+    "diffRows": [
+      {
+        "id": "js",
+        "state": "bad",
+        "detail": "js · todajs ReqSatError · 1ms"
+      },
+      {
+        "id": "clj",
+        "state": "warn",
+        "detail": "clj · toda-rig-checker yellow · 187ms"
+      },
+      {
+        "id": "bb",
+        "state": "warn",
+        "detail": "clj · toda-bb yellow · 188ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda {\n  \"structype\": \"rig\",\n  \"colour\": \"red\",\n  \"reference\": \"412b162738a19c38ccfb3848695fe760ad2571bb97c7124001ed441c04d9b808e1\",\n  \"children\": {\n    \"corkline\": {\n      \"structype\": \"cor"
+      }
+    ]
+  },
+  {
+    "idx": 28,
+    "path": "todatests/rigging/hh_valid_shield_null.toda",
+    "bailKind": "rows",
+    "origLen": 1526,
+    "currLen": 1552,
+    "origHash": "2d923e70899a7b89",
+    "currHash": "ad9c3569c552f962",
+    "bytesEqual": false,
+    "diffNote": true,
+    "initRows": [
+      {
+        "id": "js",
+        "state": "ok",
+        "detail": "js · todajs verified · 1ms"
+      },
+      {
+        "id": "clj",
+        "state": "ok",
+        "detail": "clj · toda-rig-checker green · 121ms"
+      },
+      {
+        "id": "bb",
+        "state": "ok",
+        "detail": "clj · toda-bb green · 178ms"
+      },
+      {
+        "id": "rust",
+        "state": "ok",
+        "detail": "rust · rustoda verified · 0ms"
+      }
+    ],
+    "diffRows": [
+      {
+        "id": "js",
+        "state": "bad",
+        "detail": "js · todajs Cannot read properties of null (reading 'hash') · 1ms"
+      },
+      {
+        "id": "clj",
+        "state": "bad",
+        "detail": "clj · toda-rig-checker red · 111ms"
+      },
+      {
+        "id": "bb",
+        "state": "warn",
+        "detail": "clj · toda-bb yellow · 110ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda {\n  \"structype\": \"rig\",\n  \"colour\": \"red\",\n  \"reference\": \"412b162738a19c38ccfb3848695fe760ad2571bb97c7124001ed441c04d9b808e1\",\n  \"children\": {\n    \"corkline\": {\n      \"structype\": \"cor"
+      }
+    ]
+  },
+  {
+    "idx": 29,
+    "path": "todatests/rigging/hh_wrong_hoist_values.toda",
+    "bailKind": "rows",
+    "origLen": 1627,
+    "currLen": 2540,
+    "origHash": "d8ca978bc5da3947",
+    "currHash": "58e8f67d5c8d67d2",
+    "bytesEqual": false,
+    "diffNote": true,
+    "initRows": [
+      {
+        "id": "js",
+        "state": "warn",
+        "detail": "js · todajs Missing topline hash · 1ms"
+      },
+      {
+        "id": "clj",
+        "state": "warn",
+        "detail": "clj · toda-rig-checker yellow · 128ms"
+      },
+      {
+        "id": "bb",
+        "state": "bad",
+        "detail": "clj · toda-bb red · 131ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda poptop 41840b5e52a4fc0d4293e59e83f0a547eee847f287c514a4216ebf0d7e66e2713c not found in file · 0ms"
+      }
+    ],
+    "diffRows": [
+      {
+        "id": "js",
+        "state": "bad",
+        "detail": "js · todajs ReqSatError · 1ms"
+      },
+      {
+        "id": "bb",
+        "state": "warn",
+        "detail": "clj · toda-bb yellow · 108ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda {\n  \"structype\": \"rig\",\n  \"colour\": \"red\",\n  \"reference\": \"412b162738a19c38ccfb3848695fe760ad2571bb97c7124001ed441c04d9b808e1\",\n  \"children\": {\n    \"corkline\": {\n      \"structype\": \"cor"
+      }
+    ]
+  },
+  {
+    "idx": 30,
+    "path": "todatests/rigging/hh_wrong_shield.toda",
+    "bailKind": "rows",
+    "origLen": 1728,
+    "currLen": 2540,
+    "origHash": "bdd65787483f446f",
+    "currHash": "df0884337eba7e71",
+    "bytesEqual": false,
+    "diffNote": true,
+    "initRows": [
+      {
+        "id": "js",
+        "state": "warn",
+        "detail": "js · todajs Missing topline hash · 1ms"
+      },
+      {
+        "id": "clj",
+        "state": "warn",
+        "detail": "clj · toda-rig-checker yellow · 90ms"
+      },
+      {
+        "id": "bb",
+        "state": "bad",
+        "detail": "clj · toda-bb red · 135ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda poptop 41b38442f090350c8c17076f8131c4082d3f132bb44c5f860bbb36d8d0b64f8530 not found in file · 0ms"
+      }
+    ],
+    "diffRows": [
+      {
+        "id": "js",
+        "state": "bad",
+        "detail": "js · todajs ReqSatError · 2ms"
+      },
+      {
+        "id": "bb",
+        "state": "warn",
+        "detail": "clj · toda-bb yellow · 121ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda {\n  \"structype\": \"rig\",\n  \"colour\": \"red\",\n  \"reference\": \"412b162738a19c38ccfb3848695fe760ad2571bb97c7124001ed441c04d9b808e1\",\n  \"children\": {\n    \"corkline\": {\n      \"structype\": \"cor"
+      }
+    ]
+  },
+  {
+    "idx": 31,
+    "path": "todatests/rigging/hitch_hoist_rigs_missing.toda",
+    "bailKind": "rows",
+    "origLen": 1356,
+    "currLen": 1286,
+    "origHash": "00bbac1313e59932",
+    "currHash": "49cbe4229815c3b0",
+    "bytesEqual": false,
+    "diffNote": true,
+    "initRows": [
+      {
+        "id": "js",
+        "state": "warn",
+        "detail": "js · todajs MissingHashPacketError · 1ms"
+      },
+      {
+        "id": "clj",
+        "state": "warn",
+        "detail": "clj · toda-rig-checker yellow · 114ms"
+      },
+      {
+        "id": "bb",
+        "state": "warn",
+        "detail": "clj · toda-bb yellow · 128ms"
+      },
+      {
+        "id": "rust",
+        "state": "warn",
+        "detail": "rust · rustoda {\n  \"structype\": \"rig\",\n  \"colour\": \"yellow\",\n  \"reference\": \"410b492de14da598e8215dc476a0b1604aa870bf2f50c260d0975415d2b4d30981\",\n  \"children\": {\n    \"corkline\": {\n      \"structype\": \""
+      }
+    ],
+    "diffRows": [
+      {
+        "id": "js",
+        "state": "bad",
+        "detail": "js · todajs Cannot read properties of null (reading 'hash') · 1ms"
+      },
+      {
+        "id": "clj",
+        "state": "bad",
+        "detail": "clj · toda-rig-checker red · 104ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda {\n  \"structype\": \"rig\",\n  \"colour\": \"red\",\n  \"reference\": \"412b162738a19c38ccfb3848695fe760ad2571bb97c7124001ed441c04d9b808e1\",\n  \"children\": {\n    \"corkline\": {\n      \"structype\": \"cor"
+      }
+    ]
+  },
+  {
+    "idx": 32,
+    "path": "todatests/rigging/hitch_meet_tether_null.toda",
+    "bailKind": "rows",
+    "origLen": 1494,
+    "currLen": 1286,
+    "origHash": "ad9f8b08c0be4146",
+    "currHash": "4e75080445e3b0fd",
+    "bytesEqual": false,
+    "diffNote": true,
+    "initRows": [
+      {
+        "id": "js",
+        "state": "warn",
+        "detail": "js · todajs MissingPrevious · 1ms"
+      },
+      {
+        "id": "clj",
+        "state": "bad",
+        "detail": "clj · toda-rig-checker red · 137ms"
+      },
+      {
+        "id": "bb",
+        "state": "bad",
+        "detail": "clj · toda-bb red · 162ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda rig supports up to 412fa77adc3a71c4a0f5acb8fe1522595c4d4ae41c2d8320200d2a42e2f9a71fff but focus is 412fa77adc3a71c4a0f5acb8fe1522595c4d4ae41c2d8320200d2a42e2f9a71fff · 1ms"
+      }
+    ],
+    "diffRows": [
+      {
+        "id": "js",
+        "state": "bad",
+        "detail": "js · todajs Cannot read properties of undefined (reading 'getTetherHash') · 1ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda {\n  \"structype\": \"rig\",\n  \"colour\": \"red\",\n  \"reference\": \"41464533e08c8b19c89d4645be71c9f6c579308475d0202b2f452e8719af6a2dbc\",\n  \"children\": {\n    \"corkline\": {\n      \"structype\": \"cor"
+      }
+    ]
+  },
+  {
+    "idx": 33,
+    "path": "todatests/rigging/hitch_splice_post_no_lead_entry.toda",
+    "bailKind": "rows",
+    "origLen": 2664,
+    "currLen": 4928,
+    "origHash": "28bd95b374041c61",
+    "currHash": "49e47526a12247af",
+    "bytesEqual": false,
+    "diffNote": true,
+    "initRows": [
+      {
+        "id": "js",
+        "state": "ok",
+        "detail": "js · todajs verified · 1ms"
+      },
+      {
+        "id": "clj",
+        "state": "bad",
+        "detail": "clj · toda-rig-checker red · 141ms"
+      },
+      {
+        "id": "bb",
+        "state": "bad",
+        "detail": "clj · toda-bb red · 133ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda {\n  \"structype\": \"rig\",\n  \"colour\": \"red\",\n  \"reference\": \"41e02e5caf321e59318d68b39c6f2040cfd5cd77c265cfa7927d41dbe29841e5e1\",\n  \"children\": {\n    \"hitch\": {\n      \"structype\": \"hitch\""
+      }
+    ],
+    "diffRows": [
+      {
+        "id": "js",
+        "state": "bad",
+        "detail": "js · todajs ReqSatError · 1ms"
+      },
+      {
+        "id": "clj",
+        "state": "warn",
+        "detail": "clj · toda-rig-checker yellow · 135ms"
+      },
+      {
+        "id": "bb",
+        "state": "warn",
+        "detail": "clj · toda-bb yellow · 106ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda {\n  \"structype\": \"rig\",\n  \"colour\": \"red\",\n  \"reference\": \"418d69c1426b81ef6a2a7d08d7cf21ca846fe5fcd13f8379e2810126255b117e39\",\n  \"children\": {\n    \"corkline\": {\n      \"structype\": \"cor"
+      }
+    ]
+  },
+  {
+    "idx": 34,
+    "path": "todatests/rigging/hitch_splice_post_wrong_hoist.toda",
+    "bailKind": "rows",
+    "origLen": 2528,
+    "currLen": 4646,
+    "origHash": "a7e346f9d10c9a17",
+    "currHash": "7aa9efe0a2dcc3b3",
+    "bytesEqual": false,
+    "diffNote": true,
+    "initRows": [
+      {
+        "id": "js",
+        "state": "bad",
+        "detail": "js · todajs post rig entry conflict · 1ms"
+      },
+      {
+        "id": "clj",
+        "state": "bad",
+        "detail": "clj · toda-rig-checker red · 164ms"
+      },
+      {
+        "id": "bb",
+        "state": "bad",
+        "detail": "clj · toda-bb red · 130ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda {\n  \"structype\": \"rig\",\n  \"colour\": \"red\",\n  \"reference\": \"41cb0ec7b1845317c3ba697ac6b9608ff477436a7b1191816aba383bd23e13ed51\",\n  \"children\": {\n    \"hitch\": {\n      \"structype\": \"hitch\""
+      }
+    ],
+    "diffRows": [
+      {
+        "id": "js",
+        "state": "bad",
+        "detail": "js · todajs ReqSatError · 1ms"
+      },
+      {
+        "id": "clj",
+        "state": "warn",
+        "detail": "clj · toda-rig-checker yellow · 112ms"
+      },
+      {
+        "id": "bb",
+        "state": "warn",
+        "detail": "clj · toda-bb yellow · 87ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda {\n  \"structype\": \"rig\",\n  \"colour\": \"red\",\n  \"reference\": \"41cb0446cb0ac6a8ab9866155582892ea1a1bcdf8ccce9f265ae7f7eed5a113bde\",\n  \"children\": {\n    \"corkline\": {\n      \"structype\": \"cor"
+      }
+    ]
+  },
+  {
+    "idx": 35,
+    "path": "todatests/rigging/hitch_valid_basic_splice.toda",
+    "bailKind": "rows",
+    "origLen": 2658,
+    "currLen": 4928,
+    "origHash": "8b79c8622bb1c656",
+    "currHash": "f2a9c0d1bce7fd14",
+    "bytesEqual": false,
+    "diffNote": true,
+    "initRows": [
+      {
+        "id": "js",
+        "state": "ok",
+        "detail": "js · todajs verified · 1ms"
+      },
+      {
+        "id": "clj",
+        "state": "ok",
+        "detail": "clj · toda-rig-checker green · 159ms"
+      },
+      {
+        "id": "bb",
+        "state": "ok",
+        "detail": "clj · toda-bb green · 136ms"
+      },
+      {
+        "id": "rust",
+        "state": "ok",
+        "detail": "rust · rustoda verified · 0ms"
+      }
+    ],
+    "diffRows": [
+      {
+        "id": "js",
+        "state": "bad",
+        "detail": "js · todajs ReqSatError · 1ms"
+      },
+      {
+        "id": "clj",
+        "state": "warn",
+        "detail": "clj · toda-rig-checker yellow · 131ms"
+      },
+      {
+        "id": "bb",
+        "state": "warn",
+        "detail": "clj · toda-bb yellow · 128ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda {\n  \"structype\": \"rig\",\n  \"colour\": \"red\",\n  \"reference\": \"412189dba83701f79111a2568d299f007c9c94f86b4c829bdea1c684b6f8dc9d08\",\n  \"children\": {\n    \"corkline\": {\n      \"structype\": \"cor"
+      }
+    ]
+  },
+  {
+    "idx": 36,
+    "path": "todatests/rigging/invalid_rigging_green.toda",
+    "bailKind": "rows",
+    "currLen": 5224,
+    "currHash": "d7c727a0c4cdd687",
+    "diffNote": false,
+    "initRows": [
+      {
+        "id": "js",
+        "state": "bad",
+        "detail": "js · todajs ReqSatError · 1ms"
+      },
+      {
+        "id": "clj",
+        "state": "warn",
+        "detail": "clj · toda-rig-checker yellow · 143ms"
+      },
+      {
+        "id": "bb",
+        "state": "warn",
+        "detail": "clj · toda-bb yellow · 127ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda {\n  \"structype\": \"rig\",\n  \"colour\": \"red\",\n  \"reference\": \"414cd51f687739d355043d95abafbae8c46dc092a708059c30224a260dabad7005\",\n  \"children\": {\n    \"corkline\": {\n      \"structype\": \"cor"
+      }
+    ],
+    "diffRows": []
+  },
+  {
+    "idx": 37,
+    "path": "todatests/rigging/invalid_shielding_green.toda",
+    "bailKind": "rows",
+    "origLen": 3118,
+    "currLen": 5224,
+    "origHash": "e36dcc8f530510a8",
+    "currHash": "dda7e586af709499",
+    "bytesEqual": false,
+    "diffNote": true,
+    "initRows": [
+      {
+        "id": "js",
+        "state": "ok",
+        "detail": "js · todajs verified · 1ms"
+      },
+      {
+        "id": "clj",
+        "state": "ok",
+        "detail": "clj · toda-rig-checker green · 117ms"
+      },
+      {
+        "id": "bb",
+        "state": "ok",
+        "detail": "clj · toda-bb green · 128ms"
+      },
+      {
+        "id": "rust",
+        "state": "ok",
+        "detail": "rust · rustoda verified · 0ms"
+      }
+    ],
+    "diffRows": [
+      {
+        "id": "js",
+        "state": "bad",
+        "detail": "js · todajs ReqSatError · 2ms"
+      },
+      {
+        "id": "clj",
+        "state": "warn",
+        "detail": "clj · toda-rig-checker yellow · 112ms"
+      },
+      {
+        "id": "bb",
+        "state": "warn",
+        "detail": "clj · toda-bb yellow · 125ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda {\n  \"structype\": \"rig\",\n  \"colour\": \"red\",\n  \"reference\": \"417606afc0ae2b3cd872e9a6a054cfe7a639e84808041744027808a977814c5253\",\n  \"children\": {\n    \"corkline\": {\n      \"structype\": \"cor"
+      }
+    ]
+  },
+  {
+    "idx": 38,
+    "path": "todatests/rigging/lash_succession_missing_prev.toda",
+    "bailKind": "rows",
+    "origLen": 2768,
+    "currLen": 3358,
+    "origHash": "f2f6e8500d46e551",
+    "currHash": "e0cad00eb1fdaa6e",
+    "bytesEqual": false,
+    "diffNote": true,
+    "initRows": [
+      {
+        "id": "js",
+        "state": "warn",
+        "detail": "js · todajs Missing previous 41498d82f8fe9bc445569223152e9a7c91c717013702513511bf1372914df8fc97 · 1ms"
+      },
+      {
+        "id": "clj",
+        "state": "warn",
+        "detail": "clj · toda-rig-checker yellow · 132ms"
+      },
+      {
+        "id": "bb",
+        "state": "warn",
+        "detail": "clj · toda-bb yellow · 129ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda {\n  \"structype\": \"rig\",\n  \"colour\": \"red\",\n  \"reference\": \"415ec2516066f7b63fa2bc44163209f05c7ce6f2177fe0a266eb2160b914457ef3\",\n  \"children\": {\n    \"corkline\": {\n      \"structype\": \"cor"
+      }
+    ],
+    "diffRows": [
+      {
+        "id": "js",
+        "state": "warn",
+        "detail": "js · todajs Missing topline successor · 1ms"
+      },
+      {
+        "id": "clj",
+        "state": "bad",
+        "detail": "clj · toda-rig-checker red · 106ms"
+      },
+      {
+        "id": "bb",
+        "state": "bad",
+        "detail": "clj · toda-bb red · 86ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda {\n  \"structype\": \"rig\",\n  \"colour\": \"red\",\n  \"reference\": \"41eb6efc2f5acf76db7a1a0762d7466db02f67d833a7df6ffa2379166df1c2236b\",\n  \"children\": {\n    \"corkline\": {\n      \"structype\": \"cor"
+      }
+    ]
+  },
+  {
+    "idx": 39,
+    "path": "todatests/rigging/lash_succession_no_fast_twist.toda",
+    "bailKind": "rows",
+    "origLen": 2884,
+    "currLen": 4754,
+    "origHash": "2bac99ad792f94ef",
+    "currHash": "6795a04484a556ef",
+    "bytesEqual": false,
+    "diffNote": true,
+    "initRows": [
+      {
+        "id": "js",
+        "state": "bad",
+        "detail": "js · todajs LooseTwistError · 1ms"
+      },
+      {
+        "id": "clj",
+        "state": "bad",
+        "detail": "clj · toda-rig-checker red · 123ms"
+      },
+      {
+        "id": "bb",
+        "state": "bad",
+        "detail": "clj · toda-bb red · 85ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda {\n  \"structype\": \"rig\",\n  \"colour\": \"red\",\n  \"reference\": \"41106da7c4d41349760b3b24aee5977beb63f04599662f707d4944c4753a425a2c\",\n  \"children\": {\n    \"corkline\": {\n      \"structype\": \"cor"
+      }
+    ],
+    "diffRows": [
+      {
+        "id": "js",
+        "state": "warn",
+        "detail": "js · todajs Missing topline successor · 1ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda {\n  \"structype\": \"rig\",\n  \"colour\": \"red\",\n  \"reference\": \"415b8e78c86151c0fb297648f490368c2f3d02dcef3b7013a1d882da1dea2dc3f1\",\n  \"children\": {\n    \"corkline\": {\n      \"structype\": \"cor"
+      }
+    ]
+  },
+  {
+    "idx": 40,
+    "path": "todatests/rigging/lash_succession_reqsat_fail.toda",
+    "bailKind": "rows",
+    "origLen": 3407,
+    "currLen": 5224,
+    "origHash": "af97d10e40cdad7e",
+    "currHash": "300262f7a80bec8d",
+    "bytesEqual": false,
+    "diffNote": true,
+    "initRows": [
+      {
+        "id": "js",
+        "state": "bad",
+        "detail": "js · todajs DataError · 2ms"
+      },
+      {
+        "id": "clj",
+        "state": "bad",
+        "detail": "clj · toda-rig-checker red · 118ms"
+      },
+      {
+        "id": "bb",
+        "state": "bad",
+        "detail": "clj · toda-bb red · 135ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda {\n  \"structype\": \"rig\",\n  \"colour\": \"red\",\n  \"reference\": \"41166f006d572b5d19f031ac1b2261f13dac853b81283bdd8f27a618f6d178da0f\",\n  \"children\": {\n    \"corkline\": {\n      \"structype\": \"cor"
+      }
+    ],
+    "diffRows": [
+      {
+        "id": "js",
+        "state": "warn",
+        "detail": "js · todajs Missing topline successor · 1ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda {\n  \"structype\": \"rig\",\n  \"colour\": \"red\",\n  \"reference\": \"41f821d5e7622c03e170c3760c0b8f1d897024666485a07214b1e8701dfe61e751\",\n  \"children\": {\n    \"corkline\": {\n      \"structype\": \"cor"
+      }
+    ]
+  },
+  {
+    "idx": 41,
+    "path": "todatests/rigging/lashed_non_colinear.toda",
+    "bailKind": "rows",
+    "origLen": 3621,
+    "currLen": 4754,
+    "origHash": "136ed44eda5c1914",
+    "currHash": "7b7b29f5e74ba319",
+    "bytesEqual": false,
+    "diffNote": true,
+    "initRows": [
+      {
+        "id": "js",
+        "state": "bad",
+        "detail": "js · todajs Conflicting successors. This packet store does not support conflicting successors: 412dfc3525c252569c7fafaef9bc2abcfe52a · 1ms"
+      },
+      {
+        "id": "clj",
+        "state": "warn",
+        "detail": "clj · toda-rig-checker yellow · 130ms"
+      },
+      {
+        "id": "bb",
+        "state": "bad",
+        "detail": "clj · toda-bb red · 129ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda poptop 414ce9ae370b17ee59aab92d4a24c1784ad4adbc0ffadf2732f68dc7ae3cf6adc2 not found in file · 0ms"
+      }
+    ],
+    "diffRows": [
+      {
+        "id": "js",
+        "state": "bad",
+        "detail": "js · todajs ReqSatError · 1ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda {\n  \"structype\": \"rig\",\n  \"colour\": \"red\",\n  \"reference\": \"4187c205a5f965ef5a68f648b275f13377394d181cb6012e8b06da0dd39f0b3041\",\n  \"children\": {\n    \"corkline\": {\n      \"structype\": \"cor"
+      }
+    ]
+  },
+  {
+    "idx": 42,
+    "path": "todatests/rigging/meets_do_not_match.toda",
+    "bailKind": "rows",
+    "origLen": 6743,
+    "currLen": 8916,
+    "origHash": "431ef5b5a13e3831",
+    "currHash": "e83510a84f54fc9f",
+    "bytesEqual": false,
+    "diffNote": true,
+    "initRows": [
+      {
+        "id": "js",
+        "state": "warn",
+        "detail": "js · todajs MissingSuccessor · 1ms"
+      },
+      {
+        "id": "clj",
+        "state": "bad",
+        "detail": "clj · toda-rig-checker red · 196ms"
+      },
+      {
+        "id": "bb",
+        "state": "bad",
+        "detail": "clj · toda-bb red · 120ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda {\n  \"structype\": \"rig\",\n  \"colour\": \"red\",\n  \"reference\": \"41e3774abe670c3991a4a7377094cf8fcd876340ef594651fb2d966e9f8440f134\",\n  \"children\": {\n    \"hitch\": {\n      \"structype\": \"hitch\""
+      }
+    ],
+    "diffRows": [
+      {
+        "id": "js",
+        "state": "bad",
+        "detail": "js · todajs ReqSatError · 1ms"
+      },
+      {
+        "id": "clj",
+        "state": "warn",
+        "detail": "clj · toda-rig-checker yellow · 131ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda {\n  \"structype\": \"rig\",\n  \"colour\": \"red\",\n  \"reference\": \"414a95170271f8da41c91b54adf059320b959e45cbf465792b2babe7c24595e02b\",\n  \"children\": {\n    \"corkline\": {\n      \"structype\": \"cor"
+      }
+    ]
+  },
+  {
+    "idx": 43,
+    "path": "todatests/rigging/missing_rigging.toda",
+    "bailKind": "rows",
+    "origLen": 2948,
+    "currLen": 5224,
+    "origHash": "0ade19298de2dd4d",
+    "currHash": "4c3e831b7a952ec7",
+    "bytesEqual": false,
+    "diffNote": true,
+    "initRows": [
+      {
+        "id": "js",
+        "state": "warn",
+        "detail": "js · todajs MissingHashPacketError · 1ms"
+      },
+      {
+        "id": "clj",
+        "state": "warn",
+        "detail": "clj · toda-rig-checker yellow · 111ms"
+      },
+      {
+        "id": "bb",
+        "state": "warn",
+        "detail": "clj · toda-bb yellow · 120ms"
+      },
+      {
+        "id": "rust",
+        "state": "warn",
+        "detail": "rust · rustoda {\n  \"structype\": \"rig\",\n  \"colour\": \"yellow\",\n  \"reference\": \"41572c3d9fec4f00d9c643ebd52db98d8277dfb4e833a365ce99c556c49f570e88\",\n  \"children\": {\n    \"corkline\": {\n      \"structype\": \""
+      }
+    ],
+    "diffRows": [
+      {
+        "id": "js",
+        "state": "bad",
+        "detail": "js · todajs ReqSatError · 2ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda {\n  \"structype\": \"rig\",\n  \"colour\": \"red\",\n  \"reference\": \"41da39c8d02199e76b2dd665f4546b89891618d3255588e768ad7b6caa0364f2e0\",\n  \"children\": {\n    \"corkline\": {\n      \"structype\": \"cor"
+      }
+    ]
+  },
+  {
+    "idx": 44,
+    "path": "todatests/rigging/missing_shield.toda",
+    "bailKind": "rows",
+    "origLen": 2869,
+    "currLen": 4754,
+    "origHash": "281db5c05df2aaf2",
+    "currHash": "5b9afad6a0478159",
+    "bytesEqual": false,
+    "diffNote": true,
+    "initRows": [
+      {
+        "id": "js",
+        "state": "warn",
+        "detail": "js · todajs The shield for twist 4137f3867e1fd4af828a2932ff3ea99e43c8743909a511da8bc48a17bfd6d8404f is missing · 1ms"
+      },
+      {
+        "id": "clj",
+        "state": "warn",
+        "detail": "clj · toda-rig-checker yellow · 119ms"
+      },
+      {
+        "id": "bb",
+        "state": "warn",
+        "detail": "clj · toda-bb yellow · 103ms"
+      },
+      {
+        "id": "rust",
+        "state": "warn",
+        "detail": "rust · rustoda partial pass · 0ms"
+      }
+    ],
+    "diffRows": [
+      {
+        "id": "js",
+        "state": "warn",
+        "detail": "js · todajs Missing topline successor · 1ms"
+      },
+      {
+        "id": "clj",
+        "state": "bad",
+        "detail": "clj · toda-rig-checker red · 98ms"
+      },
+      {
+        "id": "bb",
+        "state": "bad",
+        "detail": "clj · toda-bb red · 97ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda {\n  \"structype\": \"rig\",\n  \"colour\": \"red\",\n  \"reference\": \"417a76f15738cb4705f60ea441617884b6515ae873bce53cea32d9910b6ec12779\",\n  \"children\": {\n    \"corkline\": {\n      \"structype\": \"cor"
+      }
+    ]
+  },
+  {
+    "idx": 45,
+    "path": "todatests/rigging/multiple_hoists_green.toda",
+    "bailKind": "rows",
+    "origLen": 2948,
+    "currLen": 5224,
+    "origHash": "9d09efbbf8f672fa",
+    "currHash": "021cb7751a432979",
+    "bytesEqual": false,
+    "diffNote": true,
+    "initRows": [
+      {
+        "id": "js",
+        "state": "ok",
+        "detail": "js · todajs verified · 1ms"
+      },
+      {
+        "id": "clj",
+        "state": "ok",
+        "detail": "clj · toda-rig-checker green · 128ms"
+      },
+      {
+        "id": "bb",
+        "state": "ok",
+        "detail": "clj · toda-bb green · 94ms"
+      },
+      {
+        "id": "rust",
+        "state": "ok",
+        "detail": "rust · rustoda verified · 0ms"
+      }
+    ],
+    "diffRows": [
+      {
+        "id": "js",
+        "state": "bad",
+        "detail": "js · todajs ReqSatError · 1ms"
+      },
+      {
+        "id": "clj",
+        "state": "warn",
+        "detail": "clj · toda-rig-checker yellow · 117ms"
+      },
+      {
+        "id": "bb",
+        "state": "warn",
+        "detail": "clj · toda-bb yellow · 107ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda {\n  \"structype\": \"rig\",\n  \"colour\": \"red\",\n  \"reference\": \"41f519eab8a7972fd262ad7048f1eec5e8f1c8f933189609d4bd99b04641d99613\",\n  \"children\": {\n    \"corkline\": {\n      \"structype\": \"cor"
+      }
+    ]
+  },
+  {
+    "idx": 46,
+    "path": "todatests/rigging/post_rigging_missing_post_key.toda",
+    "bailKind": "rows",
+    "origLen": 4903,
+    "currLen": 9414,
+    "origHash": "1c883f14776b13a2",
+    "currHash": "551066818f72b5da",
+    "bytesEqual": false,
+    "diffNote": true,
+    "initRows": [
+      {
+        "id": "js",
+        "state": "ok",
+        "detail": "js · todajs verified · 1ms"
+      },
+      {
+        "id": "clj",
+        "state": "bad",
+        "detail": "clj · toda-rig-checker red · 107ms"
+      },
+      {
+        "id": "bb",
+        "state": "bad",
+        "detail": "clj · toda-bb red · 100ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda {\n  \"structype\": \"rig\",\n  \"colour\": \"red\",\n  \"reference\": \"4180d85ebd4c4f372a150cd7bc1a99f80c17e99187a6f77608f7cde81f6634be39\",\n  \"children\": {\n    \"hitch\": {\n      \"structype\": \"hitch\""
+      }
+    ],
+    "diffRows": [
+      {
+        "id": "js",
+        "state": "bad",
+        "detail": "js · todajs ReqSatError · 1ms"
+      },
+      {
+        "id": "clj",
+        "state": "warn",
+        "detail": "clj · toda-rig-checker yellow · 122ms"
+      },
+      {
+        "id": "bb",
+        "state": "warn",
+        "detail": "clj · toda-bb yellow · 113ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda {\n  \"structype\": \"rig\",\n  \"colour\": \"red\",\n  \"reference\": \"4118cb57cb707f8035ac4bace0cda23dbb5872d50e37c5d5e1444ad909d0c6f7ea\",\n  \"children\": {\n    \"corkline\": {\n      \"structype\": \"cor"
+      }
+    ]
+  },
+  {
+    "idx": 47,
+    "path": "todatests/rigging/self_referential.toda",
+    "bailKind": "rows",
+    "origLen": 2379,
+    "currLen": 5250,
+    "origHash": "e992633ceb517a81",
+    "currHash": "f2626849c8191f92",
+    "bytesEqual": false,
+    "diffNote": true,
+    "initRows": [
+      {
+        "id": "js",
+        "state": "warn",
+        "detail": "js · todajs Missing topline hash · 1ms"
+      },
+      {
+        "id": "clj",
+        "state": "warn",
+        "detail": "clj · toda-rig-checker yellow · 100ms"
+      },
+      {
+        "id": "bb",
+        "state": "bad",
+        "detail": "clj · toda-bb red · 129ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda poptop 4180dde95fc920c41391cdc0730bb0df7a749fac4d8aa83e30665bf6a3603001d4 not found in file · 0ms"
+      }
+    ],
+    "diffRows": [
+      {
+        "id": "js",
+        "state": "bad",
+        "detail": "js · todajs ReqSatError · 1ms"
+      },
+      {
+        "id": "bb",
+        "state": "warn",
+        "detail": "clj · toda-bb yellow · 127ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda {\n  \"structype\": \"rig\",\n  \"colour\": \"red\",\n  \"reference\": \"4130ca241afce828df2051623762cfe55886b9daffe1f274338d98078db7df3a5c\",\n  \"children\": {\n    \"corkline\": {\n      \"structype\": \"cor"
+      }
+    ]
+  },
+  {
+    "idx": 48,
+    "path": "todatests/rigging/simple_lash_f1.toda",
+    "bailKind": "rows",
+    "origLen": 4862,
+    "currLen": 9414,
+    "origHash": "79dabe083db94b00",
+    "currHash": "01bc01fc2e8c67d4",
+    "bytesEqual": false,
+    "diffNote": true,
+    "initRows": [
+      {
+        "id": "js",
+        "state": "ok",
+        "detail": "js · todajs verified · 1ms"
+      },
+      {
+        "id": "clj",
+        "state": "ok",
+        "detail": "clj · toda-rig-checker green · 117ms"
+      },
+      {
+        "id": "bb",
+        "state": "ok",
+        "detail": "clj · toda-bb green · 113ms"
+      },
+      {
+        "id": "rust",
+        "state": "ok",
+        "detail": "rust · rustoda verified · 1ms"
+      }
+    ],
+    "diffRows": [
+      {
+        "id": "js",
+        "state": "bad",
+        "detail": "js · todajs ReqSatError · 1ms"
+      },
+      {
+        "id": "clj",
+        "state": "warn",
+        "detail": "clj · toda-rig-checker yellow · 116ms"
+      },
+      {
+        "id": "bb",
+        "state": "warn",
+        "detail": "clj · toda-bb yellow · 90ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda {\n  \"structype\": \"rig\",\n  \"colour\": \"red\",\n  \"reference\": \"412c1ec43ce57dc1684275653b721659e3bee8e8d8a83bbdbc10268be05882742b\",\n  \"children\": {\n    \"corkline\": {\n      \"structype\": \"cor"
+      }
+    ]
+  },
+  {
+    "idx": 49,
+    "path": "todatests/rigging/simple_lash_f2.toda",
+    "bailKind": "rows",
+    "origLen": 4862,
+    "currLen": 9414,
+    "origHash": "e7e3970f93c918d6",
+    "currHash": "0fff4e36a71bc66a",
+    "bytesEqual": false,
+    "diffNote": true,
+    "initRows": [
+      {
+        "id": "js",
+        "state": "ok",
+        "detail": "js · todajs verified · 1ms"
+      },
+      {
+        "id": "clj",
+        "state": "ok",
+        "detail": "clj · toda-rig-checker green · 147ms"
+      },
+      {
+        "id": "bb",
+        "state": "ok",
+        "detail": "clj · toda-bb green · 133ms"
+      },
+      {
+        "id": "rust",
+        "state": "ok",
+        "detail": "rust · rustoda verified · 0ms"
+      }
+    ],
+    "diffRows": [
+      {
+        "id": "js",
+        "state": "bad",
+        "detail": "js · todajs ReqSatError · 2ms"
+      },
+      {
+        "id": "clj",
+        "state": "warn",
+        "detail": "clj · toda-rig-checker yellow · 130ms"
+      },
+      {
+        "id": "bb",
+        "state": "warn",
+        "detail": "clj · toda-bb yellow · 126ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda {\n  \"structype\": \"rig\",\n  \"colour\": \"red\",\n  \"reference\": \"4188afb8b43ea6fc1dcca7d404b1816d3b4a2f10f53dea9af224c2cdd0e15e96c1\",\n  \"children\": {\n    \"corkline\": {\n      \"structype\": \"cor"
+      }
+    ]
+  },
+  {
+    "idx": 50,
+    "path": "todatests/rigging/simple_last.toda",
+    "bailKind": "rows",
+    "origLen": 2916,
+    "currLen": 5224,
+    "origHash": "e0697da8a47e1ebe",
+    "currHash": "ac65c0e0c12f4b36",
+    "bytesEqual": false,
+    "diffNote": true,
+    "initRows": [
+      {
+        "id": "js",
+        "state": "ok",
+        "detail": "js · todajs verified · 1ms"
+      },
+      {
+        "id": "clj",
+        "state": "ok",
+        "detail": "clj · toda-rig-checker green · 130ms"
+      },
+      {
+        "id": "bb",
+        "state": "ok",
+        "detail": "clj · toda-bb green · 119ms"
+      },
+      {
+        "id": "rust",
+        "state": "ok",
+        "detail": "rust · rustoda verified · 0ms"
+      }
+    ],
+    "diffRows": [
+      {
+        "id": "js",
+        "state": "bad",
+        "detail": "js · todajs ReqSatError · 1ms"
+      },
+      {
+        "id": "clj",
+        "state": "warn",
+        "detail": "clj · toda-rig-checker yellow · 120ms"
+      },
+      {
+        "id": "bb",
+        "state": "warn",
+        "detail": "clj · toda-bb yellow · 108ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda {\n  \"structype\": \"rig\",\n  \"colour\": \"red\",\n  \"reference\": \"41d8d6b6e67ceb0932477c7fe72ba762891a337ce7f4384e8e4f157ab6c21fe123\",\n  \"children\": {\n    \"corkline\": {\n      \"structype\": \"cor"
+      }
+    ]
+  },
+  {
+    "idx": 51,
+    "path": "todatests/rigging/splice_mismatch.toda",
+    "bailKind": "rows",
+    "origLen": 16353,
+    "currLen": 26640,
+    "origHash": "9e22fccd707647c4",
+    "currHash": "1abc234c1c3be20b",
+    "bytesEqual": false,
+    "diffNote": true,
+    "initRows": [
+      {
+        "id": "js",
+        "state": "bad",
+        "detail": "js · todajs Conflicting successors. This packet store does not support conflicting successors: 418b971616b78963b2e2d5d0c135a5a9b2a67 · 1ms"
+      },
+      {
+        "id": "clj",
+        "state": "warn",
+        "detail": "clj · toda-rig-checker yellow · 123ms"
+      },
+      {
+        "id": "bb",
+        "state": "bad",
+        "detail": "clj · toda-bb red · 111ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda poptop 41961d4c76b06118218ca5f7f2ce953dd51172416e65ab82961cd82ef4914f0edf not found in file · 1ms"
+      }
+    ],
+    "diffRows": [
+      {
+        "id": "js",
+        "state": "bad",
+        "detail": "js · todajs ReqSatError · 2ms"
+      },
+      {
+        "id": "bb",
+        "state": "warn",
+        "detail": "clj · toda-bb yellow · 138ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda {\n  \"structype\": \"rig\",\n  \"colour\": \"red\",\n  \"reference\": \"4190176c443c1fb413f956808aa412bb395339d052575362b0f06a1bc667f5137e\",\n  \"children\": {\n    \"corkline\": {\n      \"structype\": \"cor"
+      }
+    ]
+  },
+  {
+    "idx": 52,
+    "path": "todatests/rigging/unit_rig.toda",
+    "bailKind": "rows",
+    "origLen": 4497,
+    "currLen": 5672,
+    "origHash": "351629511c64a91e",
+    "currHash": "3f0a180cf1772690",
+    "bytesEqual": false,
+    "diffNote": true,
+    "initRows": [
+      {
+        "id": "js",
+        "state": "ok",
+        "detail": "js · todajs verified · 1ms"
+      },
+      {
+        "id": "clj",
+        "state": "ok",
+        "detail": "clj · toda-rig-checker green · 115ms"
+      },
+      {
+        "id": "bb",
+        "state": "ok",
+        "detail": "clj · toda-bb green · 134ms"
+      },
+      {
+        "id": "rust",
+        "state": "ok",
+        "detail": "rust · rustoda verified · 0ms"
+      }
+    ],
+    "diffRows": [
+      {
+        "id": "js",
+        "state": "warn",
+        "detail": "js · todajs MissingHoistError · 1ms"
+      },
+      {
+        "id": "clj",
+        "state": "bad",
+        "detail": "clj · toda-rig-checker red · 108ms"
+      },
+      {
+        "id": "bb",
+        "state": "warn",
+        "detail": "clj · toda-bb yellow · 125ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda {\n  \"structype\": \"rig\",\n  \"colour\": \"red\",\n  \"reference\": \"4176775e8bc43560bc683758b8490960702e98ced85dd2d017fb799e13ad1af39b\",\n  \"children\": {\n    \"corkline\": {\n      \"structype\": \"cor"
+      }
+    ]
+  },
+  {
+    "idx": 53,
+    "path": "todatests/rigging/unit_rig_multi.toda",
+    "bailKind": "rows",
+    "origLen": 4992,
+    "currLen": 6390,
+    "origHash": "c0c7a3212f2faf1b",
+    "currHash": "095d6c2fc1af0ec2",
+    "bytesEqual": false,
+    "diffNote": true,
+    "initRows": [
+      {
+        "id": "js",
+        "state": "ok",
+        "detail": "js · todajs verified · 1ms"
+      },
+      {
+        "id": "clj",
+        "state": "ok",
+        "detail": "clj · toda-rig-checker green · 136ms"
+      },
+      {
+        "id": "bb",
+        "state": "ok",
+        "detail": "clj · toda-bb green · 136ms"
+      },
+      {
+        "id": "rust",
+        "state": "ok",
+        "detail": "rust · rustoda verified · 1ms"
+      }
+    ],
+    "diffRows": [
+      {
+        "id": "js",
+        "state": "warn",
+        "detail": "js · todajs Missing topline successor · 1ms"
+      },
+      {
+        "id": "clj",
+        "state": "bad",
+        "detail": "clj · toda-rig-checker red · 124ms"
+      },
+      {
+        "id": "bb",
+        "state": "bad",
+        "detail": "clj · toda-bb red · 134ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda {\n  \"structype\": \"rig\",\n  \"colour\": \"red\",\n  \"reference\": \"4136831fb81290c1de1afcb9c9966f3d80a794942655ff143066b17fd5f8c7350f\",\n  \"children\": {\n    \"corkline\": {\n      \"structype\": \"cor"
+      }
+    ]
+  },
+  {
+    "idx": 54,
+    "path": "todatests/rigging/valid_kiwano.toda",
+    "bailKind": "rows",
+    "origLen": 15946,
+    "currLen": 27528,
+    "origHash": "e1a465867f05708e",
+    "currHash": "f6b7bef2d7cea2e2",
+    "bytesEqual": false,
+    "diffNote": true,
+    "initRows": [
+      {
+        "id": "js",
+        "state": "ok",
+        "detail": "js · todajs verified · 2ms"
+      },
+      {
+        "id": "clj",
+        "state": "ok",
+        "detail": "clj · toda-rig-checker green · 226ms"
+      },
+      {
+        "id": "bb",
+        "state": "ok",
+        "detail": "clj · toda-bb green · 138ms"
+      },
+      {
+        "id": "rust",
+        "state": "ok",
+        "detail": "rust · rustoda verified · 1ms"
+      }
+    ],
+    "diffRows": [
+      {
+        "id": "js",
+        "state": "bad",
+        "detail": "js · todajs ReqSatError · 2ms"
+      },
+      {
+        "id": "clj",
+        "state": "warn",
+        "detail": "clj · toda-rig-checker yellow · 177ms"
+      },
+      {
+        "id": "bb",
+        "state": "warn",
+        "detail": "clj · toda-bb yellow · 135ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda {\n  \"structype\": \"rig\",\n  \"colour\": \"red\",\n  \"reference\": \"4189814ad34ea123a7bfc1e2413857edb2f8fb18aeb8a34965357229bdea9372c2\",\n  \"children\": {\n    \"corkline\": {\n      \"structype\": \"cor"
+      }
+    ]
+  },
+  {
+    "idx": 55,
+    "path": "todatests/rigging/valid_kiwano_0.toda",
+    "bailKind": "rows",
+    "origLen": 15946,
+    "currLen": 27528,
+    "origHash": "e1a465867f05708e",
+    "currHash": "8d8b7ab137a099ff",
+    "bytesEqual": false,
+    "diffNote": true,
+    "initRows": [
+      {
+        "id": "js",
+        "state": "ok",
+        "detail": "js · todajs verified · 2ms"
+      },
+      {
+        "id": "clj",
+        "state": "ok",
+        "detail": "clj · toda-rig-checker green · 104ms"
+      },
+      {
+        "id": "bb",
+        "state": "ok",
+        "detail": "clj · toda-bb green · 79ms"
+      },
+      {
+        "id": "rust",
+        "state": "ok",
+        "detail": "rust · rustoda verified · 1ms"
+      }
+    ],
+    "diffRows": [
+      {
+        "id": "js",
+        "state": "bad",
+        "detail": "js · todajs ReqSatError · 2ms"
+      },
+      {
+        "id": "clj",
+        "state": "warn",
+        "detail": "clj · toda-rig-checker yellow · 137ms"
+      },
+      {
+        "id": "bb",
+        "state": "warn",
+        "detail": "clj · toda-bb yellow · 134ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda {\n  \"structype\": \"rig\",\n  \"colour\": \"red\",\n  \"reference\": \"41f3e4bbf0b6e65df4a12eb462dc10f4c0c0af2696b8ef65223a1d030a59b0b364\",\n  \"children\": {\n    \"corkline\": {\n      \"structype\": \"cor"
+      }
+    ]
+  },
+  {
+    "idx": 56,
+    "path": "todatests/rigging/valid_kiwano_1.toda",
+    "bailKind": "rows",
+    "origLen": 15946,
+    "currLen": 27528,
+    "origHash": "cad24f8367b3610d",
+    "currHash": "303d1dc9185b1f89",
+    "bytesEqual": false,
+    "diffNote": true,
+    "initRows": [
+      {
+        "id": "js",
+        "state": "ok",
+        "detail": "js · todajs verified · 2ms"
+      },
+      {
+        "id": "clj",
+        "state": "ok",
+        "detail": "clj · toda-rig-checker green · 339ms"
+      },
+      {
+        "id": "bb",
+        "state": "ok",
+        "detail": "clj · toda-bb green · 133ms"
+      },
+      {
+        "id": "rust",
+        "state": "ok",
+        "detail": "rust · rustoda verified · 1ms"
+      }
+    ],
+    "diffRows": [
+      {
+        "id": "js",
+        "state": "bad",
+        "detail": "js · todajs ReqSatError · 2ms"
+      },
+      {
+        "id": "clj",
+        "state": "warn",
+        "detail": "clj · toda-rig-checker yellow · 145ms"
+      },
+      {
+        "id": "bb",
+        "state": "warn",
+        "detail": "clj · toda-bb yellow · 180ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda {\n  \"structype\": \"rig\",\n  \"colour\": \"red\",\n  \"reference\": \"413fdbc77bed3c86b8a774c0ee6b153bb2431dfc5853cdc43d8ade9bc3a24c9019\",\n  \"children\": {\n    \"corkline\": {\n      \"structype\": \"cor"
+      }
+    ]
+  },
+  {
+    "idx": 57,
+    "path": "todatests/rigging/valid_kiwano_f1.toda",
+    "bailKind": "rows",
+    "origLen": 15946,
+    "currLen": 27528,
+    "origHash": "e1a465867f05708e",
+    "currHash": "c42f7b4cd27eb3da",
+    "bytesEqual": false,
+    "diffNote": true,
+    "initRows": [
+      {
+        "id": "js",
+        "state": "ok",
+        "detail": "js · todajs verified · 2ms"
+      },
+      {
+        "id": "clj",
+        "state": "ok",
+        "detail": "clj · toda-rig-checker green · 193ms"
+      },
+      {
+        "id": "bb",
+        "state": "ok",
+        "detail": "clj · toda-bb green · 157ms"
+      },
+      {
+        "id": "rust",
+        "state": "ok",
+        "detail": "rust · rustoda verified · 1ms"
+      }
+    ],
+    "diffRows": [
+      {
+        "id": "js",
+        "state": "bad",
+        "detail": "js · todajs ReqSatError · 2ms"
+      },
+      {
+        "id": "clj",
+        "state": "warn",
+        "detail": "clj · toda-rig-checker yellow · 97ms"
+      },
+      {
+        "id": "bb",
+        "state": "warn",
+        "detail": "clj · toda-bb yellow · 138ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda {\n  \"structype\": \"rig\",\n  \"colour\": \"red\",\n  \"reference\": \"41e37738e9622614c6d3da4fb320bf8601f4b8768e1282afa0af1b065d5e1ef1da\",\n  \"children\": {\n    \"corkline\": {\n      \"structype\": \"cor"
+      }
+    ]
+  },
+  {
+    "idx": 58,
+    "path": "todatests/rigging/valid_kiwano_f2.toda",
+    "bailKind": "rows",
+    "origLen": 15946,
+    "currLen": 27528,
+    "origHash": "cad24f8367b3610d",
+    "currHash": "615928d224e731eb",
+    "bytesEqual": false,
+    "diffNote": true,
+    "initRows": [
+      {
+        "id": "js",
+        "state": "ok",
+        "detail": "js · todajs verified · 2ms"
+      },
+      {
+        "id": "clj",
+        "state": "ok",
+        "detail": "clj · toda-rig-checker green · 274ms"
+      },
+      {
+        "id": "bb",
+        "state": "ok",
+        "detail": "clj · toda-bb green · 100ms"
+      },
+      {
+        "id": "rust",
+        "state": "ok",
+        "detail": "rust · rustoda verified · 1ms"
+      }
+    ],
+    "diffRows": [
+      {
+        "id": "js",
+        "state": "bad",
+        "detail": "js · todajs ReqSatError · 2ms"
+      },
+      {
+        "id": "clj",
+        "state": "warn",
+        "detail": "clj · toda-rig-checker yellow · 154ms"
+      },
+      {
+        "id": "bb",
+        "state": "warn",
+        "detail": "clj · toda-bb yellow · 101ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda {\n  \"structype\": \"rig\",\n  \"colour\": \"red\",\n  \"reference\": \"41a337e56469a595aef0f8d3c18b31a1fe79bf466f5daef3ea14c4854d6bccd20a\",\n  \"children\": {\n    \"corkline\": {\n      \"structype\": \"cor"
+      }
+    ]
+  },
+  {
+    "idx": 59,
+    "path": "todatests/rigging/valid_kiwano_f5.toda",
+    "bailKind": "rows",
+    "origLen": 15946,
+    "currLen": 27528,
+    "origHash": "4ebb39d16b6cd6e4",
+    "currHash": "509ee4306e7468d8",
+    "bytesEqual": false,
+    "diffNote": true,
+    "initRows": [
+      {
+        "id": "js",
+        "state": "ok",
+        "detail": "js · todajs verified · 2ms"
+      },
+      {
+        "id": "clj",
+        "state": "ok",
+        "detail": "clj · toda-rig-checker green · 362ms"
+      },
+      {
+        "id": "bb",
+        "state": "ok",
+        "detail": "clj · toda-bb green · 118ms"
+      },
+      {
+        "id": "rust",
+        "state": "ok",
+        "detail": "rust · rustoda verified · 1ms"
+      }
+    ],
+    "diffRows": [
+      {
+        "id": "js",
+        "state": "bad",
+        "detail": "js · todajs ReqSatError · 2ms"
+      },
+      {
+        "id": "clj",
+        "state": "warn",
+        "detail": "clj · toda-rig-checker yellow · 136ms"
+      },
+      {
+        "id": "bb",
+        "state": "warn",
+        "detail": "clj · toda-bb yellow · 150ms"
+      },
+      {
+        "id": "rust",
+        "state": "bad",
+        "detail": "rust · rustoda {\n  \"structype\": \"rig\",\n  \"colour\": \"red\",\n  \"reference\": \"4196fda9a7771475d96373c6ae7fb7f1c7e553c351e2211fb518c6f30252d66fc1\",\n  \"children\": {\n    \"corkline\": {\n      \"structype\": \"cor"
+      }
+    ]
+  }
+]
