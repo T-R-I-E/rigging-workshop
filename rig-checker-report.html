@@ -116,33 +116,31 @@ category.</p>
   <header>
     <h3>C1. Half-hitch on corkline rejected by canonical checkers</h3>
     <span class="count">~20 rigs</span>
-    <span class="verdict over-strict">clj &amp; rust over-strict</span>
+    <span class="verdict over-strict">clj + rust false-red</span>
   </header>
   <p>The terminal hitch on a corkline is a <em>half-hitch</em> (no post twist; <code>post: "none"</code> in TRDL).
      Spec §7 (p. 19) makes half-hitches first-class. <code>clj</code> and <code>rust</code>
-     reject them as malformed full hitches with <code>post-key</code> MISMATCH.
-     <code>js</code>'s <code>HalfHitchInterpreter</code> accepts them. <code>bb</code> mostly accepts them.</p>
+     reject them as malformed full hitches with <code>post-key</code> MISMATCH.</p>
   <div class="who">
-    <span class="checker right-act">js · todajs (correct)</span>
-    <span class="checker right-act">bb (mostly correct)</span>
-    <span class="checker bad-act">clj (over-strict)</span>
-    <span class="checker bad-act">rust (over-strict)</span>
+    <span class="checker right-act">js (correct — HalfHitchInterpreter accepts)</span>
+    <span class="checker right-act">bb (correct on most)</span>
+    <span class="checker bad-act">clj (false-red)</span>
+    <span class="checker bad-act">rust (false-red)</span>
   </div>
   <div class="spec-cite">spec §7 (p. 19), §7.2 (p. 21)</div>
 </div>
 
 <div class="cat">
   <header>
-    <h3>C2. Missing topline atom: severity mismatch</h3>
+    <h3>C2. Missing topline atom — MISSING reported as red instead of yellow</h3>
     <span class="count">13 rigs</span>
-    <span class="verdict spec-correct">clj is spec-correct</span>
+    <span class="verdict over-strict">js + bb + rust false-red</span>
   </header>
   <p>The canonical poptop / topline atom isn't bundled in the .toda file.
      Spec §9.1.3 (p. 30) is explicit: MISSING → <strong>yellow</strong>, not red.
-     <code>clj</code> reports yellow, alone. <code>js</code> throws <code>MissingError</code>,
-     <code>bb</code> reports red, <code>rust</code> reports "poptop X not found in file" red.</p>
+     <code>clj</code> reports yellow. The other three treat the absence as a hard fail.</p>
   <div class="who">
-    <span class="checker right-act">clj (correct)</span>
+    <span class="checker right-act">clj (correct — yellow)</span>
     <span class="checker bad-act">js (red — should be yellow)</span>
     <span class="checker bad-act">bb (red — should be yellow)</span>
     <span class="checker bad-act">rust (red — should be yellow)</span>
@@ -152,19 +150,19 @@ category.</p>
 
 <div class="cat">
   <header>
-    <h3>C3. <code>bb</code> false-greens on canonical-bad rigs</h3>
-    <span class="count">13 rigs (and ~10 mis-classified disagreements)</span>
-    <span class="verdict bug">real bb defect</span>
+    <h3>C3. <code>bb</code> accepts canonical-bad half-hitch rigs</h3>
+    <span class="count">13 rigs</span>
+    <span class="verdict bug">bb false-green</span>
   </header>
   <p>Across <code>tests/toda-rig-checker/</code> and <code>tests/test-suite/</code>,
-     <code>bb</code> accepts rigs that are <em>designed</em> to be bad — INVALID shields,
-     non-fast leads/meets, untethered leads, etc. The canonical declared colour is red;
-     <code>clj</code> and <code>rust</code> correctly report red; <code>bb</code> reports green.
-     One example: <code>half-hitch-valid-null-shield.trdl</code> — spec §6.1.1 (p. 17)
-     requires <code>lead.shld</code> be arb-shape, "setting it to a shape other than arb results in an issue of INVALID";
-     INVALID → red. <code>bb</code> misses it.</p>
+     <code>bb</code> accepts rigs <em>designed</em> to be bad — INVALID shields,
+     non-fast leads/meets, untethered leads. Declared red; <code>clj</code> and
+     <code>rust</code> correctly report red. Example: <code>half-hitch-valid-null-shield.trdl</code> —
+     spec §6.1.1 (p. 17) requires <code>lead.shld</code> be arb-shape; setting it otherwise
+     is INVALID → red. <code>bb</code> misses it.</p>
   <div class="who">
     <span class="checker bad-act">bb (false-green)</span>
+    <span class="checker mixed-act">js (mixed — sometimes also false-green via HalfHitch relaxation)</span>
     <span class="checker right-act">clj (correct)</span>
     <span class="checker right-act">rust (correct)</span>
   </div>
@@ -173,17 +171,19 @@ category.</p>
 
 <div class="cat">
   <header>
-    <h3>C4. <code>bb</code> yellow where others say green</h3>
-    <span class="count">7 rigs</span>
-    <span class="verdict mixed">5 of 7: bb matches declared</span>
+    <h3>C4. Three checkers report green where canonical declares yellow</h3>
+    <span class="count">7 rigs (5 with declared-yellow agreement)</span>
+    <span class="verdict over-strict">js + clj + rust false-green</span>
   </header>
   <p>For 5 of the 7, <code>bb</code> is the <strong>only</strong> checker matching the
-     canonical declared yellow — the other three over-eagerly report green.
-     These are lash-and-splice edge cases (indirect-tether splicing,
-     lashed maximal-time-crossing) where the spec answer is yellow per §9.1.3.</p>
+     canonical declared yellow. These are lash-and-splice edge cases
+     (indirect-tether splicing, lashed maximal-time-crossing) where the
+     spec answer is yellow (MISSING/UNKNOWN) per §9.1.3.</p>
   <div class="who">
-    <span class="checker right-act">bb (correct)</span>
-    <span class="checker bad-act">js / clj / rust (over-eager green)</span>
+    <span class="checker right-act">bb (correct — yellow)</span>
+    <span class="checker bad-act">js (false-green)</span>
+    <span class="checker bad-act">clj (false-green)</span>
+    <span class="checker bad-act">rust (false-green)</span>
   </div>
   <div class="spec-cite">spec §9.1.3 (p. 30)</div>
 </div>
@@ -192,7 +192,7 @@ category.</p>
   <header>
     <h3>C5. <code>rust</code> verifies known-bad rigs</h3>
     <span class="count">2 rigs</span>
-    <span class="verdict bug">real rust defect</span>
+    <span class="verdict bug">rust false-green</span>
   </header>
   <p>Two specific holes:
      (i) <code>rigs/10-leadline-has-corkline-predecessor.trdl</code> — conflicting successors;
@@ -203,7 +203,9 @@ category.</p>
      invariant; <code>rust</code> is missing the check.</p>
   <div class="who">
     <span class="checker bad-act">rust (false-green)</span>
-    <span class="checker right-act">js / clj / bb (correct)</span>
+    <span class="checker right-act">js (correct)</span>
+    <span class="checker right-act">clj (correct)</span>
+    <span class="checker right-act">bb (correct)</span>
   </div>
   <div class="spec-cite">spec §8.2 (p. 27)</div>
 </div>
@@ -211,25 +213,39 @@ category.</p>
 <div class="cat">
   <header>
     <h3>C6. JS exceptions misclassified as FAIL/red</h3>
-    <span class="count">8 rigs</span>
-    <span class="verdict bug">workshop UX bug</span>
+    <span class="count">8 rigs (5 of which fixed; see note)</span>
+    <span class="verdict over-strict">js false-red on MISSING-class</span>
   </header>
-  <p>The workshop maps <em>any</em> exception thrown by the JS interpreter to
-     FAIL/red. Per spec §9.1.2 (p. 29), a rig checker may treat an atomic error
-     as yellow; conditions like <code>MissingHoistError</code> and <code>MissingHashPacketError</code>
-     correspond to MISSING issues which spec §9.1.3 (p. 30) classifies as yellow.</p>
+  <p>The workshop's JS checker threw exceptions for atoms not bundled in the
+     file (<code>MissingHoistError</code>, <code>MissingHashPacketError</code>) and the workshop
+     mapped all exceptions to FAIL/red. Per spec §9.1.3 (p. 30), MISSING is yellow.</p>
   <div class="who">
-    <span class="checker bad-act">js (red — should be yellow for MISSING-class)</span>
-    <span class="checker mixed-act">workshop (label routing bug)</span>
+    <span class="checker bad-act">js (red — should be yellow for Missing*; <strong>fixed</strong> in app.js)</span>
+    <span class="checker right-act">clj (yellow — correct)</span>
+    <span class="checker right-act">bb (yellow — correct)</span>
+    <span class="checker mixed-act">rust (mixed — yellow on some, red on others)</span>
   </div>
   <div class="spec-cite">spec §9.1.2 (p. 29), §9.1.3 (p. 30)</div>
+  <details>
+    <summary>Note — workshop fix landed</summary>
+    <p style="margin:6px 0;">The JS checker's <code>run</code> in <code>app.js</code> now catches errors whose class
+       name starts with <code>Missing</code> and returns <code>state: warn</code> instead of
+       letting them propagate to the outer pipeline's FAIL handler. Verified
+       against the 8 affected rigs:</p>
+    <ul style="margin:6px 0 4px;">
+      <li>5 rigs now correctly return yellow: <code>cork_missing_rigging</code>, <code>corkline_incomplete_early_red</code>, <code>corkline_incomplete_early_yellow</code>, <code>hitch_hoist_rigs_missing</code>, <code>missing_rigging</code>.</li>
+      <li>3 rigs correctly stay red — they're <code>ReqSatError</code> (INVALID → red) and "Conflicting successors" (real spec violation): <code>delegation-chain-4-level</code>, <code>invalid_rigging_green</code>, <code>lashed_non_colinear</code>.</li>
+    </ul>
+    <p style="margin:6px 0 0;">After the fix: <code>hitch_hoist_rigs_missing</code> and <code>missing_rigging</code> move
+       to all-four-agree-yellow (clean); the others rejoin the C2 missing-topline cluster.</p>
+  </details>
 </div>
 
 <div class="cat">
   <header>
     <h3>C7. Remaining multi-way splits</h3>
     <span class="count">10 rigs</span>
-    <span class="verdict mixed">case-by-case</span>
+    <span class="verdict mixed">various</span>
   </header>
   <p>Each is a unique combination of the above. Notable:
      <code>complex-rig-26-lashed-complex.trdl</code> (declared red) — only <code>bb</code> catches it red,
@@ -246,7 +262,7 @@ category.</p>
     <tr>
       <td><code>js · todajs</code></td>
       <td class="num">6</td>
-      <td>HalfHitchInterpreter relaxation; exceptions mapped to red (should be yellow for MISSING-class)</td>
+      <td>HalfHitchInterpreter relaxation. (Exception-mapping bug fixed in <code>app.js</code> this commit.)</td>
       <td><span class="verdict mixed">mixed</span></td>
     </tr>
     <tr>
@@ -275,9 +291,9 @@ category.</p>
 <ol>
   <li><strong><code>bb</code> half-hitch false-greens</strong> — 13 declared-red rigs in <code>tests/toda-rig-checker/</code> and <code>tests/test-suite/</code> are accepted as green. File a focused issue.</li>
   <li><strong>Half-hitch on corkline acceptance in <code>clj</code> and <code>rust</code></strong> — both currently reject the terminating half-hitch convention that spec §7 and §7.2 make valid. ~20 rigs affected.</li>
-  <li><strong>MISSING → yellow severity</strong> in <code>js</code>, <code>bb</code>, <code>rust</code>: 13 rigs where the topline isn't bundled should be yellow per §9.1.3.</li>
+  <li><strong>MISSING → yellow severity</strong> in <code>bb</code> and <code>rust</code>: 13 rigs where the topline isn't bundled should be yellow per §9.1.3. (JS-side fixed in this commit.)</li>
   <li><strong><code>rust</code> conflicting-successors check</strong> — two rigs slip through; spec §8.2 invariant.</li>
-  <li><strong>JS exception classification in the workshop</strong> — map <code>MissingHoistError</code> / <code>MissingHashPacketError</code> to WARN, not FAIL. 8 rigs.</li>
+  <li><strong style="text-decoration: line-through; opacity: 0.6;">JS exception classification in the workshop</strong> <span class="verdict spec-correct">fixed</span> — <code>app.js</code> now maps <code>Missing*</code> exceptions to WARN. 5 of 8 affected rigs now agree with spec; 3 correctly stay red (non-MISSING errors).</li>
   <li><strong>Re-probe <code>cork_reqsat_fail.toda</code></strong> — the only HTTPS timeout in the run.</li>
 </ol>
 

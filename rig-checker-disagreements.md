@@ -297,7 +297,16 @@ violate spec guarantees. Worth filing as targeted bugs.
 
 ---
 
-### C6 — JS crashes (8 rigs)
+### C6 — JS crashes (8 rigs; 5 fixed in this commit)
+
+**Status.** The workshop's JS checker `run` in `app.js` now catches errors
+whose class name begins with `Missing` and returns `state: warn` (matching
+spec §9.1.3 MISSING → yellow) rather than letting them propagate to the
+outer FAIL handler. After the fix, 5 of the 8 rigs below correctly return
+yellow; the other 3 stay red because their underlying error class is
+`ReqSatError` (INVALID → red) or "Conflicting successors" (a real spec
+violation per §8.2). The pre-fix data captured by the harness is preserved
+below for the audit record.
 
 **Pattern.** The JS checker throws an exception (often a JS runtime error,
 not a `MissingError`) — rendered as FAIL with the error string as detail.

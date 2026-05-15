@@ -700,11 +700,25 @@ const CHECKERS = [
         id: 'js',
         label: 'js · todajs',
         async run(ctx) {
-            let line   = Line.fromTwist(ctx.twist)
-            let interp = new HalfHitchInterpreter(line, ctx.corklineHash)
-            await interp.verifyTopline()
-            await interp.verifyHitchLine(ctx.twistHash)
-            return { state: 'ok', detail: 'verified' }
+            try {
+                let line   = Line.fromTwist(ctx.twist)
+                let interp = new HalfHitchInterpreter(line, ctx.corklineHash)
+                await interp.verifyTopline()
+                await interp.verifyHitchLine(ctx.twistHash)
+                return { state: 'ok', detail: 'verified' }
+            } catch (e) {
+                // Spec §9.1.3 (p.30): MISSING / UNKNOWN issues are yellow, not
+                // red. svgiewer/src exposes the MISSING family via class names
+                // beginning with "Missing" (MissingError, MissingHoistError,
+                // MissingPrevious, MissingSuccessor, MissingPostEntry,
+                // MissingHashPacketError). Map those to warn; let everything
+                // else propagate so the outer pipeline still renders FAIL.
+                let name = e?.name || e?.constructor?.name || ''
+                if (/^Missing/.test(name)) {
+                    return { state: 'warn', detail: e?.message || String(e) }
+                }
+                throw e
+            }
         },
     },
     {
