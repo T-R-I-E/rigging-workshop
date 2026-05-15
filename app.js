@@ -886,15 +886,21 @@ function check_workshop_supported(bytes) {
 
 function bail_message(twistCount, isAbject) {
     if (twistCount > WORKSHOP_TWIST_LIMIT) {
-        return `Rigging Workshop supports rigs ≤ ${WORKSHOP_TWIST_LIMIT} twists. ` +
-               `This file has ${twistCount}. Use abject-workshop for larger files ` +
-               `(see abject-workshop.md).`
+        return {
+            label: 'FILE TOO BIG ERROR',
+            msg: `Rigging Workshop supports rigs ≤ ${WORKSHOP_TWIST_LIMIT} twists. ` +
+                 `This file has ${twistCount}. Use abject-workshop for larger files ` +
+                 `(see abject-workshop.md).`,
+        }
     }
     if (isAbject) {
-        return `This file looks like an abject. Rigging Workshop only checks ` +
-               `single rigs and does not implement full abject checking ` +
-               `(delegation chains, multi-rig walks). Use abject-workshop for ` +
-               `abjects (see abject-workshop.md).`
+        return {
+            label: 'ABJECT ERROR',
+            msg: `This file looks like an abject. Rigging Workshop only checks ` +
+                 `single rigs and does not implement full abject checking ` +
+                 `(delegation chains, multi-rig walks). Use abject-workshop for ` +
+                 `abjects (see abject-workshop.md).`,
+        }
     }
     return null
 }
@@ -915,10 +921,10 @@ function workshop_bail_reason() {
     return bail_message(twistCount, false)
 }
 
-function render_workshop_unsupported(rc, msg) {
+function render_workshop_unsupported(rc, info) {
     rc.className = 'rig-check warn'
-    rc.innerHTML = `<span class="badge">N/A</span>` +
-                   `<div>${escape_text(msg)}</div>`
+    rc.innerHTML = `<span class="badge">${escape_text(info.label)}</span>` +
+                   `<div>${escape_text(info.msg)}</div>`
 }
 
 function show_abject_info(id) {
@@ -1052,8 +1058,8 @@ window.workshop = {
     render(buffer) { return showpipe(buffer) },
     select_node, highlight_node,
     check_supported: check_workshop_supported,
-    render_unsupported(msg) {
+    render_unsupported(info) {
         let rc = el('rigcheck')
-        if (rc) render_workshop_unsupported(rc, msg)
+        if (rc) render_workshop_unsupported(rc, info)
     },
 }

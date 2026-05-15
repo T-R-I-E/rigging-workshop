@@ -184,6 +184,19 @@ function escape_html(s) {
 // which is the user-visible "flash". When the panel hasn't rendered any
 // per-checker rows yet (initial load, fresh editor) we fall back to the
 // original single full-width row.
+// Update the rig-check panel's section header. Called from each load path
+// so the user can see which example is currently being checked. Truncated
+// to keep the header from wrapping; full label available on hover.
+function set_loaded_label(label) {
+  let titleEl = document.querySelector('#rig-check-section .section-title')
+  if (!titleEl) return
+  if (!label) { titleEl.textContent = 'Rig check'; titleEl.removeAttribute('title'); return }
+  const MAX = 30
+  let shown = label.length > MAX ? label.slice(0, MAX - 1) + '…' : label
+  titleEl.textContent = `Rig check for ${shown}`
+  titleEl.title = label
+}
+
 function set_rigcheck(klass, label, msg) {
   let rc = document.getElementById('rigcheck')
   if (rc.classList.contains('rig-check-list')) {
@@ -210,7 +223,7 @@ async function build() {
     ({ bytes, lineHashes, corkline } = await compile(get_doc()))
   } catch (e) {
     if (my !== build_seq) return
-    set_rigcheck('bad', 'FAIL', `compile: ${e.message}`)
+    set_rigcheck('bad', 'TRDL COMPILE ERROR', e.message)
     console.error(e)
     return
   }
@@ -225,7 +238,7 @@ async function build() {
   try {
     window.workshop.render(bytes)
   } catch (e) {
-    set_rigcheck('bad', 'FAIL', `render: ${e.message}`)
+    set_rigcheck('bad', 'RENDER ERROR', e.message)
     console.error(e)
   }
 }
@@ -262,7 +275,7 @@ async function load_bytes(buf) {
     window.workshop.render(buf)
   } catch (e) {
     window.workshop.initial_toda_load = null
-    set_rigcheck('bad', 'FAIL', `decompile: ${e.message}`)
+    set_rigcheck('bad', 'DECOMPILE ERROR', e.message)
     console.error(e)
   }
 }
@@ -276,6 +289,7 @@ function deselect_rig() {
 
 async function load_file(file) {
   deselect_rig()
+  set_loaded_label(file.name)
   if (file.name.toLowerCase().endsWith('.trdl')) {
     set_doc(await file.text())          // auto-build kicks in
   } else {
@@ -285,6 +299,7 @@ async function load_file(file) {
 
 async function load_url(url) {
   deselect_rig()
+  set_loaded_label(url.split('/').pop() || url)
   try {
     let res = await fetch(url)
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
@@ -294,7 +309,7 @@ async function load_url(url) {
       await load_bytes(await res.arrayBuffer())
     }
   } catch (e) {
-    set_rigcheck('bad', 'FAIL', `load: ${e.message}`)
+    set_rigcheck('bad', 'LOAD ERROR', e.message)
   }
 }
 
@@ -581,6 +596,7 @@ async function load_rig_meta(rig_url, explicit_json_url) {
 async function load_rig(path) {
   active_rig = path
   render_rigs_list()
+  set_loaded_label(rig_label(path))
   let entry = RIGS.find(r => r[0] === path)
   // Await the meta fetch so that workshop.corkline is set from the canonical
   // JSON before load_bytes triggers an immediate render — otherwise the
@@ -598,7 +614,7 @@ async function load_rig(path) {
       await load_bytes(await res.arrayBuffer()) // .toda → decompile path
     }
   } catch (err) {
-    set_rigcheck('bad', 'FAIL', `load ${path}: ${err.message}`)
+    set_rigcheck('bad', 'LOAD ERROR', `${path}: ${err.message}`)
   }
 }
 
