@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Rig-Checker Disagreement Audit — Executive Report</title>
+<style>
+  :root {
+    --bg: #fafaf7;
+    --panel: #fff;
+    --ink: #1d1d1b;
+    --ink-2: #4a4a47;
+    --ink-3: #87867f;
+    --line: #e7e5dc;
+    --line-2: #d8d6cc;
+    --ok: #b9d9a1;
+    --warn: #f1d181;
+    --bad: #e89a8e;
+    --bad-strong: #c45a4d;
+    --accent: #4a6ea8;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Inter", "Helvetica Neue", sans-serif;
+    --radius: 6px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--ink); font-family: var(--sans); font-size: 14px; line-height: 1.55; }
+  body { padding: 28px 32px 80px; max-width: 980px; margin: 0 auto; }
+  h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.01em; margin: 0 0 4px; }
+  h2 { font-size: 16px; font-weight: 700; margin: 32px 0 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+  h3 { font-size: 13px; font-weight: 700; margin: 18px 0 8px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-3); }
+  p, ul, ol { margin: 0 0 12px; }
+  ul, ol { padding-left: 22px; }
+  li { margin-bottom: 4px; }
+  code { font-family: var(--mono); font-size: 12.5px; background: #f1f0e9; padding: 1px 5px; border-radius: 3px; color: var(--ink); }
+
+  .meta { color: var(--ink-3); font-size: 12.5px; margin-bottom: 22px; }
+
+  .row { display: flex; gap: 14px; flex-wrap: wrap; }
+  .card {
+    flex: 1 1 180px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+  }
+  .card .num { font-size: 28px; font-weight: 700; line-height: 1; color: var(--ink); }
+  .card .pct { font-size: 11.5px; color: var(--ink-3); margin-left: 4px; }
+  .card .label { font-size: 11.5px; color: var(--ink-3); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.06em; }
+  .card.ok    .num { color: #5d8b3f; }
+  .card.bad   .num { color: var(--bad-strong); }
+  .card.warn  .num { color: #b48634; }
+
+  .legend { display: inline-flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 11px; padding: 1px 7px 1px 5px; border-radius: 10px; border: 1px solid var(--line-2); background: var(--panel); }
+  .legend::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; }
+  .legend.green::before  { background: var(--ok); }
+  .legend.yellow::before { background: var(--warn); }
+  .legend.red::before    { background: var(--bad); }
+
+  table { width: 100%; border-collapse: collapse; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+  th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--line); font-size: 13px; vertical-align: top; }
+  th { font-weight: 600; background: #f4f3ec; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-3); }
+  tr:last-child td { border-bottom: none; }
+  td.num { font-family: var(--mono); text-align: right; }
+  td.tuple { font-family: var(--mono); font-size: 11px; color: var(--ink-3); }
+  .verdict { font-weight: 600; font-size: 12px; padding: 2px 8px; border-radius: 3px; border: 1px solid; display: inline-block; }
+  .verdict.spec-correct  { background: color-mix(in oklab, var(--ok) 22%, #fff); border-color: color-mix(in oklab, var(--ok) 50%, var(--line)); color: #466b30; }
+  .verdict.over-strict   { background: color-mix(in oklab, var(--warn) 22%, #fff); border-color: color-mix(in oklab, var(--warn) 50%, var(--line)); color: #7a5919; }
+  .verdict.bug           { background: color-mix(in oklab, var(--bad) 20%, #fff); border-color: color-mix(in oklab, var(--bad) 50%, var(--line)); color: var(--bad-strong); }
+  .verdict.mixed         { background: #efece2; border-color: var(--line-2); color: var(--ink-2); }
+
+  .bar { display: flex; align-items: stretch; background: #f1f0e9; border-radius: 4px; overflow: hidden; height: 22px; font-family: var(--mono); font-size: 11px; }
+  .bar > div { display: flex; align-items: center; justify-content: center; color: #2a2a25; min-width: 36px; }
+  .bar .b-ok    { background: var(--ok); }
+  .bar .b-warn  { background: var(--warn); }
+  .bar .b-bad   { background: var(--bad); }
+  .bar .b-empty { background: #f1f0e9; color: var(--ink-3); }
+
+  .cat { border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); padding: 16px 18px; margin-bottom: 14px; }
+  .cat header { display: flex; align-items: baseline; gap: 10px; margin-bottom: 8px; }
+  .cat h3 { margin: 0; font-size: 14.5px; text-transform: none; letter-spacing: 0; color: var(--ink); }
+  .cat .count { font-family: var(--mono); font-size: 11.5px; color: var(--ink-3); }
+  .cat p { margin: 6px 0; font-size: 13px; color: var(--ink-2); }
+  .cat .who { display: flex; gap: 8px; flex-wrap: wrap; margin: 6px 0 4px; }
+  .cat .who .checker { font-family: var(--mono); font-size: 11px; padding: 1px 7px; border-radius: 3px; border: 1px solid var(--line-2); background: #f4f3ec; color: var(--ink-2); }
+  .cat .who .checker.bad-act    { background: color-mix(in oklab, var(--bad) 18%, #fff); border-color: var(--bad); color: var(--bad-strong); }
+  .cat .who .checker.right-act  { background: color-mix(in oklab, var(--ok) 22%, #fff); border-color: var(--ok); color: #466b30; }
+  .cat .who .checker.mixed-act  { background: color-mix(in oklab, var(--warn) 18%, #fff); border-color: var(--warn); color: #7a5919; }
+
+  details { background: #f4f3ec; padding: 10px 14px; border-radius: 4px; margin-top: 8px; font-size: 13px; }
+  details summary { cursor: pointer; font-size: 11.5px; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.05em; }
+  details ul { margin: 8px 0 0; }
+  details code { font-size: 11.5px; background: #fff; }
+
+  .spec-cite { font-family: var(--mono); font-size: 11px; color: var(--ink-3); }
+  .footnote { color: var(--ink-3); font-size: 12px; margin-top: 8px; }
+</style>
+</head>
+<body>
+
+<h1>Rig-Checker Disagreement Audit</h1>
+<div class="meta">Executive report &middot; 127 example rigs &middot; 4 backends: <code>js · todajs</code>, <code>clj · toda-rig-checker</code>, <code>clj · toda-bb</code>, <code>rust · rustoda</code> &middot; spec: rigging_specifications.pdf v0.9876</div>
+
+<div class="row">
+  <div class="card ok"><div class="num">55<span class="pct">43%</span></div><div class="label">all four agree</div></div>
+  <div class="card warn"><div class="num">69<span class="pct">54%</span></div><div class="label">disagreement</div></div>
+  <div class="card bad"><div class="num">3<span class="pct">2%</span></div><div class="label">anomaly</div></div>
+  <div class="card"><div class="num">127</div><div class="label">total rigs</div></div>
+</div>
+
+<h2>Where the disagreements come from</h2>
+
+<p>Six distinct root causes. Counts overlap slightly where a rig fits more
+than one category; the table below counts each rig in its most specific
+category.</p>
+
+<div class="cat">
+  <header>
+    <h3>C1. Half-hitch on corkline rejected by canonical checkers</h3>
+    <span class="count">~20 rigs</span>
+    <span class="verdict over-strict">clj &amp; rust over-strict</span>
+  </header>
+  <p>The terminal hitch on a corkline is a <em>half-hitch</em> (no post twist; <code>post: "none"</code> in TRDL).
+     Spec §7 (p. 19) makes half-hitches first-class. <code>clj</code> and <code>rust</code>
+     reject them as malformed full hitches with <code>post-key</code> MISMATCH.
+     <code>js</code>'s <code>HalfHitchInterpreter</code> accepts them. <code>bb</code> mostly accepts them.</p>
+  <div class="who">
+    <span class="checker right-act">js · todajs (correct)</span>
+    <span class="checker right-act">bb (mostly correct)</span>
+    <span class="checker bad-act">clj (over-strict)</span>
+    <span class="checker bad-act">rust (over-strict)</span>
+  </div>
+  <div class="spec-cite">spec §7 (p. 19), §7.2 (p. 21)</div>
+</div>
+
+<div class="cat">
+  <header>
+    <h3>C2. Missing topline atom: severity mismatch</h3>
+    <span class="count">13 rigs</span>
+    <span class="verdict spec-correct">clj is spec-correct</span>
+  </header>
+  <p>The canonical poptop / topline atom isn't bundled in the .toda file.
+     Spec §9.1.3 (p. 30) is explicit: MISSING → <strong>yellow</strong>, not red.
+     <code>clj</code> reports yellow, alone. <code>js</code> throws <code>MissingError</code>,
+     <code>bb</code> reports red, <code>rust</code> reports "poptop X not found in file" red.</p>
+  <div class="who">
+    <span class="checker right-act">clj (correct)</span>
+    <span class="checker bad-act">js (red — should be yellow)</span>
+    <span class="checker bad-act">bb (red — should be yellow)</span>
+    <span class="checker bad-act">rust (red — should be yellow)</span>
+  </div>
+  <div class="spec-cite">spec §9.1.3 (p. 30), §2.5 (p. 4)</div>
+</div>
+
+<div class="cat">
+  <header>
+    <h3>C3. <code>bb</code> false-greens on canonical-bad rigs</h3>
+    <span class="count">13 rigs (and ~10 mis-classified disagreements)</span>
+    <span class="verdict bug">real bb defect</span>
+  </header>
+  <p>Across <code>tests/toda-rig-checker/</code> and <code>tests/test-suite/</code>,
+     <code>bb</code> accepts rigs that are <em>designed</em> to be bad — INVALID shields,
+     non-fast leads/meets, untethered leads, etc. The canonical declared colour is red;
+     <code>clj</code> and <code>rust</code> correctly report red; <code>bb</code> reports green.
+     One example: <code>half-hitch-valid-null-shield.trdl</code> — spec §6.1.1 (p. 17)
+     requires <code>lead.shld</code> be arb-shape, "setting it to a shape other than arb results in an issue of INVALID";
+     INVALID → red. <code>bb</code> misses it.</p>
+  <div class="who">
+    <span class="checker bad-act">bb (false-green)</span>
+    <span class="checker right-act">clj (correct)</span>
+    <span class="checker right-act">rust (correct)</span>
+  </div>
+  <div class="spec-cite">spec §6.1.1 (p. 17), §9.1.3 (p. 30)</div>
+</div>
+
+<div class="cat">
+  <header>
+    <h3>C4. <code>bb</code> yellow where others say green</h3>
+    <span class="count">7 rigs</span>
+    <span class="verdict mixed">5 of 7: bb matches declared</span>
+  </header>
+  <p>For 5 of the 7, <code>bb</code> is the <strong>only</strong> checker matching the
+     canonical declared yellow — the other three over-eagerly report green.
+     These are lash-and-splice edge cases (indirect-tether splicing,
+     lashed maximal-time-crossing) where the spec answer is yellow per §9.1.3.</p>
+  <div class="who">
+    <span class="checker right-act">bb (correct)</span>
+    <span class="checker bad-act">js / clj / rust (over-eager green)</span>
+  </div>
+  <div class="spec-cite">spec §9.1.3 (p. 30)</div>
+</div>
+
+<div class="cat">
+  <header>
+    <h3>C5. <code>rust</code> verifies known-bad rigs</h3>
+    <span class="count">2 rigs</span>
+    <span class="verdict bug">real rust defect</span>
+  </header>
+  <p>Two specific holes:
+     (i) <code>rigs/10-leadline-has-corkline-predecessor.trdl</code> — conflicting successors;
+     three other checkers detect this, <code>rust</code> says verified.
+     (ii) <code>tests/toda-graph/extra-fast-between-meet-and-post.trdl</code> — declared yellow;
+     <code>rust</code> says verified.
+     Spec §8.2 (p. 27) names colinear-successors as a fundamental rigging
+     invariant; <code>rust</code> is missing the check.</p>
+  <div class="who">
+    <span class="checker bad-act">rust (false-green)</span>
+    <span class="checker right-act">js / clj / bb (correct)</span>
+  </div>
+  <div class="spec-cite">spec §8.2 (p. 27)</div>
+</div>
+
+<div class="cat">
+  <header>
+    <h3>C6. JS exceptions misclassified as FAIL/red</h3>
+    <span class="count">8 rigs</span>
+    <span class="verdict bug">workshop UX bug</span>
+  </header>
+  <p>The workshop maps <em>any</em> exception thrown by the JS interpreter to
+     FAIL/red. Per spec §9.1.2 (p. 29), a rig checker may treat an atomic error
+     as yellow; conditions like <code>MissingHoistError</code> and <code>MissingHashPacketError</code>
+     correspond to MISSING issues which spec §9.1.3 (p. 30) classifies as yellow.</p>
+  <div class="who">
+    <span class="checker bad-act">js (red — should be yellow for MISSING-class)</span>
+    <span class="checker mixed-act">workshop (label routing bug)</span>
+  </div>
+  <div class="spec-cite">spec §9.1.2 (p. 29), §9.1.3 (p. 30)</div>
+</div>
+
+<div class="cat">
+  <header>
+    <h3>C7. Remaining multi-way splits</h3>
+    <span class="count">10 rigs</span>
+    <span class="verdict mixed">case-by-case</span>
+  </header>
+  <p>Each is a unique combination of the above. Notable:
+     <code>complex-rig-26-lashed-complex.trdl</code> (declared red) — only <code>bb</code> catches it red,
+     the other three say green. The dominant bb-false-green pattern reverses here.</p>
+</div>
+
+<h2>By the numbers, per checker</h2>
+
+<table>
+  <thead>
+    <tr><th>Checker</th><th class="num">Solo deviations<br><span style="font-weight:400">(unanimous others)</span></th><th>Dominant failure mode</th><th>Severity</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>js · todajs</code></td>
+      <td class="num">6</td>
+      <td>HalfHitchInterpreter relaxation; exceptions mapped to red (should be yellow for MISSING-class)</td>
+      <td><span class="verdict mixed">mixed</span></td>
+    </tr>
+    <tr>
+      <td><code>clj · toda-rig-checker</code></td>
+      <td class="num">5</td>
+      <td>Mostly spec-correct (MISSING → yellow). Rejects half-hitch on corkline.</td>
+      <td><span class="verdict spec-correct">mostly correct</span></td>
+    </tr>
+    <tr>
+      <td><code>clj · toda-bb</code></td>
+      <td class="num">12</td>
+      <td>False-greens on canonical-bad half-hitch tests (~13); occasional false-yellows.</td>
+      <td><span class="verdict bug">worst offender</span></td>
+    </tr>
+    <tr>
+      <td><code>rust · rustoda</code></td>
+      <td class="num">2</td>
+      <td>Misses conflicting-successors; misses extra-fast-between-meet-and-post.</td>
+      <td><span class="verdict bug">narrow holes</span></td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>What needs fixing</h2>
+
+<ol>
+  <li><strong><code>bb</code> half-hitch false-greens</strong> — 13 declared-red rigs in <code>tests/toda-rig-checker/</code> and <code>tests/test-suite/</code> are accepted as green. File a focused issue.</li>
+  <li><strong>Half-hitch on corkline acceptance in <code>clj</code> and <code>rust</code></strong> — both currently reject the terminating half-hitch convention that spec §7 and §7.2 make valid. ~20 rigs affected.</li>
+  <li><strong>MISSING → yellow severity</strong> in <code>js</code>, <code>bb</code>, <code>rust</code>: 13 rigs where the topline isn't bundled should be yellow per §9.1.3.</li>
+  <li><strong><code>rust</code> conflicting-successors check</strong> — two rigs slip through; spec §8.2 invariant.</li>
+  <li><strong>JS exception classification in the workshop</strong> — map <code>MissingHoistError</code> / <code>MissingHashPacketError</code> to WARN, not FAIL. 8 rigs.</li>
+  <li><strong>Re-probe <code>cork_reqsat_fail.toda</code></strong> — the only HTTPS timeout in the run.</li>
+</ol>
+
+<p class="footnote">Per-rig detail and adjudication rationale: <a href="rig-checker-disagreements.md">rig-checker-disagreements.md</a>.
+Raw harvest data: <a href="per-rig.json">per-rig.json</a>, <a href="harvest-v2.json">harvest-v2.json</a>.</p>
+
+</body>
+</html>
