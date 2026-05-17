@@ -134,7 +134,25 @@ function collect_twist_overrides(twist_entities) {
     if ('teth'  in e) o.tether     = ref_to_kw(e.teth)
     if ('shld'  in e) o.shield     = e.shld
     if ('cargo' in e) o.cargo      = e.cargo
-    if ('rigs'  in e) o.extra_rigs = e.rigs
+    if ('rigs'  in e) {
+      // Three forms of the rigs override:
+      //   "rigs": "null"                         → explicit NULL slot
+      //   "rigs": { "raw": "<hex>", ... }        → verbatim atom content
+      //   "rigs": { ...pair-entries }            → legacy: extra pairs
+      //                                            merged with hitch-derived
+      // The raw form takes precedence over hitch-derived rigtrie when both
+      // are present — used for designed-bad-rig fixtures where the original
+      // body.rigs holds pairs that the {hitch, lead, meet, hoist, fastener}
+      // canonical reconstruction can't produce.
+      if (e.rigs === 'null') {
+        o.rigs_null = true
+      } else if (e.rigs && typeof e.rigs === 'object' && 'raw' in e.rigs) {
+        o.rigs_raw   = e.rigs.raw
+        o.rigs_shape = e.rigs.shape || 'pairtrie'
+      } else {
+        o.extra_rigs = e.rigs
+      }
+    }
     out.set(kw, o)
   }
   return out
@@ -201,7 +219,18 @@ export function trdl_to_spec(entities) {
       if (reqsat_kw)            spec.reqsat        = reqsat_kw
       if (override.prev_id)     spec.prev_id       = override.prev_id
       if (tether_kw)            spec.tether        = tether_kw
-      if (Object.keys(rig_entries).length) spec.rig = rig_entries
+      // rigs override precedence: explicit raw > explicit null >
+      // hitch-derived (rig_entries). Raw bytes go straight into a
+      // pairtrie (or other-shape) atom that we hand to compile via
+      // spec.rigs_raw; compile.js writes its hash into body.rigs.
+      if (override.rigs_raw) {
+        spec.rigs_raw   = override.rigs_raw
+        spec.rigs_shape = override.rigs_shape || 'pairtrie'
+      } else if (override.rigs_null) {
+        spec.rigs_null = true
+      } else if (Object.keys(rig_entries).length) {
+        spec.rig = rig_entries
+      }
       // Decompile emits shld: 'null' explicitly to mean "no shield" even
       // for fast twists on shielded lines. Distinguish from no-override.
       let hasShieldOverride = 'shield' in override

@@ -1,7 +1,7 @@
 // Build pipeline. spec → twists map → output bytes. Mirrors twist-maker.core.
 
 import { byte_concat, sha256, bytes_to_hex, hex_to_bytes } from './bytes.js'
-import { lat_focus, lat_to_bytes, NULL_HASH, get_hash } from './lat.js'
+import { lat_focus, lat_to_bytes, NULL_HASH, get_hash, from_packet, SHAPE } from './lat.js'
 import { arb, pairtrie, body, twist as build_twist } from './factory.js'
 import { keypair as ed_keypair, req_pairtrie, sign_fn } from './ed25519.js'
 
@@ -142,7 +142,7 @@ async function build_twists(lines) {
 
   for (let spec of sorted) {
     let { id, prev_id, tether, cargo, shield, rig, shield_source,
-          poptop, reqsat, line } = spec
+          poptop, reqsat, line, rigs_raw, rigs_shape, rigs_null } = spec
 
     let prev_lat
     if (prev_id == null || prev_id === 'null') prev_lat = null
@@ -206,7 +206,21 @@ async function build_twists(lines) {
       if (src_spec?.shield) rig_shield = hex_to_bytes(src_spec.shield)
     }
 
-    let rig_lat = rig ? await build_rig_lat(twists, rig_shield, rig) : null
+    // rigs slot precedence: explicit raw bytes > explicit null > hitch-
+    // derived pairtrie. Raw lets designed-bad-rig fixtures preserve a
+    // body.rigs atom whose pairs don't satisfy the canonical hitch quad,
+    // and lets the non-pairtrie shapes (rigs pointing at a hashlist /
+    // arb / twist) survive the roundtrip — `shape` in the spec maps
+    // to the SHAPE byte we hand to from_packet.
+    let rig_lat
+    if (rigs_raw) {
+      let shape_byte = SHAPE[rigs_shape] ?? SHAPE.pairtrie
+      rig_lat = await from_packet(shape_byte, hex_to_bytes(rigs_raw))
+    } else if (rigs_null) {
+      rig_lat = null
+    } else {
+      rig_lat = rig ? await build_rig_lat(twists, rig_shield, rig) : null
+    }
 
     let kp        = (reqsat === 'ed25519') ? line_keys.get(line) : null
     let req_lat   = kp ? await req_pairtrie(kp.pub) : null

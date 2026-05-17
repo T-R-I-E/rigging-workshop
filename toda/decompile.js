@@ -12,6 +12,10 @@ import { bytes_to_hex, hex_to_bytes, sha256, byte_concat } from './bytes.js'
 const TWIST = 0x48, BODY = 0x49, ARB = 0x60, HASHLIST = 0x61, PAIRTRIE = 0x63
 const SYM_POPTOP = '22c70173874680c58e5c1d32854bd10486aac6f1aa821b56e3d512fd72e45ac72e'
 const NULL_HASH = '00'
+const SHAPE_NAMES = {
+  [TWIST]: 'twist', [BODY]: 'body', [ARB]: 'arb',
+  [HASHLIST]: 'hashes', [PAIRTRIE]: 'pairtrie',
+}
 
 // ---- low-level byte parsing ------------------------------------------------
 
@@ -485,7 +489,7 @@ export async function decompile(buf, name = 'rig') {
         if (teth_ref) set_override(id, 'teth', teth_ref)
         else          set_override(id, 'teth', teth)  // literal hex, no atom
       }
-      // Cargo on line-firsts: preserve the original body.carg verbatim.
+      // Cargo: preserve the original body.carg verbatim for every twist.
       //
       // trdl_to_spec's default for "other firsts" (non-poptop, non-abject)
       // is spec.cargo = `cargo-<line_name>` — a deterministic per-line
@@ -505,22 +509,24 @@ export async function decompile(buf, name = 'rig') {
       // spec.poptop (a pairtrie of {SYM_POPTOP → abject_first}) — see
       // compile.js's poptop branch which takes precedence over cargo.
       // So overriding cargo here doesn't affect the poptop encoding.
-      if (i === 0) {
-        let carg = body?.carg
-        if (!carg || is_null(carg)) {
-          set_override(id, 'cargo', 'null')
+      // Mid-line twists matter too: designed-bad-rig fixtures like
+      // multiple_hoists_green put a cargo on a fast twist mid-line,
+      // and dropping that loses an edge in the shape extractor.
+      let carg = body?.carg
+      if (!carg || is_null(carg)) {
+        if (i === 0) set_override(id, 'cargo', 'null')
+        // mid-line twists default to no-cargo; no override needed.
+      } else {
+        let carg_atom = env.index[carg]
+        if (carg_atom && carg_atom.shape === ARB) {
+          let arb_bytes = env.bytes.subarray(carg_atom.cfirst, carg_atom.last + 1)
+          set_override(id, 'cargo', 'arb:' + bytes_to_hex(arb_bytes))
         } else {
-          let carg_atom = env.index[carg]
-          if (carg_atom && carg_atom.shape === ARB) {
-            let arb_bytes = env.bytes.subarray(carg_atom.cfirst, carg_atom.last + 1)
-            set_override(id, 'cargo', 'arb:' + bytes_to_hex(arb_bytes))
-          } else {
-            // Pairtrie / hashlist / twist / out-of-file: emit literal
-            // hash; compile writes it into the body slot without
-            // synthesizing an atom. Round-trips when the referenced
-            // atom is reachable through another twist's lat.
-            set_override(id, 'cargo', carg)
-          }
+          // Pairtrie / hashlist / twist / out-of-file: emit literal
+          // hash; compile writes it into the body slot without
+          // synthesizing an atom. Round-trips when the referenced
+          // atom is reachable through another twist's lat.
+          set_override(id, 'cargo', carg)
         }
       }
       // Shield: always emit. trdl_to_spec auto-generates a random
@@ -538,6 +544,37 @@ export async function decompile(buf, name = 'rig') {
           let arb_bytes = env.bytes.subarray(arb_atom.cfirst, arb_atom.last + 1)
           set_override(id, 'shld', bytes_to_hex(arb_bytes))
         }
+      }
+      // Rigs: emit raw override whenever body.rigs is non-null. The
+      // {hitch, lead, meet, hoist, fastener} entity is a high-level
+      // convenience that the compiler turns into the canonical
+      // {S(lead)→I(meet), SS(lead)→S(meet)} quad — but designed-bad-
+      // rig fixtures put non-canonical pairs into rigs, and that
+      // reconstruction can't reproduce them. Always-emit-raw preserves
+      // verbatim atom bytes (regardless of shape) and the compiler
+      // routes them straight into the body.rigs slot via spec.rigs_raw.
+      // Cost: ~80 bytes of extra TRDL per hitch/post entry; gain: every
+      // pair (canonical or wrong, missing or extra) survives the
+      // roundtrip exactly.
+      let rigs_h = body?.rigs
+      if (rigs_h && !is_null(rigs_h)) {
+        let rigs_atom = env.index[rigs_h]
+        if (rigs_atom) {
+          let content = env.bytes.subarray(rigs_atom.cfirst, rigs_atom.last + 1)
+          let raw_hex = bytes_to_hex(content)
+          let shape_name = SHAPE_NAMES[rigs_atom.shape]
+          if (shape_name === 'pairtrie') {
+            set_override(id, 'rigs', { raw: raw_hex })
+          } else {
+            set_override(id, 'rigs', {
+              raw:   raw_hex,
+              shape: shape_name || `0x${rigs_atom.shape.toString(16)}`,
+            })
+          }
+        }
+        // Out-of-file rigs hash: no override, fall back to the hitch
+        // entity's canonical reconstruction (the recompile won't match
+        // bytes but at least produces a valid rig).
       }
     })
   }
