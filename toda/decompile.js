@@ -311,28 +311,105 @@ export async function decompile(buf, name = 'rig') {
   let hitches    = await detect_hitches(env, body_cache, named)
   let crosses    = detect_cross_line_prevs(body_cache, named)
 
+  // Identify the corkline line. trdl_to_spec uses the rig entity's `poptop`
+  // field to resolve which line's ids[0] becomes the corkline hash; without
+  // a meaningful value it falls back to lines_map.values()[0] which is the
+  // first-discovered line — for most test rigs that's the LEADLINE, and
+  // the recompile then hands every checker a cork hash that points at the
+  // hitch's lead. Symptom: rust reports "lead tether is NULL (not fast)"
+  // because it ends up identifying the corkline's own twist as the hitch
+  // lead.
+  //
+  // Heuristic: the corkline is the line that contains hitch hoists but
+  // not hitch leads — the topmost line in the stack of hitches. For a
+  // single-hitch rig (no splice/lash) the hoist's line and the fastener's
+  // line are the same; for splices/lashings the leadline of one hitch may
+  // be the topline of another, so we look for the line that's purely a
+  // target. Fallbacks cover degenerate cases.
+  let lead_lines = new Set(), hoist_lines = new Set(), fastener_lines = new Set()
+  let line_of = ref => {
+    let m = /^(.+)\[(\d+)\]$/.exec(ref || '')
+    return m ? m[1] : null
+  }
+  for (let h of hitches) {
+    if (line_of(h.lead))     lead_lines.add(line_of(h.lead))
+    if (line_of(h.hoist))    hoist_lines.add(line_of(h.hoist))
+    if (line_of(h.fastener)) fastener_lines.add(line_of(h.fastener))
+  }
+  let corkline_line_name = null
+  for (let l of hoist_lines) {
+    if (!lead_lines.has(l)) { corkline_line_name = l; break }
+  }
+  if (!corkline_line_name) {
+    for (let l of fastener_lines) {
+      if (!lead_lines.has(l)) { corkline_line_name = l; break }
+    }
+  }
+  if (!corkline_line_name && hitches.length > 0) {
+    corkline_line_name = line_of(hitches[0].hoist) || line_of(hitches[0].fastener)
+  }
+
   let out = []
-  out.push({ rig: name })
+  out.push(corkline_line_name
+    ? { rig: name, poptop: corkline_line_name }
+    : { rig: name })
   for (let { name: ln, twists } of named) {
     let shielded = line_shielded(body_cache, twists)
-    out.push(shielded
-      ? { line: ln, twists: twists.length }
-      : { line: ln, twists: twists.length, shielded: false, reqsat: 'null' })
+    // Always emit reqsat:'null'. The default in trdl.js is ed25519, but the
+    // JS port at ed25519.js uses raw 32-byte public keys (per CLAUDE.md's
+    // "Known v1 caveats"), so recompile of any shielded line produces a
+    // pubkey the canonical checkers can't parse ("could not parse public
+    // key" in rust, "ed25519-req INVALID" up the stack). For test rigs we
+    // don't need cryptographic signatures — the rig-check verifies tether
+    // / hoist / topline structure regardless of req-sat. Stripping reqsat
+    // here makes the recompile rig-equivalent under all four checkers
+    // until we ship X.509-wrapped public keys in ed25519.js.
+    out.push({ line: ln, twists: twists.length, shielded, reqsat: 'null' })
   }
   for (let h of hitches) out.push({
     hitch: h.name, lead: h.lead, meet: h.meet,
     fastener: h.fastener, hoist: h.hoist,
   })
   for (let c of crosses) out.push(c)
-  // Mark dangling-genesis lines so the recompile produces a random-arb
-  // prev for the first twist rather than a null prev. Without this,
-  // round-trip turns "rig anchored upstream" into "rig with null genesis".
-  for (let { name: ln, twists } of named) {
-    let prev = body_cache.get(twists[0])?.prev
-    if (!is_null(prev) && !env.index[prev]) {
-      out.push({ id: `${ln}[0]`, prev: 'dangling' })
-    }
+  // Per-twist overrides. We accumulate them keyed by twist id and emit one
+  // entity per twist at the end — collect_twist_overrides in trdl.js replaces
+  // (doesn't merge) when it sees the same id twice, so emitting separate
+  // entities for prev vs shld vs … would lose all but the last.
+  //
+  // What we preserve here:
+  //   • prev:"dangling" — the first twist of a line whose body.prev points
+  //     outside the file (anchored upstream). Without this, recompile would
+  //     treat it as a null genesis and produce a different body hash.
+  //   • shld:<hex>      — the shield arb's bytes, verbatim. Recompile already
+  //     accepts an shld override; feeding the real bytes here makes the
+  //     hoist trie's S(lead)/SS(lead) keys land on the same hashes as the
+  //     original, so the recompiled rig is semantically equivalent under
+  //     all four checkers instead of failing on a randomly-rolled shield.
+  let twist_overrides = new Map()
+  let set_override = (id, key, value) => {
+    let o = twist_overrides.get(id) || {}
+    o[key] = value
+    twist_overrides.set(id, o)
   }
+  for (let { name: ln, twists } of named) {
+    twists.forEach((h, i) => {
+      let id = `${ln}[${i}]`
+      let body = body_cache.get(h)
+      if (i === 0) {
+        let prev = body?.prev
+        if (!is_null(prev) && !env.index[prev]) set_override(id, 'prev', 'dangling')
+      }
+      let shld_hash = body?.shld
+      if (shld_hash && !is_null(shld_hash)) {
+        let arb_atom = env.index[shld_hash]
+        if (arb_atom && arb_atom.shape === ARB) {
+          let arb_bytes = env.bytes.subarray(arb_atom.cfirst, arb_atom.last + 1)
+          set_override(id, 'shld', bytes_to_hex(arb_bytes))
+        }
+      }
+    })
+  }
+  for (let [id, o] of twist_overrides) out.push({ id, ...o })
   return out
 }
 
