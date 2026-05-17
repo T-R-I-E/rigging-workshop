@@ -1,15 +1,1 @@
-{
-  "name": "rigcheck",
-  "type": "module",
-  "version": "0.1.0",
-  "files": [
-    "rigcheck_bg.wasm",
-    "rigcheck.js",
-    "rigcheck.d.ts"
-  ],
-  "main": "rigcheck.js",
-  "types": "rigcheck.d.ts",
-  "sideEffects": [
-    "./snippets/*"
-  ]
-}
+../../../rustoda/wasm/package.json
