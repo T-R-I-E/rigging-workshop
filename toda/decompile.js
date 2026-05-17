@@ -485,8 +485,44 @@ export async function decompile(buf, name = 'rig') {
         if (teth_ref) set_override(id, 'teth', teth_ref)
         else          set_override(id, 'teth', teth)  // literal hex, no atom
       }
-      // Cargo: forced null on line-firsts — see ☝️ comment block.
-      if (i === 0) set_override(id, 'cargo', 'null')
+      // Cargo on line-firsts: preserve the original body.carg verbatim.
+      //
+      // trdl_to_spec's default for "other firsts" (non-poptop, non-abject)
+      // is spec.cargo = `cargo-<line_name>` — a deterministic per-line
+      // string hashed via str_to_hash, intended for hand-authored TRDL.
+      // For decompile, we want the EXACT original cargo bytes so that
+      // two slow corkline-genesis twists with distinct cargo don't
+      // collapse to the same hash (simple_last bug: b[0] and c[0] both
+      // had non-null cargo arbs in the original; force-nulling here
+      // produced byte-identical bodies → one twist atom for both).
+      //
+      // Encodings (matches compile.js's parse):
+      //   null atom (00)     → 'null'      (compile: cargo_val = null)
+      //   arb atom in bundle → 'arb:<hex>' (compile: rebuild arb)
+      //   anything else      → literal hex (compile: write hash as-is)
+      //
+      // The poptop-line first twist gets its cargo synthesized from
+      // spec.poptop (a pairtrie of {SYM_POPTOP → abject_first}) — see
+      // compile.js's poptop branch which takes precedence over cargo.
+      // So overriding cargo here doesn't affect the poptop encoding.
+      if (i === 0) {
+        let carg = body?.carg
+        if (!carg || is_null(carg)) {
+          set_override(id, 'cargo', 'null')
+        } else {
+          let carg_atom = env.index[carg]
+          if (carg_atom && carg_atom.shape === ARB) {
+            let arb_bytes = env.bytes.subarray(carg_atom.cfirst, carg_atom.last + 1)
+            set_override(id, 'cargo', 'arb:' + bytes_to_hex(arb_bytes))
+          } else {
+            // Pairtrie / hashlist / twist / out-of-file: emit literal
+            // hash; compile writes it into the body slot without
+            // synthesizing an atom. Round-trips when the referenced
+            // atom is reachable through another twist's lat.
+            set_override(id, 'cargo', carg)
+          }
+        }
+      }
       // Shield: always emit. trdl_to_spec auto-generates a random
       // shield for fast tethered twists on shielded lines when the
       // override is absent — preserving null-shld twists explicitly

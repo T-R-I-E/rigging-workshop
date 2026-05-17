@@ -36,6 +36,12 @@ export function extract_shape(buf) {
   body_building(env)
   env.firsts = []
   get_in_line(env)
+  // Sort firsts by twist hash so y assignment is determined by the rig's
+  // content rather than the byte order they happened to appear in the
+  // file. Without this, two byte streams that encode structurally
+  // equivalent rigs but interleave atoms differently get different y
+  // values for the same line → false NEQ.
+  env.firsts.sort((a, b) => a.hash < b.hash ? -1 : a.hash > b.hash ? 1 : 0)
   y_the_first_twist(env)
   stack_lines(env)
   stack_lines(env)
@@ -127,7 +133,10 @@ function have_successors(env) {
 
 function get_hitched(env) {
   env.shapes[BODY]?.forEach(b => {
-    if (!b.rigtrie) return
+    // Body's rigs slot can point at a non-pairtrie atom in "invalid_rigging"
+    // fixtures (test rigs designed to wire the rigs hash at a non-trie
+    // shape). Skip those — there are no rig pairs to walk.
+    if (!b.rigtrie || !b.rigtrie.pairs) return
     b.rigtrie.pairs.forEach(pair => {
       let t = b.twist
       let meet = pair[1]
