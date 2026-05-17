@@ -707,13 +707,35 @@ const CHECKERS = [
                 await interp.verifyHitchLine(ctx.twistHash)
                 return { state: 'ok', detail: 'verified' }
             } catch (e) {
-                // Spec §9.1.3 (p.30): MISSING / UNKNOWN issues are yellow, not
-                // red. svgiewer/src exposes the MISSING family via class names
-                // beginning with "Missing" (MissingError, MissingHoistError,
-                // MissingPrevious, MissingSuccessor, MissingPostEntry,
-                // MissingHashPacketError). Map those to warn; let everything
-                // else propagate so the outer pipeline still renders FAIL.
+                // Spec §9.1.3 (p.30): MISSING / UNKNOWN issues are yellow,
+                // INVALID / MISMATCH issues are red. svgiewer/src names a
+                // few INVALID-class invariant violations with a "Missing"
+                // prefix even though all relevant atoms are present and a
+                // structural rule was broken. We classify those as red here
+                // until the JS hierarchy is cleaned up — see
+                // js-rig-checker-surgical-changes.md.
+                //
+                //   MissingHoistError  — no hoist exists for this lead (e.g.
+                //                        hh_tether_null: NULL teth → not fast)
+                //   MissingPostEntry   — post twist exists but its rigs lack
+                //                        the canonical entry for the lead
+                //   MissingSuccessor   — line ends before reaching stop
+                //
+                // Everything else with a "Missing" prefix (MissingError,
+                // MissingHashPacketError, MissingPrevError, MissingPrevious)
+                // is a genuine atom-not-in-bundle situation → yellow.
+                // MissingPrevious stays yellow only because the wrapper in
+                // interpret.js:prev() currently swallows the inner type;
+                // see surgical-changes.md §2 for the upstream fix.
                 let name = e?.name || e?.constructor?.name || ''
+                const JS_INVALID_AS_MISSING = new Set([
+                    'MissingHoistError',
+                    'MissingPostEntry',
+                    'MissingSuccessor',
+                ])
+                if (JS_INVALID_AS_MISSING.has(name)) {
+                    return { state: 'bad', detail: e?.message || String(e) }
+                }
                 if (/^Missing/.test(name)) {
                     return { state: 'warn', detail: e?.message || String(e) }
                 }

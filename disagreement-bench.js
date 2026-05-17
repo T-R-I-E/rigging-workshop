@@ -208,8 +208,15 @@ async function js_check(ctx) {
     await interp.verifyHitchLine(ctx.twistHash)
     return { v: 'ok', detail: 'verified' }
   } catch (e) {
+    // See app.js CHECKERS[0].run for the rationale; mirror the same
+    // classification here. Three "Missing*" classes are actually
+    // INVALID-class per spec §9.1.3 and must be red:
     let name = e?.name || e?.constructor?.name || ''
-    if (/^Missing/.test(name)) return { v: 'warn', detail: e.message || String(e) }
+    const JS_INVALID_AS_MISSING = new Set([
+      'MissingHoistError', 'MissingPostEntry', 'MissingSuccessor',
+    ])
+    if (JS_INVALID_AS_MISSING.has(name)) return { v: 'bad',  detail: e.message || String(e) }
+    if (/^Missing/.test(name))           return { v: 'warn', detail: e.message || String(e) }
     return { v: 'bad', detail: e.message || String(e) }
   }
 }
