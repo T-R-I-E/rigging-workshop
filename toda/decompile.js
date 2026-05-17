@@ -377,9 +377,14 @@ export async function decompile(buf, name = 'rig') {
   // entities for prev vs shld vs … would lose all but the last.
   //
   // What we preserve here:
-  //   • prev:"dangling" — the first twist of a line whose body.prev points
-  //     outside the file (anchored upstream). Without this, recompile would
-  //     treat it as a null genesis and produce a different body hash.
+  //   • prev:<hex>      — for line-genesis twists whose body.prev points to
+  //     a hash NOT in the file (anchored upstream / dangling). We emit the
+  //     LITERAL hex from the original body — compile.js writes it straight
+  //     into the body slot without synthesizing an arb atom, so the
+  //     recompile's body hash matches the original's. Crucial for rig-
+  //     perfect: without this, each compile generates a fresh random arb
+  //     for "dangling" and every downstream hash cascades, breaking the
+  //     hoist trie's S(lead) keys that the canonical checkers expect.
   //   • shld:<hex>      — the shield arb's bytes, verbatim. Recompile already
   //     accepts an shld override; feeding the real bytes here makes the
   //     hoist trie's S(lead)/SS(lead) keys land on the same hashes as the
@@ -397,7 +402,7 @@ export async function decompile(buf, name = 'rig') {
       let body = body_cache.get(h)
       if (i === 0) {
         let prev = body?.prev
-        if (!is_null(prev) && !env.index[prev]) set_override(id, 'prev', 'dangling')
+        if (!is_null(prev) && !env.index[prev]) set_override(id, 'prev', prev)
       }
       let shld_hash = body?.shld
       if (shld_hash && !is_null(shld_hash)) {

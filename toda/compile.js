@@ -147,10 +147,27 @@ async function build_twists(lines) {
     let prev_lat
     if (prev_id == null || prev_id === 'null') prev_lat = null
     else if (prev_id === 'dangling') {
+      // Legacy marker. Pre-rig-perfect decompile emitted 'dangling' and
+      // expected compile to synthesize a random arb. Still supported for
+      // hand-authored TRDL, but lossy: each compile produces different
+      // bytes for the prev and every downstream body hash cascades.
       let { random_bytes } = await import('./bytes.js')
       prev_lat = await arb(random_bytes(32))
     }
-    else prev_lat = twists.get(prev_id) || null
+    else if (twists.has(prev_id)) prev_lat = twists.get(prev_id)
+    else if (/^(41|22)[0-9a-f]{64}$|^00$|^ff$/i.test(prev_id)) {
+      // Literal hash hex (sha-256 with 0x41 prefix, symbol with 0x22, or
+      // NULL/UNIT singletons). Decompile emits this for line-genesis whose
+      // body.prev points outside the file — compile writes the hex into
+      // the body slot directly, without synthesizing an arb atom. Result:
+      // recompile body matches the original's body hash slot-for-slot, and
+      // the canonical checkers see "prev → not in file" exactly as they
+      // did against the original bytes. get_hash() in lat.js returns a
+      // string input unchanged, so passing the hex through as `prev` works
+      // without any further plumbing.
+      prev_lat = prev_id
+    }
+    else prev_lat = null
 
     let tether_lat   = tether ? twists.get(tether) || null : null
     let shield_lat   = shield ? await arb(hex_to_bytes(shield)) : null

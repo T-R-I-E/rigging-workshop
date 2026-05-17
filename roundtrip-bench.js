@@ -243,18 +243,31 @@ async function run_one(path) {
   }
 
   // Canonical corkline from the .json sidecar — same as the workshop uses.
+  // A few designed-bad fixtures (lashed_non_colinear, self_referential,
+  // splice_mismatch) ship a sidecar without a corkline field. Fall back to
+  // the file's focus hash: it lets every checker run (rather than skipping
+  // the rig entirely) and produces a self-referential rig-check, which is
+  // a meaningful test of "does the file pass its own walk?".
   let corkline_orig
   try {
     let res = await fetch(path.replace(/\.toda$/, '.json'))
-    if (!res.ok) throw new Error(`HTTP ${res.status}`)
-    let j = await res.json()
-    corkline_orig = j.corkline
-    r.expectedColour = j.colour || null
-  } catch (e) {
-    r.error = 'sidecar: ' + (e.message || String(e))
-    return r
+    if (res.ok) {
+      let j = await res.json()
+      corkline_orig = j.corkline
+      r.expectedColour = j.colour || null
+    }
+  } catch (_) { /* sidecar missing or malformed — fall through to fallback */ }
+  if (!corkline_orig) {
+    try {
+      let atoms = Atoms.fromBytes(bytes_orig)
+      corkline_orig = atoms.focus?.toString()
+      r.corklineFallback = 'focus'
+    } catch (e) {
+      r.error = 'no sidecar corkline and focus parse failed: ' + (e.message || String(e))
+      return r
+    }
+    if (!corkline_orig) { r.error = 'no sidecar corkline and no focus'; return r }
   }
-  if (!corkline_orig) { r.error = 'sidecar has no corkline'; return r }
 
   // --- pass 1: original bytes ---
   let ctx_orig
