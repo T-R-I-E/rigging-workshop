@@ -230,10 +230,19 @@ async function build() {
   if (my !== build_seq) return                  // stale: a newer build is queued
   last_built_bytes = bytes
   line_hashes = lineHashes
-  // Only overwrite corkline when compile produced one. For .toda loads
-  // the canonical corkline is set up-front from the sibling .json; if
-  // the decompile→recompile cycle produces a null corkline we keep the
-  // canonical value rather than blanking it out.
+  // .toda load lifecycle: load_bytes ran decompile and stashed the resulting
+  // TRDL text on initial_toda_load.decompile_text. If the editor still shows
+  // exactly that text, the user hasn't edited — the build that fired here is
+  // the auto-build triggered by load_bytes's set_doc(text). Re-rendering with
+  // the recompiled bytes would replace viz/hex/rig-check with a lossy
+  // reconstruction of what the user just loaded (v1 decompile loses shield
+  // bytes, regenerates random shields, etc.). Skip the render and leave the
+  // canonical .json corkline alone. Once the user actually edits the TRDL,
+  // get_doc() will differ from decompile_text and rendering resumes.
+  let init = window.workshop?.initial_toda_load
+  if (init && init.decompile_text != null && get_doc() === init.decompile_text) {
+    return
+  }
   if (corkline) window.workshop.corkline = corkline
   try {
     window.workshop.render(bytes)
@@ -269,6 +278,7 @@ async function load_bytes(buf) {
       rig_id:  active_rig,
       results: new Map(),       // checker_id → {state, badge, detail}
       workshop_check: check,    // reuse fail-fast result; show_abject_info caches off this
+      decompile_text: text,     // baseline for "has the user edited?" check in build()
     }
     set_doc(text)
     last_built_bytes = buf
