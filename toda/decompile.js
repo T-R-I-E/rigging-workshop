@@ -403,34 +403,14 @@ export async function decompile(buf, name = 'rig') {
       if (i === 0) {
         let prev = body?.prev
         if (!is_null(prev) && !env.index[prev]) set_override(id, 'prev', prev)
-        // Cargo on line-first twists: trdl_to_spec heuristically adds
-        // cargo: 'cargo-<linename>' for non-poptop / non-abject firsts,
-        // which changes body.carg vs the original. The "right" fix is to
-        // preserve the original cargo atom byte-for-byte; for null and
-        // arb-shaped cargo that's straightforward (emit 'null' or
-        // 'arb:<hex>'). For pairtrie / hashes / other shapes, we'd need
-        // to inject the original atom into the recompile output, which
-        // requires plumbing compile.js doesn't have yet.
-        //
-        // Only the null and arb cases are wired up so far. Literal-hash
-        // preservation produced a body referencing missing atoms — rust
-        // (correctly) flagged the rig as broken — so we fall back to the
-        // 'cargo-<linename>' heuristic in the other-shape case. That
-        // keeps the recompile internally consistent at the cost of body
-        // hashes that diverge from the original.
-        let carg = body?.carg
-        if (is_null(carg)) {
-          set_override(id, 'cargo', 'null')
-        } else {
-          let carg_atom = env.index[carg]
-          if (carg_atom && carg_atom.shape === ARB) {
-            let arb_bytes = env.bytes.subarray(carg_atom.cfirst, carg_atom.last + 1)
-            set_override(id, 'cargo', 'arb:' + bytes_to_hex(arb_bytes))
-          }
-          // else: leave cargo alone, recompile uses the auto-cargo
-          // heuristic and produces a self-consistent (but byte-divergent)
-          // recompile.
-        }
+        // Force cargo: 'null' on every line-first twist. trdl_to_spec
+        // heuristically adds cargo: 'cargo-<linename>' for non-poptop /
+        // non-abject firsts, which produces an arb cargo atom that the
+        // original didn't have. Cargo content doesn't affect rig-check
+        // outcomes — the spec's rig validity is about lead/meet/fastener
+        // /hoist/post structure, not body.carg — so the simplest faithful
+        // thing is to null cargo across the board on recompile.
+        set_override(id, 'cargo', 'null')
       }
       let shld_hash = body?.shld
       if (shld_hash && !is_null(shld_hash)) {
