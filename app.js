@@ -758,7 +758,11 @@ async function server_check(ctx, base) {
         return { state: 'warn', detail: 'server offline' }
     }
     if (!res.ok) {
-        return { state: 'bad',
+        // Server didn't successfully evaluate the rig — that's "we don't
+        // know" (yellow per spec §9.1.3 unknown/atomic-error semantics),
+        // not "rig proven invalid". Reporting it as red would let a
+        // parser hiccup or 400 pose as a definitive red verdict.
+        return { state: 'warn',
                  detail: `HTTP ${res.status}: ${(await res.text()).slice(0,120)}` }
     }
     let { colour } = await res.json()
@@ -802,7 +806,9 @@ async function rust_check(ctx) {
         let { state, detail } = JSON.parse(mod.check_rig(bytes, ctx.corklineHex, ctx.twistHex))
         return { state, detail }
     } catch (e) {
-        return { state: 'bad', detail: e.message || String(e) }
+        // wasm threw or produced malformed JSON — that's "we don't know"
+        // (yellow per spec §9.1.3), not "rig proven invalid" (red).
+        return { state: 'warn', detail: e.message || String(e) }
     }
 }
 

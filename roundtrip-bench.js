@@ -171,7 +171,13 @@ async function server_check(ctx, base) {
       body: ctx.bytes,
     })
   } catch { return { v: 'warn', detail: 'server offline' } }
-  if (!res.ok) return { v: 'bad', detail: `HTTP ${res.status}` }
+  if (!res.ok) {
+    // A non-2xx is the server failing to process the request, not the
+    // checker producing a red verdict. Per spec §9.1.3 atomic / unable-
+    // to-interpret conditions are yellow, not red — conflating them
+    // would let a parser hiccup pose as "this rig is proven invalid".
+    return { v: 'warn', detail: `HTTP ${res.status}` }
+  }
   let { colour } = await res.json()
   return {
     v: colour === 'green' ? 'ok' : colour === 'yellow' ? 'warn' : 'bad',
@@ -183,15 +189,18 @@ async function rust_check(ctx) {
   let bytes = ctx.bytes instanceof Uint8Array ? ctx.bytes : new Uint8Array(ctx.bytes)
   let res = await check_via_worker({ bytes, cork: ctx.corklineHex, twist: ctx.twistHex }, CHECKER_TIMEOUT_MS)
   if (!res.ok) {
-    // Timeout is a soft fail (warn) — the wasm went into an unbounded
-    // loop but the rig itself isn't necessarily invalid. A worker-error
-    // or wasm-thrown exception is a hard bad.
-    return { v: res.timeout ? 'warn' : 'bad', detail: res.error }
+    // Both timeouts and worker errors mean the wasm didn't produce a
+    // verdict for this rig. Per spec §9.1.3 that's unknown/atomic-error
+    // (yellow), not "rig proven invalid" (red).
+    return { v: 'warn', detail: res.error }
   }
   try {
     let { state, detail } = JSON.parse(res.result)
     return { v: state, detail }
-  } catch (e) { return { v: 'bad', detail: e.message || String(e) } }
+  } catch (e) {
+    // Malformed JSON from the wasm: again, no verdict. Yellow, not red.
+    return { v: 'warn', detail: e.message || String(e) }
+  }
 }
 
 // Timeout guard. Any checker that exceeds the budget returns a 'warn'
