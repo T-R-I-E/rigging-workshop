@@ -24,6 +24,7 @@ import { decompile, emit_jsonl } from './toda/decompile.js'
 import { parse_trdl_string, trdl_to_spec } from './toda/trdl.js'
 import { build } from './toda/compile.js'
 import { check_via_worker } from './toda/rustoda-wasm/client.js'
+import { extract_shape } from './toda/shape.js'
 
 // ----------------------------------------------------------------------------
 // Inline HalfHitchInterpreter (copy of app.js's). See app.js for rationale —
@@ -337,14 +338,36 @@ async function run_one(path) {
   catch (e) { r.recompileError = 'ctx_rec: ' + (e.message || String(e)); return r }
   r.rec = await run_all_checkers(ctx_rec)
 
+  // Shape equality: a stronger check than checker-eq. Even when all four
+  // checkers report the same colour for orig and recompile, the underlying
+  // rig may have been silently reshaped (twists dropped/added, edges
+  // rerouted, hitch promotions changed). extract_shape canonicalises the
+  // graph layout to a string; identical bytes → identical string.
+  try {
+    let shape_orig = extract_shape(bytes_orig.buffer)
+    let shape_rec  = extract_shape(bytes_rec.buffer)
+    r.shapeEq = shape_orig === shape_rec
+    if (!r.shapeEq) {
+      r.shape_orig = shape_orig
+      r.shape_rec  = shape_rec
+    }
+  } catch (e) {
+    r.shapeEq = false
+    r.shapeError = e.message || String(e)
+  }
+
   r.diffs = []
   for (let k of ['js', 'clj', 'bb', 'rust']) {
     if (r.orig[k].v !== r.rec[k].v) {
       r.diffs.push(`${k}: ${r.orig[k].v} → ${r.rec[k].v}`)
     }
   }
-  r.rigPerfect = r.diffs.length === 0
-  console.log(`[bench] ✓ ${path} → ${r.rigPerfect ? 'PERFECT' : 'DIFF: ' + r.diffs.join(', ')}`)
+  r.rigPerfect = r.diffs.length === 0 && r.shapeEq
+  let tag = r.rigPerfect ? 'PERFECT'
+          : (r.diffs.length && !r.shapeEq) ? 'DIFF+SHAPE'
+          : r.diffs.length ? 'DIFF'
+          : 'SHAPE NEQ'
+  console.log(`[bench] ✓ ${path} → ${tag}${r.diffs.length ? ': ' + r.diffs.join(', ') : ''}`)
   return r
 }
 
@@ -361,12 +384,35 @@ function render_row(tbody, r) {
   let basename = r.path.replace(/^.*\//, '').replace(/\.toda$/, '')
   let oc = r.orig || {}, rc = r.rec || {}
   let verdict, vClass
-  if (r.error) { verdict = 'ERR'; vClass = 'error' }
+  if (r.error)               { verdict = 'ERR';         vClass = 'error' }
   else if (r.recompileError) { verdict = 'COMPILE ERR'; vClass = 'error' }
   else if (r.rigPerfect)     { verdict = 'PERFECT';     vClass = 'perfect' }
-  else                       { verdict = 'DIFF';        vClass = 'imperfect' }
+  else if (r.diffs?.length && !r.shapeEq) { verdict = 'DIFF+SHAPE'; vClass = 'imperfect' }
+  else if (r.diffs?.length)  { verdict = 'DIFF';        vClass = 'imperfect' }
+  else if (r.shapeEq === false) { verdict = 'SHAPE NEQ'; vClass = 'imperfect' }
+  else                       { verdict = '—';           vClass = '' }
 
-  let note = r.error || r.recompileError || (r.diffs?.length ? r.diffs.join('\n') : '')
+  let noteParts = []
+  if (r.error) noteParts.push(r.error)
+  if (r.recompileError) noteParts.push(r.recompileError)
+  if (r.diffs?.length) noteParts.push(r.diffs.join('\n'))
+  if (r.shapeEq === false && r.shape_orig && r.shape_rec) {
+    // Brief shape diff: first divergence index plus counts. The full
+    // strings are on r.shape_orig / r.shape_rec for download/inspection.
+    let a = r.shape_orig, b = r.shape_rec, n = Math.min(a.length, b.length), at = 0
+    while (at < n && a[at] === b[at]) at++
+    let countA = (a.match(/"i":/g) || []).length
+    let countB = (b.match(/"i":/g) || []).length
+    noteParts.push(`shape: orig=${countA} twists, rec=${countB} twists; diff at char ${at}`)
+  }
+  if (r.shapeError) noteParts.push('shape error: ' + r.shapeError)
+  let note = noteParts.join('\n')
+
+  let shapeCell = ''
+  if (r.error || r.recompileError) shapeCell = '<span class="v-skip">—</span>'
+  else if (r.shapeEq === true)  shapeCell = '<span class="v-ok">EQ</span>'
+  else if (r.shapeEq === false) shapeCell = '<span class="v-bad">NEQ</span>'
+  else shapeCell = '<span class="v-skip">—</span>'
 
   tr.innerHTML =
     `<td title="${r.path}">${basename}</td>` +
@@ -379,6 +425,7 @@ function render_row(tbody, r) {
     `<td class="col-rec">${pill(rc.clj)}</td>` +
     `<td class="col-rec">${pill(rc.bb)}</td>` +
     `<td class="col-rec">${pill(rc.rust)}</td>` +
+    `<td>${shapeCell}</td>` +
     `<td><span class="verdict ${vClass}">${verdict}</span></td>` +
     `<td class="note">${escape_html(note)}</td>`
   tbody.appendChild(tr)
