@@ -443,7 +443,13 @@ const RIGS = [
   ['tests/toda-graph/three-hitches-horizontal.trdl',                                   'green'],
   ['tests/toda-graph/three-hitches-vertical.trdl',                                     'green'],
 
-  ['tests/toda-abject/delegation-chain-4-level.trdl',                                  'green'],
+  // tests/toda-abject/* — excluded. The Rigging Workshop is exclusively
+  // for single rigs; abject fixtures (delegation chains, multi-rig
+  // walks) belong in abject-workshop. See abject-workshop.md → "Tests
+  // excluded from rigging-workshop" for the list and reasoning. The
+  // workshop still refuses-to-process abject .toda loads at the byte
+  // level (workshop_bail_check in app.js) so a user dropping one in by
+  // accident sees a clear ABJECT ERROR banner pointing at the spec doc.
 
   ['tests/toda-core/twist-chain-with-fields.trdl',                                     'green'],
   ['tests/toda-core/twist-isolation-multi-line.trdl',                                  'green'],

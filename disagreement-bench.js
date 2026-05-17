@@ -116,7 +116,9 @@ const RIGS = [
   ['tests/toda-graph/multi-level-rig.trdl', 'yellow'],
   ['tests/toda-graph/three-hitches-horizontal.trdl', 'green'],
   ['tests/toda-graph/three-hitches-vertical.trdl', 'green'],
-  ['tests/toda-abject/delegation-chain-4-level.trdl', 'green'],
+  // tests/toda-abject/* — excluded; abject fixtures belong in
+  // abject-workshop. See abject-workshop.md → "Tests excluded from
+  // rigging-workshop".
   ['tests/toda-core/twist-chain-with-fields.trdl', 'green'],
   ['tests/toda-core/twist-isolation-multi-line.trdl', 'green'],
   ['todatests/rigging/complex_bad_hoist_direct_to_indirect.toda', 'red'],

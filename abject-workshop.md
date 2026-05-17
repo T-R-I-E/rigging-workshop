@@ -12,6 +12,33 @@ learned while investigating the issue that prompted this split, and
 (c) the questions a real implementation needs to answer.
 
 
+## Tests excluded from rigging-workshop
+
+Rigging-workshop is exclusively for single rigs. Fixtures that require
+abject-aware checking — delegation-chain walks, multi-rig enumeration,
+sub-abject resolution — have been moved out of the workshop's `RIGS`
+list (editor.js) and `disagreement-bench.js`'s probe set, and belong in
+this workshop instead. Re-add them here when abject-workshop ships.
+
+| Path | Source | Why excluded |
+|---|---|---|
+| `tests/toda-abject/delegation-chain-4-level.trdl` | `../todaclj/toda-clj-tests/toda-abject/` | Compiles to a 4-level delegation chain. The workshop's single-(twist, corkline) pipeline can't faithfully check it — the abject has multiple internal rigs and the rig-check needs `Abject.checkAllRigs()`, which doesn't exist yet on the canonical clj/bb/rust side and isn't worth half-implementing in the workshop. |
+
+(The line above is the only abject-explicit test that was in either
+RIGS list at the time of the split. As more abject fixtures land
+upstream they belong here, not in the rigging-workshop's sidebar.)
+
+For *.toda loads at the byte level, rigging-workshop already has a
+fail-fast detector (`workshop_bail_check` in `app.js`) — it parses the
+focus twist with `Abject.fromTwist`, and if non-null it short-circuits
+the load with an `ABJECT ERROR` banner pointing at this doc. That
+boundary check stays in the workshop indefinitely; it's the
+"refused-to-process" message a user sees when they drop a DQ token or
+similar into the wrong tool. Don't remove it when implementing
+abject-workshop — instead make abject-workshop the suggested
+destination.
+
+
 ## Why separate from rigging-workshop
 
 rigging-workshop is for authoring TRDL test rigs. The editor is the source
