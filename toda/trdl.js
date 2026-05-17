@@ -133,7 +133,23 @@ function collect_twist_overrides(twist_entities) {
     if ('prev'  in e) o.prev_id    = ref_to_kw(e.prev)
     if ('teth'  in e) o.tether     = ref_to_kw(e.teth)
     if ('shld'  in e) o.shield     = e.shld
-    if ('cargo' in e) o.cargo      = e.cargo
+    if ('cargo' in e) {
+      // Three forms (matching rigs):
+      //   "cargo": "null"                          → explicit NULL slot
+      //   "cargo": { "raw": "<hex>", "shape":… }   → verbatim atom bytes
+      //   "cargo": "<other string>"                → legacy: arb:, hash hex, or utf-8
+      // raw form preserves designed-bad cargo atoms (e.g. pairtries
+      // containing twist refs in multi-hoist fixtures); needed because
+      // a plain literal-hash cargo override sets the body slot right
+      // but doesn't include the atom in the bundle, losing the
+      // cargo→target edge in the shape extractor.
+      if (e.cargo && typeof e.cargo === 'object' && 'raw' in e.cargo) {
+        o.cargo_raw   = e.cargo.raw
+        o.cargo_shape = e.cargo.shape || 'pairtrie'
+      } else {
+        o.cargo = e.cargo
+      }
+    }
     if ('rigs'  in e) {
       // Three forms of the rigs override:
       //   "rigs": "null"                         → explicit NULL slot
@@ -213,7 +229,8 @@ export function trdl_to_spec(entities) {
       // literal hash for non-null. Presence of the key (rather than
       // truthiness of the value) means "decompile told us what was
       // really there, don't fall back to the cargo-<linename> heuristic".
-      let hasCargoOverride = 'cargo' in override
+      let hasCargoOverride    = 'cargo' in override
+      let hasCargoRawOverride = 'cargo_raw' in override
 
       let spec = { id, line: line_name }
       if (reqsat_kw)            spec.reqsat        = reqsat_kw
@@ -241,9 +258,13 @@ export function trdl_to_spec(entities) {
       }
       if (shield_src)           spec.shield_source = shield_src
       if (is_abject_first)      spec.poptop        = poptop_first
-      else if (is_other_first && !hasCargoOverride)
+      else if (is_other_first && !hasCargoOverride && !hasCargoRawOverride)
                                 spec.cargo         = `cargo-${line_name}`
       if (hasCargoOverride)     spec.cargo         = override.cargo
+      if (hasCargoRawOverride) {
+        spec.cargo_raw   = override.cargo_raw
+        spec.cargo_shape = override.cargo_shape || 'pairtrie'
+      }
       return spec
     })
     edn_lines.set(line_name, specs)

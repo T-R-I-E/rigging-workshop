@@ -521,11 +521,25 @@ export async function decompile(buf, name = 'rig') {
         if (carg_atom && carg_atom.shape === ARB) {
           let arb_bytes = env.bytes.subarray(carg_atom.cfirst, carg_atom.last + 1)
           set_override(id, 'cargo', 'arb:' + bytes_to_hex(arb_bytes))
+        } else if (carg_atom) {
+          // Pairtrie / hashlist: emit raw atom bytes so the cargo atom
+          // ends up in the recompile bundle. Without this, body.carg
+          // points at a hash whose atom isn't synthesized → cargo→target
+          // edges (e.g. multi-hoist fixtures) vanish from the shape.
+          let content = env.bytes.subarray(carg_atom.cfirst, carg_atom.last + 1)
+          let raw_hex = bytes_to_hex(content)
+          let shape_name = SHAPE_NAMES[carg_atom.shape]
+          if (shape_name === 'pairtrie') {
+            set_override(id, 'cargo', { raw: raw_hex })
+          } else {
+            set_override(id, 'cargo', {
+              raw:   raw_hex,
+              shape: shape_name || `0x${carg_atom.shape.toString(16)}`,
+            })
+          }
         } else {
-          // Pairtrie / hashlist / twist / out-of-file: emit literal
-          // hash; compile writes it into the body slot without
-          // synthesizing an atom. Round-trips when the referenced
-          // atom is reachable through another twist's lat.
+          // Out-of-file: emit literal hash. The body slot holds it;
+          // checkers see a "missing atom" reference, same as orig.
           set_override(id, 'cargo', carg)
         }
       }

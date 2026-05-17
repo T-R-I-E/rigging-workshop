@@ -142,7 +142,8 @@ async function build_twists(lines) {
 
   for (let spec of sorted) {
     let { id, prev_id, tether, cargo, shield, rig, shield_source,
-          poptop, reqsat, line, rigs_raw, rigs_shape, rigs_null } = spec
+          poptop, reqsat, line, rigs_raw, rigs_shape, rigs_null,
+          cargo_raw, cargo_shape } = spec
 
     let prev_lat
     if (prev_id == null || prev_id === 'null') prev_lat = null
@@ -190,6 +191,13 @@ async function build_twists(lines) {
     let cargo_val
     if (poptop && poptop_lat) {
       cargo_val = await pairtrie([[SYM_POPTOP, poptop_lat]])
+    } else if (cargo_raw) {
+      // Verbatim atom bytes — used for designed-bad cargo (e.g. a
+      // pairtrie containing twist refs in multi-hoist fixtures).
+      // Defaults to pairtrie shape; non-pairtrie shapes specified
+      // via spec.cargo_shape.
+      let shape_byte = SHAPE[cargo_shape] ?? SHAPE.pairtrie
+      cargo_val = await from_packet(shape_byte, hex_to_bytes(cargo_raw))
     } else if (cargo === 'null' || cargo == null) {
       cargo_val = null
     } else if (typeof cargo === 'string' && cargo.startsWith('arb:')) {
