@@ -23,6 +23,7 @@ import { Hash } from './src/core/hash.js'
 import { decompile, emit_jsonl } from './toda/decompile.js'
 import { parse_trdl_string, trdl_to_spec } from './toda/trdl.js'
 import { build } from './toda/compile.js'
+import { check_via_worker } from './toda/rustoda-wasm/client.js'
 
 // ----------------------------------------------------------------------------
 // Inline HalfHitchInterpreter (copy of app.js's). See app.js for rationale —
@@ -126,16 +127,11 @@ const FIXTURES = [
 const CLJ_URL = 'https://d3myckc3w6ekfv.cloudfront.net/rigcheck-clj'
 const BB_URL  = 'https://d3myckc3w6ekfv.cloudfront.net/rigcheck-bb'
 
-// rustoda's wasm runs synchronously on the main thread — a tight loop in
-// Rust will freeze the page with no JS-side escape (Promise.race timers
-// won't fire because the event loop is blocked). Until rustoda either
-// (a) grows iteration limits or (b) runs in a Web Worker we can terminate,
-// known-bad fixtures get the rust checker skipped here. Both passes
-// (original and recompile) skip together so the rig can still earn a
-// PERFECT/DIFF verdict on the other three checkers.
-const RUST_SKIP = new Set([
-  'todatests/rigging/complex_tether_direction_change.toda',
-])
+// rustoda is invoked through a Web Worker (toda/rustoda-wasm/client.js)
+// so we can worker.terminate() any fixture that sends the wasm into a
+// tight synchronous loop. CHECKER_TIMEOUT_MS bounds each call; on
+// timeout the rust verdict becomes warn with a 'wasm timeout' detail
+// and the next call gets a fresh worker.
 
 // ----------------------------------------------------------------------------
 // Checker drivers (mirror app.js CHECKERS run() functions)
@@ -172,23 +168,17 @@ async function server_check(ctx, base) {
   }
 }
 
-let _rustoda_load
-async function load_rustoda() {
-  if (!_rustoda_load) _rustoda_load = (async () => {
-    try {
-      let mod = await import('./toda/rustoda-wasm/rigcheck.js')
-      await mod.default()
-      return { mod }
-    } catch (e) { return { error: e } }
-  })()
-  return _rustoda_load
-}
 async function rust_check(ctx) {
-  let { mod, error } = await load_rustoda()
-  if (error) return { v: 'warn', detail: 'wasm load failed' }
+  let bytes = ctx.bytes instanceof Uint8Array ? ctx.bytes : new Uint8Array(ctx.bytes)
+  let res = await check_via_worker({ bytes, cork: ctx.corklineHex, twist: ctx.twistHex }, CHECKER_TIMEOUT_MS)
+  if (!res.ok) {
+    // Timeout is a soft fail (warn) — the wasm went into an unbounded
+    // loop but the rig itself isn't necessarily invalid. A worker-error
+    // or wasm-thrown exception is a hard bad.
+    return { v: res.timeout ? 'warn' : 'bad', detail: res.error }
+  }
   try {
-    let bytes = ctx.bytes instanceof Uint8Array ? ctx.bytes : new Uint8Array(ctx.bytes)
-    let { state, detail } = JSON.parse(mod.check_rig(bytes, ctx.corklineHex, ctx.twistHex))
+    let { state, detail } = JSON.parse(res.result)
     return { v: state, detail }
   } catch (e) { return { v: 'bad', detail: e.message || String(e) } }
 }
@@ -206,15 +196,14 @@ function with_timeout(promise, ms, label) {
 
 const CHECKER_TIMEOUT_MS = 10000
 
-async function run_all_checkers(ctx, opts = {}) {
-  let rust_promise = opts.skip_rust
-    ? Promise.resolve({ v: 'skip', detail: 'skipped (known wasm hang)' })
-    : with_timeout(rust_check(ctx), CHECKER_TIMEOUT_MS, 'rust')
+async function run_all_checkers(ctx) {
+  // rust_check already has its own worker-mediated timeout; the others
+  // are wrapped here.
   let [js, clj, bb, rust] = await Promise.all([
     with_timeout(js_check(ctx),              CHECKER_TIMEOUT_MS, 'js'),
     with_timeout(server_check(ctx, CLJ_URL), CHECKER_TIMEOUT_MS, 'clj'),
     with_timeout(server_check(ctx, BB_URL),  CHECKER_TIMEOUT_MS, 'bb'),
-    rust_promise,
+    rust_check(ctx),
   ])
   return { js, clj, bb, rust }
 }
@@ -267,14 +256,11 @@ async function run_one(path) {
   }
   if (!corkline_orig) { r.error = 'sidecar has no corkline'; return r }
 
-  let skip_rust = RUST_SKIP.has(path)
-  if (skip_rust) console.warn(`[bench]   skipping rust for ${path}`)
-
   // --- pass 1: original bytes ---
   let ctx_orig
   try { ctx_orig = build_ctx(bytes_orig, corkline_orig) }
   catch (e) { r.error = 'ctx_orig: ' + (e.message || String(e)); return r }
-  r.orig = await run_all_checkers(ctx_orig, { skip_rust })
+  r.orig = await run_all_checkers(ctx_orig)
   r.origLen = bytes_orig.length
 
   // --- decompile → recompile ---
@@ -314,13 +300,10 @@ async function run_one(path) {
   let ctx_rec
   try { ctx_rec = build_ctx(bytes_rec, corkline_rec) }
   catch (e) { r.recompileError = 'ctx_rec: ' + (e.message || String(e)); return r }
-  r.rec = await run_all_checkers(ctx_rec, { skip_rust })
+  r.rec = await run_all_checkers(ctx_rec)
 
-  // Compare verdicts. 'skip' on both sides counts as a match (the rig-perfect
-  // verdict reflects the checkers that actually ran).
   r.diffs = []
   for (let k of ['js', 'clj', 'bb', 'rust']) {
-    if (r.orig[k].v === 'skip' && r.rec[k].v === 'skip') continue
     if (r.orig[k].v !== r.rec[k].v) {
       r.diffs.push(`${k}: ${r.orig[k].v} → ${r.rec[k].v}`)
     }
