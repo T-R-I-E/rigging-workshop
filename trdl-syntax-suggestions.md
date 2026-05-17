@@ -265,14 +265,37 @@ After landing the workshop-side support for these extensions, the
 SHAPE-EQ column of `roundtrip-bench.html` should be EQ for every
 fixture. Verdict `PERFECT` requires both checker-eq AND shape-eq.
 
-| date       | perfect | shape-eq, checkers-diverge | shape-neq |
-|------------|---------|----------------------------|-----------|
-| 2026-05-17 (pre-cargo-fix) | 11 / 68 | 9  | 48 |
-| 2026-05-17 (post-cargo-fix, post-firsts-sort) | 13 / 68 | 10 | 45 |
+| date       | perfect | shape-eq, checkers-diverge | shape-neq | running change |
+|------------|---------|----------------------------|-----------|----------------|
+| 2026-05-17 (pre-cargo-fix) | 11 / 68 | 9  | 48 | baseline |
+| 2026-05-17 (post-cargo-fix, firsts-sort) | 13 / 68 | 10 | 45 | +2 perfect |
+| 2026-05-17 (rigs-raw + mid-line cargo) | 18 / 68 | 17 | 33 | +5 perfect |
+| 2026-05-17 (cargo-raw for non-arb) | **33 / 68** | 22 | **13** | +15 perfect |
 
-The first three SHAPE-EQ wins after the cargo fix:
-`tether_loop`, `hh_tether_missing`, `complex_maximal_time_crossing`.
-The shape-eq-but-checker-diverge bucket reflects rigs where the
-recompile produces a structurally-equivalent rig but the *bytes*
-still differ (different random shields, atom interleaving), which
-shifts what the checkers see.
+The shape-eq-but-checker-diverge bucket grew from 9 → 22 over these
+changes: the recompile produces a structurally-equivalent rig
+(SHAPE EQ) but the *bytes* still differ (different random shields,
+atom interleaving), which shifts what the checkers see. That's
+checker stability work, not decompile-loop work.
+
+### Remaining 13 SHAPE-NEQ fixtures
+
+Clustered by diff position (suggests shared root cause):
+
+**char 22 — twist-count drops (5 fixtures):**
+`conflicting_successors` (7→6), `cork_prev_invalid_green` (19→8),
+`cork_prev_invalid_red` (19→13), `lashed_non_colinear` (15→12),
+`splice_mismatch` (59→57). All lose twists. Probably one root cause
+in line discovery / prev resolution; needs investigation.
+
+**chars 71–2004 — single-edge differences (6 fixtures):**
+`lead_shield_non_arb` (71), `lash_succession_reqsat_fail` (114),
+`missing_rigging` (114), `missing_shield` (845),
+`post_rigging_missing_post_key` (1435), `cork_missing_rigging`
+(1562), `cork_reqsat_fail` (2004). Same twist count;
+edge missing or shifted. Likely one of the remaining proposed
+extensions (reqs/sats override for the reqsat fixtures; non-arb
+shield for `lead_shield_non_arb`) catches each.
+
+**single oddball (2):** `hh_tether_not_twist` (50), tether shape
+edge cases.
