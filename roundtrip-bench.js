@@ -182,13 +182,25 @@ async function rust_check(ctx) {
   } catch (e) { return { v: 'bad', detail: e.message || String(e) } }
 }
 
+// Timeout guard. Any checker that exceeds the budget returns a 'warn'
+// sentinel rather than hanging the whole bench — rust wasm in particular
+// has no JS-side escape if it goes into a Rust infinite loop, and the
+// HTTPS checkers can wedge on a stalled response.
+function with_timeout(promise, ms, label) {
+  return Promise.race([
+    promise.catch(e => ({ v: 'bad', detail: e?.message || String(e) })),
+    new Promise(r => setTimeout(() => r({ v: 'warn', detail: `${label} timeout (${ms}ms)` }), ms)),
+  ])
+}
+
+const CHECKER_TIMEOUT_MS = 10000
+
 async function run_all_checkers(ctx) {
-  // Parallel — same as the workshop. Each returns { v, detail }.
   let [js, clj, bb, rust] = await Promise.all([
-    js_check(ctx).catch(e => ({ v: 'bad', detail: e.message || String(e) })),
-    server_check(ctx, CLJ_URL),
-    server_check(ctx, BB_URL),
-    rust_check(ctx),
+    with_timeout(js_check(ctx),                       CHECKER_TIMEOUT_MS, 'js'),
+    with_timeout(server_check(ctx, CLJ_URL),          CHECKER_TIMEOUT_MS, 'clj'),
+    with_timeout(server_check(ctx, BB_URL),           CHECKER_TIMEOUT_MS, 'bb'),
+    with_timeout(rust_check(ctx),                     CHECKER_TIMEOUT_MS, 'rust'),
   ])
   return { js, clj, bb, rust }
 }
@@ -215,6 +227,7 @@ function build_ctx(bytes, corkline_hex) {
 // One fixture: load → check orig → decompile/recompile → check recompile → compare
 
 async function run_one(path) {
+  console.log(`[bench] ▶ ${path}`)
   let r = { path }
   let bytes_orig
   try {
@@ -248,18 +261,29 @@ async function run_one(path) {
   r.origLen = bytes_orig.length
 
   // --- decompile → recompile ---
+  // 20s budget. async work can be raced, but a tight synchronous loop in
+  // decompile/compile will freeze the page; if Run-All halts at a specific
+  // rig, check the console for the last "▶" log line — that's the culprit.
   let bytes_rec, corkline_rec
   try {
-    let entities    = await decompile(bytes_orig.buffer)
-    let trdl_text   = emit_jsonl(entities)
-    let parsed      = parse_trdl_string(trdl_text)
-    let spec        = trdl_to_spec(parsed)
-    let compiled    = await build(spec)
-    bytes_rec       = new Uint8Array(compiled.bytes)
-    corkline_rec    = compiled.corkline_h || null
-    r.trdl          = trdl_text
+    let pipeline = (async () => {
+      let entities  = await decompile(bytes_orig.buffer)
+      let trdl_text = emit_jsonl(entities)
+      let parsed    = parse_trdl_string(trdl_text)
+      let spec      = trdl_to_spec(parsed)
+      let compiled  = await build(spec)
+      return { bytes_rec: new Uint8Array(compiled.bytes), corkline_rec: compiled.corkline_h, trdl_text }
+    })()
+    let result = await Promise.race([
+      pipeline,
+      new Promise((_, rej) => setTimeout(() => rej(new Error('pipeline timeout (20s)')), 20000)),
+    ])
+    bytes_rec    = result.bytes_rec
+    corkline_rec = result.corkline_rec || null
+    r.trdl       = result.trdl_text
   } catch (e) {
     r.recompileError = e.message || String(e)
+    console.warn(`[bench]   pipeline failed for ${path}: ${r.recompileError}`)
     return r
   }
   r.recLen = bytes_rec.length
@@ -283,6 +307,7 @@ async function run_one(path) {
     }
   }
   r.rigPerfect = r.diffs.length === 0
+  console.log(`[bench] ✓ ${path} → ${r.rigPerfect ? 'PERFECT' : 'DIFF: ' + r.diffs.join(', ')}`)
   return r
 }
 
