@@ -202,8 +202,14 @@ export function trdl_to_spec(entities) {
       if (override.prev_id)     spec.prev_id       = override.prev_id
       if (tether_kw)            spec.tether        = tether_kw
       if (Object.keys(rig_entries).length) spec.rig = rig_entries
-      if (override.shield)      spec.shield        = override.shield
-      else if (shield_hex)      spec.shield        = shield_hex
+      // Decompile emits shld: 'null' explicitly to mean "no shield" even
+      // for fast twists on shielded lines. Distinguish from no-override.
+      let hasShieldOverride = 'shield' in override
+      if (hasShieldOverride && override.shield && override.shield !== 'null') {
+        spec.shield = override.shield
+      } else if (!hasShieldOverride && shield_hex) {
+        spec.shield = shield_hex
+      }
       if (shield_src)           spec.shield_source = shield_src
       if (is_abject_first)      spec.poptop        = poptop_first
       else if (is_other_first && !hasCargoOverride)

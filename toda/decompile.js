@@ -349,6 +349,13 @@ export async function decompile(buf, name = 'rig') {
     corkline_line_name = line_of(hitches[0].hoist) || line_of(hitches[0].fastener)
   }
 
+  // Hash → 'line[i]' map, used both by post detection (for hitch entities)
+  // and by the per-twist override loop further down.
+  let hash_to_ref = new Map()
+  for (let { name: ln, twists } of named) {
+    twists.forEach((h, i) => hash_to_ref.set(h, `${ln}[${i}]`))
+  }
+
   let out = []
   out.push(corkline_line_name
     ? { rig: name, poptop: corkline_line_name }
@@ -366,11 +373,51 @@ export async function decompile(buf, name = 'rig') {
     // until we ship X.509-wrapped public keys in ed25519.js.
     out.push({ line: ln, twists: twists.length, shielded, reqsat: 'null' })
   }
-  for (let h of hitches) out.push({
-    hitch: h.name, lead: h.lead, meet: h.meet,
-    fastener: h.fastener, hoist: h.hoist,
-  })
-  for (let c of crosses) out.push(c)
+  // For each hitch, detect whether it has a real post (full hitch) or is
+  // a half-hitch. Without explicit post info, trdl.js's expand_hitches
+  // auto-computes post_kw = next-twist-after-meet on the meet's line,
+  // tethers that twist to the hoist, and adds a post-rig entry. For
+  // kiwano-family rigs whose hitches are *half-hitches* in the original
+  // (no twist has the canonical [lead, hoist] entry), that auto-promotion
+  // creates spurious fast twists on adjacent hitches' footlines — rust
+  // flags them as "extra fast twist between lead and meet".
+  //
+  // We identify the post by scanning every twist's rigs pairtrie for the
+  // canonical {lead-hash → hoist-hash} entry. The twist whose rigs
+  // contains it IS the post. If no twist has it, the hitch is a half-
+  // hitch and we emit post:"none" to suppress the auto-tether.
+  let ref_to_hash = new Map()
+  for (let [hash, ref] of hash_to_ref) ref_to_hash.set(ref, hash)
+  function detect_post_for(h) {
+    let lead_h  = ref_to_hash.get(h.lead)
+    let hoist_h = ref_to_hash.get(h.hoist)
+    if (!lead_h || !hoist_h) return 'none'
+    for (let t of (env.shapes[TWIST] || [])) {
+      let body = body_cache.get(t.hash)
+      let rigs_h = body?.rigs
+      if (!rigs_h || is_null(rigs_h)) continue
+      let rig_atom = env.index[rigs_h]
+      if (!rig_atom || rig_atom.shape !== PAIRTRIE) continue
+      let pairs = read_pairtrie(env, rig_atom)
+      if (pairs.some(([k, v]) => k === lead_h && v === hoist_h)) {
+        return hash_to_ref.get(t.hash) || 'none'
+      }
+    }
+    return 'none'
+  }
+  for (let h of hitches) {
+    out.push({
+      hitch: h.name, lead: h.lead, meet: h.meet,
+      fastener: h.fastener, hoist: h.hoist,
+      post: detect_post_for(h),
+    })
+  }
+  // Cross-line prev is folded into the per-twist override loop below
+  // (the `{id,...}` form), where it merges with shld/teth/cargo into a
+  // single entity per twist. Standalone {twist,prev} entities would
+  // collide with the override entities in collect_twist_overrides
+  // (replace-by-id, not merge), so we don't emit them separately.
+  void crosses
   // Per-twist overrides. We accumulate them keyed by twist id and emit one
   // entity per twist at the end — collect_twist_overrides in trdl.js replaces
   // (doesn't merge) when it sees the same id twice, so emitting separate
@@ -396,24 +443,60 @@ export async function decompile(buf, name = 'rig') {
     o[key] = value
     twist_overrides.set(id, o)
   }
+  // hash_to_ref is built above (shared with the post-detection scan).
   for (let { name: ln, twists } of named) {
     twists.forEach((h, i) => {
       let id = `${ln}[${i}]`
       let body = body_cache.get(h)
-      if (i === 0) {
-        let prev = body?.prev
-        if (!is_null(prev) && !env.index[prev]) set_override(id, 'prev', prev)
-        // Force cargo: 'null' on every line-first twist. trdl_to_spec
-        // heuristically adds cargo: 'cargo-<linename>' for non-poptop /
-        // non-abject firsts, which produces an arb cargo atom that the
-        // original didn't have. Cargo content doesn't affect rig-check
-        // outcomes — the spec's rig validity is about lead/meet/fastener
-        // /hoist/post structure, not body.carg — so the simplest faithful
-        // thing is to null cargo across the board on recompile.
-        set_override(id, 'cargo', 'null')
+      // prev override:
+      //   - line genesis (i === 0) with prev pointing outside the file:
+      //     emit the literal hex (dangling).
+      //   - any twist with prev pointing into the file but NOT to the
+      //     previous twist on the same line: emit the cross-line ref.
+      //   - non-genesis prev pointing to the same-line predecessor: no
+      //     override needed; trdl_to_spec computes it by position.
+      let prev = body?.prev
+      if (!is_null(prev)) {
+        if (!env.index[prev]) {
+          if (i === 0) set_override(id, 'prev', prev)
+        } else {
+          let prev_ref = hash_to_ref.get(prev)
+          if (prev_ref) {
+            let expected = i > 0 ? `${ln}[${i - 1}]` : null
+            if (prev_ref !== expected) set_override(id, 'prev', prev_ref)
+          }
+        }
       }
+      // teth override: expand_hitches only tethers leads + meets. Every
+      // other fast twist (fasteners, hoists, twists fast for other
+      // structural reasons) needs an explicit teth — without it, the
+      // recompile leaves them non-fast, the lead-footline walk has the
+      // wrong fast-twist set, and the canonical checkers reject the rig.
+      // This is the kiwano-family bug: rust reports "extra fast twist
+      // between lead and meet" or "lead tether is NULL" because the
+      // fasteners and hoists came back non-fast on recompile. Emit a
+      // teth override for every twist with non-null body.teth; the
+      // override path in trdl_to_spec wins over the auto-tether-from-
+      // hitches, so this also covers leads and meets correctly when
+      // their original teth differs from the hitch's fastener.
+      let teth = body?.teth
+      if (!is_null(teth)) {
+        let teth_ref = hash_to_ref.get(teth)
+        if (teth_ref) set_override(id, 'teth', teth_ref)
+        else          set_override(id, 'teth', teth)  // literal hex, no atom
+      }
+      // Cargo: forced null on line-firsts — see ☝️ comment block.
+      if (i === 0) set_override(id, 'cargo', 'null')
+      // Shield: always emit. trdl_to_spec auto-generates a random
+      // shield for fast tethered twists on shielded lines when the
+      // override is absent — preserving null-shld twists explicitly
+      // (with 'null') suppresses that for meets/hoists/etc. whose
+      // original had no shield even though their line is shielded
+      // (the kiwano-family fasteners + meets exhibit this).
       let shld_hash = body?.shld
-      if (shld_hash && !is_null(shld_hash)) {
+      if (!shld_hash || is_null(shld_hash)) {
+        set_override(id, 'shld', 'null')
+      } else {
         let arb_atom = env.index[shld_hash]
         if (arb_atom && arb_atom.shape === ARB) {
           let arb_bytes = env.bytes.subarray(arb_atom.cfirst, arb_atom.last + 1)

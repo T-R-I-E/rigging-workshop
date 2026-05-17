@@ -169,7 +169,16 @@ async function build_twists(lines) {
     }
     else prev_lat = null
 
-    let tether_lat   = tether ? twists.get(tether) || null : null
+    // tether resolves to: a known twist's lat (normal case from
+     // hitch-derived tethers), or a literal hash hex (decompile preserves
+     // the teth of fasteners / hoists whose original points to a twist
+     // outside the file). Literal hex goes into the body slot verbatim
+     // without synthesizing an atom, matching the prev handling above.
+    let tether_lat
+    if (!tether)                                            tether_lat = null
+    else if (twists.has(tether))                            tether_lat = twists.get(tether)
+    else if (/^(41|22)[0-9a-f]{64}$/i.test(tether))         tether_lat = tether
+    else                                                    tether_lat = null
     let shield_lat   = shield ? await arb(hex_to_bytes(shield)) : null
     let poptop_lat   = poptop ? twists.get(poptop) || null : null
     // Cargo encodings (from decompile, see toda/decompile.js):
