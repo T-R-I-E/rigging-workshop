@@ -172,9 +172,21 @@ async function build_twists(lines) {
     let tether_lat   = tether ? twists.get(tether) || null : null
     let shield_lat   = shield ? await arb(hex_to_bytes(shield)) : null
     let poptop_lat   = poptop ? twists.get(poptop) || null : null
+    // Cargo encodings (from decompile, see toda/decompile.js):
+    //   'null'        → explicitly no cargo (body.carg = NULL)
+    //   'arb:<hex>'   → rebuild the arb atom with those bytes
+    //   '<66-char hex>' → literal hash; write into body slot without
+    //                     synthesizing a corresponding atom
+    //   anything else → legacy hand-authored TRDL: hash the UTF-8 string
     let cargo_val
     if (poptop && poptop_lat) {
       cargo_val = await pairtrie([[SYM_POPTOP, poptop_lat]])
+    } else if (cargo === 'null' || cargo == null) {
+      cargo_val = null
+    } else if (typeof cargo === 'string' && cargo.startsWith('arb:')) {
+      cargo_val = await arb(hex_to_bytes(cargo.slice(4)))
+    } else if (typeof cargo === 'string' && /^(41|22)[0-9a-f]{64}$/i.test(cargo)) {
+      cargo_val = cargo
     } else if (cargo) {
       cargo_val = await str_to_hash(cargo)
     }

@@ -562,6 +562,15 @@ body {
   border-color: color-mix(in oklab, var(--bad) 35%, var(--line-2));
 }
 .rig-check.bad .badge { background: var(--bad); color: #fff; border-color: var(--ink); }
+/* "broke" = checker couldn't evaluate the request (HTTP non-2xx, wasm
+   exception, timeout). Spec puts it in the yellow / unknown bucket per
+   §9.1.3 but we visually distinguish it from a real yellow so users see
+   "checker failed to process" separately from "checker says yellow". */
+.rig-check.broke {
+  background: color-mix(in oklab, #d77f2a 14%, var(--panel));
+  border-color: color-mix(in oklab, #d77f2a 40%, var(--line-2));
+}
+.rig-check.broke .badge { background: #d77f2a; color: var(--ink); border-color: var(--ink); letter-spacing: 0.5px; }
 
 /* Per-checker status pills shown in the collapsed rig-check h4 (one
    pill per checker so all four states are visible at a glance). */

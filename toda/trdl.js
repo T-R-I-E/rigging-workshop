@@ -190,6 +190,12 @@ export function trdl_to_spec(entities) {
       let is_abject_first = (line_name === abject_name && i === 0)
       let is_other_first  = (line_name !== poptop_name &&
                              line_name !== abject_name && i === 0)
+      // Decompile emits explicit `cargo` overrides — 'null' for
+      // line-firsts whose original body.carg was NULL, 'arb:<hex>' /
+      // literal hash for non-null. Presence of the key (rather than
+      // truthiness of the value) means "decompile told us what was
+      // really there, don't fall back to the cargo-<linename> heuristic".
+      let hasCargoOverride = 'cargo' in override
 
       let spec = { id, line: line_name }
       if (reqsat_kw)            spec.reqsat        = reqsat_kw
@@ -200,8 +206,9 @@ export function trdl_to_spec(entities) {
       else if (shield_hex)      spec.shield        = shield_hex
       if (shield_src)           spec.shield_source = shield_src
       if (is_abject_first)      spec.poptop        = poptop_first
-      else if (is_other_first)  spec.cargo         = `cargo-${line_name}`
-      if (override.cargo)       spec.cargo         = override.cargo
+      else if (is_other_first && !hasCargoOverride)
+                                spec.cargo         = `cargo-${line_name}`
+      if (hasCargoOverride)     spec.cargo         = override.cargo
       return spec
     })
     edn_lines.set(line_name, specs)

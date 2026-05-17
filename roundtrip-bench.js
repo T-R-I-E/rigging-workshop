@@ -161,6 +161,13 @@ async function js_check(ctx) {
   }
 }
 
+// 'broke' is a fifth verdict alongside ok/warn/bad. Semantically it's still
+// in the yellow / unknown bucket per spec §9.1.3 (atomic-error, unable-to-
+// interpret), but tracking it separately surfaces "checker couldn't evaluate
+// the request" rigs as distinct from "checker says yellow about the rig".
+// Two passes with broke-on-both-sides count as a verdict match (we don't
+// know either way) for rig-perfect purposes.
+
 async function server_check(ctx, base) {
   let url = `${base}?cork=${ctx.corklineHex}&twist=${ctx.twistHex}`
   let res
@@ -170,14 +177,8 @@ async function server_check(ctx, base) {
       headers: { 'Content-Type': 'application/octet-stream' },
       body: ctx.bytes,
     })
-  } catch { return { v: 'warn', detail: 'server offline' } }
-  if (!res.ok) {
-    // A non-2xx is the server failing to process the request, not the
-    // checker producing a red verdict. Per spec §9.1.3 atomic / unable-
-    // to-interpret conditions are yellow, not red — conflating them
-    // would let a parser hiccup pose as "this rig is proven invalid".
-    return { v: 'warn', detail: `HTTP ${res.status}` }
-  }
+  } catch { return { v: 'broke', detail: 'server offline' } }
+  if (!res.ok) return { v: 'broke', detail: `HTTP ${res.status}` }
   let { colour } = await res.json()
   return {
     v: colour === 'green' ? 'ok' : colour === 'yellow' ? 'warn' : 'bad',
@@ -188,29 +189,23 @@ async function server_check(ctx, base) {
 async function rust_check(ctx) {
   let bytes = ctx.bytes instanceof Uint8Array ? ctx.bytes : new Uint8Array(ctx.bytes)
   let res = await check_via_worker({ bytes, cork: ctx.corklineHex, twist: ctx.twistHex }, CHECKER_TIMEOUT_MS)
-  if (!res.ok) {
-    // Both timeouts and worker errors mean the wasm didn't produce a
-    // verdict for this rig. Per spec §9.1.3 that's unknown/atomic-error
-    // (yellow), not "rig proven invalid" (red).
-    return { v: 'warn', detail: res.error }
-  }
+  if (!res.ok) return { v: 'broke', detail: res.error }
   try {
     let { state, detail } = JSON.parse(res.result)
     return { v: state, detail }
   } catch (e) {
-    // Malformed JSON from the wasm: again, no verdict. Yellow, not red.
-    return { v: 'warn', detail: e.message || String(e) }
+    return { v: 'broke', detail: e.message || String(e) }
   }
 }
 
-// Timeout guard. Any checker that exceeds the budget returns a 'warn'
-// sentinel rather than hanging the whole bench — rust wasm in particular
-// has no JS-side escape if it goes into a Rust infinite loop, and the
-// HTTPS checkers can wedge on a stalled response.
+// Timeout guard. Any checker that exceeds the budget reports as broke
+// rather than hanging the whole bench — rust wasm in particular has no
+// JS-side escape if it goes into a Rust infinite loop, and the HTTPS
+// checkers can wedge on a stalled response.
 function with_timeout(promise, ms, label) {
   return Promise.race([
-    promise.catch(e => ({ v: 'bad', detail: e?.message || String(e) })),
-    new Promise(r => setTimeout(() => r({ v: 'warn', detail: `${label} timeout (${ms}ms)` }), ms)),
+    promise.catch(e => ({ v: 'broke', detail: e?.message || String(e) })),
+    new Promise(r => setTimeout(() => r({ v: 'broke', detail: `${label} timeout (${ms}ms)` }), ms)),
   ])
 }
 

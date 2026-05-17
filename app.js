@@ -755,14 +755,14 @@ async function server_check(ctx, base) {
             body: ctx.bytes,
         })
     } catch {
-        return { state: 'warn', detail: 'server offline' }
+        return { state: 'broke', detail: 'server offline' }
     }
     if (!res.ok) {
-        // Server didn't successfully evaluate the rig — that's "we don't
-        // know" (yellow per spec §9.1.3 unknown/atomic-error semantics),
-        // not "rig proven invalid". Reporting it as red would let a
-        // parser hiccup or 400 pose as a definitive red verdict.
-        return { state: 'warn',
+        // Server didn't successfully evaluate the rig — broke, not bad.
+        // Spec-wise this is in the yellow / unknown bucket per §9.1.3,
+        // but we visually distinguish it from a real yellow so the user
+        // can see "checker failed to process" cases separately.
+        return { state: 'broke',
                  detail: `HTTP ${res.status}: ${(await res.text()).slice(0,120)}` }
     }
     let { colour } = await res.json()
@@ -795,7 +795,7 @@ async function load_rustoda() {
 }
 async function rust_check(ctx) {
     let { mod, error } = await load_rustoda()
-    if (error) return { state: 'warn', detail: `wasm load failed: ${error.message || error}` }
+    if (error) return { state: 'broke', detail: `wasm load failed: ${error.message || error}` }
     try {
         let bytes = ctx.bytes instanceof Uint8Array ? ctx.bytes : new Uint8Array(ctx.bytes)
         // Pass ctx.twistHex as the focus so the rust checker pivots around
@@ -806,9 +806,8 @@ async function rust_check(ctx) {
         let { state, detail } = JSON.parse(mod.check_rig(bytes, ctx.corklineHex, ctx.twistHex))
         return { state, detail }
     } catch (e) {
-        // wasm threw or produced malformed JSON — that's "we don't know"
-        // (yellow per spec §9.1.3), not "rig proven invalid" (red).
-        return { state: 'warn', detail: e.message || String(e) }
+        // wasm threw or produced malformed JSON — broke, not bad.
+        return { state: 'broke', detail: e.message || String(e) }
     }
 }
 
@@ -844,9 +843,10 @@ function results_differ(a, b) {
 }
 
 function badge_for(state) {
-    return state === 'ok'   ? 'OK'
-         : state === 'warn' ? 'WARN'
-         : state === 'bad'  ? 'FAIL'
+    return state === 'ok'    ? 'OK'
+         : state === 'warn'  ? 'WARN'
+         : state === 'bad'   ? 'FAIL'
+         : state === 'broke' ? 'BROKE'
          : '—'
 }
 
