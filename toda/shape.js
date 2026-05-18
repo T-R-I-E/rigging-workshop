@@ -241,7 +241,14 @@ function canonicalize(env) {
   twists.sort((a, b) => {
     let dx = (a.x || 0) - (b.x || 0)
     if (dx !== 0) return dx
-    return ((a.first?.y || 0) - (b.first?.y || 0))
+    let dy = (a.first?.y || 0) - (b.first?.y || 0)
+    if (dy !== 0) return dy
+    // Tie-break by twist hash so two byte streams encoding the same
+    // rig (same atoms, possibly different interleaving) produce the
+    // same index assignment — without this, edges that reference
+    // twists by index disagree across orig vs rec even when the
+    // structure is identical (cork_prev_invalid_* family).
+    return a.hash < b.hash ? -1 : a.hash > b.hash ? 1 : 0
   })
 
   let idx_of = new Map()

@@ -35,7 +35,8 @@ function classify_entity(m) {
   else if ('hitch' in m) return { ...m, entity_type: 'hitch', entity_id: m.hitch }
   else if ('twist' in m) return { ...m, entity_type: 'twist', entity_id: m.twist }
   else if ('id'    in m) return { ...m, entity_type: 'twist', entity_id: m.id    }
-  else throw new Error('Unknown TRDL entity (no rig/line/hitch/twist/id key)')
+  else if ('atom'  in m) return { ...m, entity_type: 'atom',  entity_id: m.atom  }
+  else throw new Error('Unknown TRDL entity (no rig/line/hitch/twist/id/atom key)')
 }
 
 // "a[3]" → "a_3", "mytwist" → "mytwist". Returns null on null/undefined input.
@@ -274,8 +275,20 @@ export function trdl_to_spec(entities) {
     .map(ln => lines_map.get(ln)?.ids.at(-1))
     .filter(Boolean)
 
+  // Raw atom entities: {"atom":"<hash>", "shape":"arb", "raw":"<hex>"}
+  // get registered as standalone atoms in the output bundle, regardless
+  // of whether any twist spec references them. Designed-bad rigs whose
+  // body slots point at non-twist atoms (the cork_prev_invalid_*
+  // family: arb in a twist.prev slot) need this — the literal-hex
+  // override gets the body bytes right but the arb atom itself isn't
+  // pulled in by the lat-merging path.
+  let atoms = entities
+    .filter(e => e.entity_type === 'atom')
+    .map(e => ({ hash: e.atom, shape: e.shape || 'arb', raw: e.raw }))
+
   return {
     lines:  edn_lines,
+    atoms,
     output: {
       merge:    last_ids,
       exclude:  [],

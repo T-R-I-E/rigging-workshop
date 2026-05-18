@@ -271,10 +271,39 @@ function assemble_output(twists, output) {
   return merged
 }
 
+// Build raw atom entities into a lat. Each entity creates one atom via
+// from_packet(shape, content) — its hash is determined by the bytes.
+// Caller merges this lat alongside the twist lats so the atoms end up
+// in the output bundle regardless of whether any twist's lat references
+// them. Used for designed-bad rigs whose body slots point at non-twist
+// atoms (cork_prev_invalid_*: arb in a twist's prev slot).
+async function build_atoms(atom_entries) {
+  let lat = new Map()
+  for (let { shape, raw } of atom_entries) {
+    let shape_byte = SHAPE[shape]
+    if (shape_byte == null) continue
+    let atom_lat = await from_packet(shape_byte, hex_to_bytes(raw))
+    for (let [k, v] of atom_lat) {
+      if (lat.has(k)) lat.delete(k)
+      lat.set(k, v)
+    }
+  }
+  return lat
+}
+
 // Public entry point. Returns { bytes, twists, corkline_h }.
 export async function build(spec) {
   let twists  = await build_twists(spec.lines)
   let out_lat = assemble_output(twists, spec.output)
+  // Atom entities are merged AFTER the twist lats so any atom they
+  // synthesize lands in the output even if not reached via twist refs.
+  if (spec.atoms?.length) {
+    let extras = await build_atoms(spec.atoms)
+    for (let [k, v] of extras) {
+      if (out_lat.has(k)) out_lat.delete(k)
+      out_lat.set(k, v)
+    }
+  }
   let corkline_h = spec.output.corkline ? lat_focus(twists.get(spec.output.corkline)) : null
   return {
     bytes:   lat_to_bytes(out_lat),
