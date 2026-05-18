@@ -231,6 +231,47 @@ throw e
 currently swallows the distinction (#2 above) — sometimes it really is
 a missing atom. Once #2 lands upstream, `MissingPrevious` goes away.
 
+## Update 2026-05-18: spec re-reading sharpens the dilemma
+
+After todatests was re-labelled per spec §9.5 (commit 605990c, "re-label
+hoist-failure fixtures") the interim mitigation is in a degenerate
+equilibrium. The same JS exception (`MissingHoistError`) fires for both
+spec-MISSING (yellow) and spec-MISMATCH (red) hoist cases — the JS
+taxonomy genuinely cannot tell them apart without finer-grained classes
+upstream.
+
+Concrete from the 2026-05-18 disagreement-bench run:
+
+| fixture | spec canonical | JS exception | with mitigation | without |
+|---|---|---|---|---|
+| `corkline_incomplete_late`  | yellow | `MissingHoistError` | red ✗ | yellow ✓ |
+| `hh_corkline_twist_missing` | yellow | `MissingHoistError` | red ✗ | yellow ✓ |
+| `hh_no_s_lead`              | yellow | `MissingHoistError` | red ✗ | yellow ✓ |
+| `hh_no_ss_lead`             | yellow | `MissingHoistError` | red ✗ | yellow ✓ |
+| `hh_wrong_shield`           | yellow | `MissingHoistError` | red ✗ | yellow ✓ |
+| `hh_self_referential_rig`   | red    | `MissingHoistError` | red ✓ | yellow ✗ |
+| `hh_mismatched_s_ss_values` | red    | `MissingHoistError` | red ✓ | yellow ✗ |
+| `hh_wrong_hoist_values`     | red    | `MissingHoistError` | red ✓ | yellow ✗ |
+
+Net: keep mitigation → 5 false-reds, 3 correct-reds. Drop mitigation →
+5 correct-yellows, 3 false-yellows. Mild edge to dropping (+2), but the
+disagreement is structurally unfixable from the workshop side — needs
+the §3 precondition (lead-validity invariant before hoist search) plus
+finer-grained `InvalidHoistMismatch` vs `MissingHoistCandidate` classes
+upstream.
+
+Also surfaced today:
+
+- `topline_rigs_non_trie` (new hand-built fixture) — JS throws bare
+  `Missing topline successor` and gets warn/yellow; canonical is red
+  (rigs atom has known non-trie shape, spec §9.5 INVALID). Confirms
+  Open-Question #1 above: this throw site really does need its own
+  class (`LineTooShortError` or similar) so the workshop can route it
+  to red.
+- Rust WASM (rebuilt 2026-05-18) now correctly returns yellow for the
+  5 spec-MISSING cases — the upstream `find_hoist` shape-check landed
+  in `rustoda/src/rig.rs`. JS is now the lone hold-out on those.
+
 ## Open questions
 
 - **What exactly should happen for a topline whose atom is genuinely
