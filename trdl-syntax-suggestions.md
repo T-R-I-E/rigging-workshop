@@ -288,6 +288,21 @@ fixture. Verdict `PERFECT` requires both checker-eq AND shape-eq.
   evidently treat asymmetrically). The kiwano interaction needs to
   be understood before we re-enable rigs/cargo pairtrie scanning;
   for now this fixture stays SHAPE NEQ.
+
+  **Kiwano paradox** (investigated 2026-05-17, not resolved): the
+  6 `valid_kiwano*` fixtures each have cargo pairtries with pair
+  entries like `[arb["Unique"], arb["t0"]]` — bare position labels.
+  In the *original* bundle these arbs sit at byte positions 1755+
+  (after some twists/bodies/pairtries). In the *recompile without
+  atom entities*, these arbs are missing entirely. Both states get
+  `ok` from js/clj/rust. **Adding the arbs via atom entities** (so
+  they sit at the *end* of the rec byte stream) flips js/clj/rust
+  to `bad`. So the asymmetry isn't "checker needs the atoms" —
+  it's "adding atoms in this specific position breaks the rig".
+  Hypothesis: some checker walks atoms in byte order during a
+  topline-validity step and bails on extra trailing structure;
+  needs deeper inspection of the checker code paths (look at
+  what `js: ok → bad` actually throws). Out of scope this turn.
 - **layout degeneracy (1)**: `conflicting_successors`. Orig has
   twists stacked at (x=0,y=1) because plonk_twists can't place them;
   rec separates them onto distinct lines. The fix's structural change
