@@ -97,27 +97,31 @@ byte injection breaks the TRDL-is-a-text-format contract.
 
 ---
 
-### 2. `shld:` non-arb shape
+### 2. `shld:` non-arb shape + out-of-bundle hash (landed 2026-05-17)
 
-**Affects:** `hh_wrong_shield`, `lead_shield_non_arb`,
+**Affected:** `hh_wrong_shield`, `lead_shield_non_arb`,
 `invalid_shielding_green`, `missing_shield` (~4 fixtures).
 
-**What's needed:** today TRDL `shld:<hex>` means "the bytes of an
-arb atom whose content is `<hex>`". For designed-bad rigs where the
-lead's `shld:` points at an atom of a different shape (hashlist,
-pairtrie, twist, …), we need a way to express it.
+TRDL gains two new shld forms alongside the existing
+"null"/arb-bytes-hex:
 
 ```jsonl
-{"id":"a[0]", "shld":{"raw":"<arb-or-other-atom-bytes>"}}    // verbatim atom
-{"id":"a[0]", "shld":{"hex":"41…","shape":"hashlist"}}        // point at existing atom
-{"id":"a[0]", "shld":"null"}                                  // already supported
-{"id":"a[0]", "shld":"<arb-hex>"}                             // already supported (arb bytes)
+{"id":"a[0]", "shld":{"raw":"<atom-content-hex>", "shape":"hashlist"}}
+{"id":"a[0]", "shld":{"hash":"<66-char-sha256-hex>"}}
 ```
 
-**Why now:** without it the shield-shape fixtures all canonicalize.
+The `raw` form preserves designed-bad shield atoms of any shape
+(`lead_shield_non_arb`, `invalid_shielding_green`); compile builds
+the atom via from_packet. The `hash` form preserves an out-of-bundle
+shield reference (`missing_shield`); compile writes the hex into the
+body slot without synthesizing any atom — checkers see "shield atom
+missing" exactly as in the original.
 
-**Why upstream:** same as rigs-override; staying consistent across
-the two decompilers.
+decompile.js detects all four cases:
+   - body.shld → NULL          → "null"
+   - body.shld → arb in bundle  → arb-bytes-hex (existing)
+   - body.shld → non-arb in bundle → { raw, shape }
+   - body.shld → hash out of bundle → { hash }
 
 ---
 
@@ -272,12 +276,30 @@ fixture. Verdict `PERFECT` requires both checker-eq AND shape-eq.
 | 2026-05-17 (rigs-raw + mid-line cargo) | 18 / 68 | 17 | 33 | +5 perfect |
 | 2026-05-17 (cargo-raw for non-arb) | **33 / 68** | 22 | **13** | +15 perfect |
 | 2026-05-17 (conflicting-prev + prev-non-twist) | 33 / 68 | 23 | **12** | +1 shape-eq |
-| 2026-05-17 (raw atom entities + hash tiebreak) | 33 / 68 | **27** | **8**  | +4 shape-eq |
+| 2026-05-17 (raw atom entities + hash tiebreak) | 33 / 68 | 27 | 8 | +4 shape-eq |
+| 2026-05-17 (shld raw + hash forms — ext #2) | 33 / 68 | **29** | **6** | +2 shape-eq |
 
-**60 / 68 fixtures (88%) now have matching SHAPE.** Remaining work
+**62 / 68 fixtures (91%) now have matching SHAPE.** Remaining work
 to close the gap to PERFECT is mostly checker-stability — same shape
 but different checker verdict due to non-structural bytes (random
 shields, random ed25519 sigs, etc.) that shift what the checkers see.
+
+### Six remaining NEQ — categorized
+
+- **out-of-bundle rigs hash (2)**: `cork_missing_rigging`,
+  `missing_rigging`. Same pattern as missing_shield was — the rigs
+  hash exists in body but the referenced atom isn't in the bundle.
+  Fixable by adding `rigs: {hash: …}` form (analogue of the new
+  `shld: {hash}`).
+- **reqsat fixtures (2)**: `cork_reqsat_fail`,
+  `lash_succession_reqsat_fail`. Need extension #4
+  (reqs/sats override).
+- **post-rig edge (1)**: `post_rigging_missing_post_key`
+  (char 1435 — single edge). Needs investigation.
+- **layout degeneracy (1)**: `conflicting_successors`. Orig has
+  twists stacked at (x=0,y=1) because plonk_twists can't place them;
+  rec separates them onto distinct lines. The fix's structural change
+  is intentional — accepting this as out-of-scope.
 
 The shape-eq-but-checker-diverge bucket grew from 9 → 22 over these
 changes: the recompile produces a structurally-equivalent rig
