@@ -339,14 +339,19 @@ async function build_atoms(atom_entries) {
 export async function build(spec) {
   let twists  = await build_twists(spec.lines)
   let out_lat = assemble_output(twists, spec.output)
-  // Atom entities are merged AFTER the twist lats so any atom they
-  // synthesize lands in the output even if not reached via twist refs.
+  // Atom entities are merged at the BEGINNING of the byte stream.
+  // Several rig-checkers treat the last atom in the bundle as the
+  // rig's focus (the topline-ish anchor); appending extras at the
+  // end would shift that off. Prepending preserves the final-atom-
+  // is-focus invariant while still ensuring the extras are present.
   if (spec.atoms?.length) {
     let extras = await build_atoms(spec.atoms)
-    for (let [k, v] of extras) {
-      if (out_lat.has(k)) out_lat.delete(k)
-      out_lat.set(k, v)
+    let reordered = new Map()
+    for (let [k, v] of extras) reordered.set(k, v)
+    for (let [k, v] of out_lat) {
+      if (!reordered.has(k)) reordered.set(k, v)
     }
+    out_lat = reordered
   }
   let corkline_h = spec.output.corkline ? lat_focus(twists.get(spec.output.corkline)) : null
   return {

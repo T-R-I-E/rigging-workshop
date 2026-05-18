@@ -733,18 +733,21 @@ export async function decompile(buf, name = 'rig') {
     // (1) prev / teth slots pointing at non-twist atoms.
     emit_atom_for(body.prev)
     emit_atom_for(body.teth)
-    // (2) hashes inside reqs pairtrie + twist.sats pairtrie content.
-    //     Ed25519 sigs reference pubkey arbs that need explicit atom
-    //     entities or the recompile is missing them and checkers flip.
-    //     Limited to reqs+sats (not rigs/cargo) — rigs/cargo content
-    //     scanning broke valid_kiwano family, separate investigation.
-    let reqs_h = body.reqs
-    if (reqs_h && !is_null(reqs_h)) {
-      let reqs_atom = env.index[reqs_h]
-      if (reqs_atom && reqs_atom.shape === PAIRTRIE) {
-        for (let [k, v] of read_pairtrie(env, reqs_atom)) {
-          emit_atom_for(k); emit_atom_for(v)
-        }
+    // (2) hashes inside rigs + reqs pairtrie content (body slots) and
+    //     twist.sats pairtrie content (twist slot). Each pairtrie atom
+    //     itself is built by its raw override but the atoms it
+    //     references via content (post-rig key arbs, ed25519 pub-arbs,
+    //     sig hashes) need explicit atom entities or rec is missing
+    //     them. Cargo content scan is INTENTIONALLY skipped — the
+    //     workshop ignores cargo for verification purposes; preserving
+    //     it would needlessly bloat the rec bundle.
+    for (let slot of ['rigs', 'reqs']) {
+      let h = body[slot]
+      if (!h || is_null(h)) continue
+      let atom = env.index[h]
+      if (!atom || atom.shape !== PAIRTRIE) continue
+      for (let [k, v] of read_pairtrie(env, atom)) {
+        emit_atom_for(k); emit_atom_for(v)
       }
     }
     let twist_atom = env.index[t.hash]
