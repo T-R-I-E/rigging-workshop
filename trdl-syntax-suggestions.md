@@ -236,6 +236,29 @@ decompile bugs being fixed in parallel:
 - Line-discovery ordering instability: `shape.js` now sorts firsts
   by hash before y-assignment
 
+### Surfaces ext #1 but not a TRDL gap: `topline_rigs_non_trie` (2026-05-18)
+
+Hand-built fixture added in todatests commit 2d1ac2e probes spec §9.5
+topline-key INVALID — a corkline twist whose `rigs` field points at a
+`SHAPE.hashes` (0x61) atom instead of a pairtrie.
+
+Roundtrip result: 695 → 695 bytes, shape-eq, three of four checkers
+(clj/bb/rust) match orig vs rec exactly. Decompile's existing path at
+`toda/decompile.js:644-647` already emits the right form:
+
+```jsonl
+{"id":"b[1]","rigs":{"raw":"4121471beb…","shape":"hashes"}}
+```
+
+…and compile threads `rigs_raw`/`rigs_shape` through to the body
+slot. **TRDL ext #1 is sufficient as-is.**
+
+Only divergence: `js` switches from `Missing topline successor` (warn)
+on orig to `ShapeError` (bad) on rec — different JS-interpreter
+traversal path on byte-equivalent bundles, not a roundtrip-pipeline
+issue. Captured in `js-rig-checker-surgical-changes.md` as another
+case where the JS exception name doesn't track the spec category.
+
 ---
 
 ## Adoption path
