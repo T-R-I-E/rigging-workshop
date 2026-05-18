@@ -1,0 +1,16 @@
+{"rig":"Intermediate lines change tether direction via new line"}
+{"line":"poptop","twists":8,"shielded":false,"reqsat":"null"}
+{"line":"a","twists":2,"shielded":false,"reqsat":"null"}
+{"line":"b","twists":5,"shielded":false,"reqsat":"null"}
+{"line":"c","twists":6,"shielded":false,"reqsat":"null"}
+{"line":"abject","twists":4,"shielded":false,"reqsat":"null"}
+{"hitch":"C1","lead":"c[0]","meet":"c[1]","fastener":"b[0]","hoist":"b[1]","post":"none"}
+{"hitch":"C2","lead":"c[1]","meet":"c[3]","fastener":"a[0]","hoist":"a[1]"}
+{"hitch":"C3","lead":"c[3]","meet":"c[4]","fastener":"poptop[2]","hoist":"poptop[6]"}
+{"hitch":"C4","lead":"c[4]","meet":"c[5]","fastener":"poptop[3]","hoist":"poptop[7]"}
+{"hitch":"B1","lead":"b[0]","meet":"b[3]","fastener":"poptop[0]","hoist":"poptop[4]"}
+{"hitch":"B2","lead":"b[3]","meet":"b[4]","fastener":"c[2]","hoist":"c[5]"}
+{"hitch":"A1","lead":"a[0]","meet":"a[1]","fastener":"poptop[1]","hoist":"poptop[5]"}
+{"hitch":"Pb1","lead":"abject[0]","meet":"abject[1]","fastener":"c[0]","hoist":"c[3]"}
+{"hitch":"Pb2","lead":"abject[1]","meet":"abject[2]","fastener":"c[1]","hoist":"c[4]"}
+{"hitch":"Pb3","lead":"abject[2]","meet":"abject[3]","fastener":"b[2]","hoist":"b[4]"}

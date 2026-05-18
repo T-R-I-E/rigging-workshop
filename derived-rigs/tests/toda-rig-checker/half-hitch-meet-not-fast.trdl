@@ -1,0 +1,7 @@
+{"rig":"Half-hitch meet not fast"}
+{"line":"poptop","twists":2,"shielded":false,"reqsat":"null"}
+{"line":"a","twists":5,"shielded":false,"reqsat":"null"}
+{"line":"abject","twists":4,"shielded":false,"reqsat":"null"}
+{"hitch":"A1","lead":"a[1]","meet":"a[4]","fastener":"poptop[0]","hoist":"poptop[1]"}
+{"hitch":"Pb1","lead":"abject[1]","meet":"abject[3]","fastener":"a[1]","hoist":"a[4]","post":"none"}
+{"twist":"abject[3]","teth":null}

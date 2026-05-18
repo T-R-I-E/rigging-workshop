@@ -1,0 +1,7 @@
+{
+  "moniker": "rigs/19-fast-line-multiply-lashed-up-to-slow-line.trdl",
+  "colour": "yellow",
+  "source": "rigs/19-fast-line-multiply-lashed-up-to-slow-line.trdl",
+  "heuristic": true,
+  "compile_error": "Circular dependency in twist specs: poptop_1,abject_2,abject_3,abject_4,a_2,a_3,a_4,a_5"
+}

@@ -1,0 +1,7 @@
+{"rig":"Multi-level rig"}
+{"line":"poptop","twists":7,"shielded":false,"reqsat":"null"}
+{"line":"a","twists":5,"shielded":true,"reqsat":"null"}
+{"line":"abject","twists":4,"shielded":true,"reqsat":"null"}
+{"hitch":"A1","lead":"a[1]","meet":"a[4]","fastener":"poptop[0]","hoist":"poptop[4]"}
+{"hitch":"Pb1","lead":"abject[0]","meet":"abject[2]","fastener":"a[2]","hoist":"a[4]"}
+{"hitch":"Pb2","lead":"abject[2]","meet":"abject[3]","fastener":"poptop[3]","hoist":"poptop[5]"}

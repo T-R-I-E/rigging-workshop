@@ -1,0 +1,15 @@
+{"rig":"Attempt to trigger false positive on tether loop detection"}
+{"line":"poptop","twists":7,"shielded":false,"reqsat":"null"}
+{"line":"a","twists":6,"shielded":false,"reqsat":"null"}
+{"line":"b","twists":6,"shielded":false,"reqsat":"null"}
+{"line":"abject","twists":4,"shielded":false,"reqsat":"null"}
+{"hitch":"B1","lead":"b[0]","meet":"b[1]","fastener":"a[0]","hoist":"a[1]"}
+{"hitch":"B2","lead":"b[1]","meet":"b[2]","fastener":"poptop[0]","hoist":"poptop[3]"}
+{"hitch":"B3","lead":"b[2]","meet":"b[3]","fastener":"poptop[1]","hoist":"poptop[4]","post":"none"}
+{"hitch":"B4","lead":"b[3]","meet":"b[5]","fastener":"a[3]","hoist":"a[4]"}
+{"hitch":"A1","lead":"a[0]","meet":"a[1]","fastener":"poptop[0]","hoist":"poptop[2]"}
+{"hitch":"A2","lead":"a[1]","meet":"a[2]","fastener":"b[0]","hoist":"b[3]","post":"none"}
+{"hitch":"A3","lead":"a[2]","meet":"a[5]","fastener":"poptop[1]","hoist":"poptop[6]"}
+{"hitch":"Pb1","lead":"abject[0]","meet":"abject[1]","fastener":"b[0]","hoist":"b[2]"}
+{"hitch":"Pb2","lead":"abject[1]","meet":"abject[2]","fastener":"b[1]","hoist":"b[4]"}
+{"hitch":"Pb3","lead":"abject[2]","meet":"abject[3]","fastener":"poptop[0]","hoist":"poptop[5]"}

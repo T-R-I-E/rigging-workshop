@@ -1,0 +1,4 @@
+{"rig":"Twist chain with fields"}
+{"line":"poptop","twists":2,"shielded":false,"reqsat":"null"}
+{"line":"abject","twists":8,"shielded":true,"reqsat":"ed25519"}
+{"hitch":"Pb1","lead":"abject[0]","meet":"abject[7]","fastener":"poptop[0]","hoist":"poptop[1]","post":"none"}

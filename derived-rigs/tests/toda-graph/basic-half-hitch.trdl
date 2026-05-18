@@ -1,0 +1,4 @@
+{"rig":"Basic half-hitch"}
+{"line":"poptop","twists":2,"shielded":false,"reqsat":"null"}
+{"line":"abject","twists":2,"shielded":true,"reqsat":"null"}
+{"hitch":"Pb1","lead":"abject[0]","meet":"abject[1]","fastener":"poptop[0]","hoist":"poptop[1]","post":"none"}
