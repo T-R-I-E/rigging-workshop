@@ -719,6 +719,14 @@ export async function decompile(buf, name = 'rig') {
     let raw_hex = bytes_to_hex(env.bytes.subarray(atom.cfirst, atom.last + 1))
     out.push({ atom: h, shape: shape_name, raw: raw_hex })
   }
+  // Orphan-body emission: some imPERFECT fixtures have body atoms in
+  // orig that no twist references (hh_tether_missing, hh_wrong_hoist_values
+  // etc. — bodies for "what the missing twist's body would have been").
+  // Emitting atom entities for these makes the rec atom-count match
+  // orig, BUT flips 3 hh_valid_* rigs from ok→bad on js/clj/rust.
+  // Same pattern as the kiwano paradox: adding atoms to rec at the
+  // tail of out_lat changes checker behavior. Disabled for now until
+  // byte-order sensitivity is understood.
   for (let t of env.shapes[TWIST] || []) {
     let body = body_cache.get(t.hash)
     if (!body) continue
