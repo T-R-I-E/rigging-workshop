@@ -59,41 +59,35 @@ Numbered by frequency of usage in the existing fixture set. Each
 extension is a backwards-compatible addition to the per-twist
 `{id, ...}` override entity that decompile already emits.
 
-### 1. `rigs:` override for arbitrary body.rigs content
+### 1. `rigs:` override for arbitrary body.rigs content (landed 2026-05-17)
 
-**Affects:** `hh_wrong_hoist_values`, `hh_mismatched_s_ss_values`,
-`hh_wrong_shield`, `hitch_meet_tether_null`, `hh_non_fast_meet`,
-`complex_bad_hoist_direct_to_indirect`,
-`complex_bad_hoist_indirect_to_direct`, `hitch_splice_post_wrong_hoist`,
-`multiple_hoists_green`, `invalid_rigging_green` (~10 fixtures).
+**Affected:** ~12 fixtures including `hh_wrong_hoist_values`,
+`hh_mismatched_s_ss_values`, `complex_bad_hoist_*`,
+`hitch_splice_post_wrong_hoist`, `multiple_hoists_green`,
+`invalid_rigging_green`, and the out-of-bundle cases
+`missing_rigging` and `cork_missing_rigging`.
 
-**What's needed:** the `{hitch, lead, meet, hoist}` entity is a
-high-level convenience — it tells the compiler to *build* the
-canonical four-pair quad in the hoist's `rigs:` slot. For rigs that
-test what happens when those pairs are wrong, we need a low-level
-escape hatch.
+TRDL gains four forms on the per-twist entity:
 
 ```jsonl
-{"id":"c[2]", "rigs":{"raw":"<pairtrie-hex>"}}              // verbatim atom bytes
-{"id":"c[2]", "rigs":{"pairs":[["41…ab","41…cd"], …]}}      // explicit pairs
-{"id":"c[2]", "rigs":{"shape":"hashlist","hex":"41…"}}      // point at non-pairtrie atom
-{"id":"c[2]", "rigs":"null"}                                 // explicit NULL slot
+{"id":"c[2]", "rigs":"null"}                                  // explicit NULL slot
+{"id":"c[2]", "rigs":{"raw":"<hex>"}}                         // verbatim pairtrie bytes
+{"id":"c[2]", "rigs":{"raw":"<hex>","shape":"hashlist"}}      // non-pairtrie atom
+{"id":"c[2]", "rigs":{"hash":"<66-char-sha256-hex>"}}         // out-of-bundle hash
 ```
+
+Precedence (high→low): `raw` > `hash` > `null` > hitch-derived
+pair entries. Implemented in toda/{trdl,compile,decompile}.js.
 
 When present on a hitch's *hoist* twist, the explicit `rigs:`
 override replaces what `{hitch}` would have built. When present
 on a *post* twist (whose `rigs:` would carry the
 `{lead → hoist}` post-rig pair) the override likewise wins.
 
-**Why now:** ~25% of the SHAPE-NEQ fixtures are designed-bad-rigs
-fixtures, and rigs-content invariants are the largest single
-category of "designed bad" tests. The workshop can fake this with
-the `raw:` form alone if upstream resists — emit verbatim atom bytes
-and let `compile.js` write them straight into the body slot.
-
-**Why upstream:** the canonical Clojure decompiler will eventually
-need to round-trip the same fixtures. Doing this with hand-rolled
-byte injection breaks the TRDL-is-a-text-format contract.
+`hash` form (added later in the session) is the analogue of
+`shld:{hash}` — for designed-bad rigs where the body.rigs hash
+references an atom not in the bundle. Compile writes the hex into
+the body slot verbatim; the referenced atom stays missing as in orig.
 
 ---
 
@@ -277,20 +271,14 @@ fixture. Verdict `PERFECT` requires both checker-eq AND shape-eq.
 | 2026-05-17 (cargo-raw for non-arb) | **33 / 68** | 22 | **13** | +15 perfect |
 | 2026-05-17 (conflicting-prev + prev-non-twist) | 33 / 68 | 23 | **12** | +1 shape-eq |
 | 2026-05-17 (raw atom entities + hash tiebreak) | 33 / 68 | 27 | 8 | +4 shape-eq |
-| 2026-05-17 (shld raw + hash forms — ext #2) | 33 / 68 | **29** | **6** | +2 shape-eq |
+| 2026-05-17 (shld raw + hash forms — ext #2) | 33 / 68 | 29 | 6 | +2 shape-eq |
+| 2026-05-17 (rigs:{hash} form) | **35 / 68** | 29 | **4** | +2 perfect |
 
-**62 / 68 fixtures (91%) now have matching SHAPE.** Remaining work
-to close the gap to PERFECT is mostly checker-stability — same shape
-but different checker verdict due to non-structural bytes (random
-shields, random ed25519 sigs, etc.) that shift what the checkers see.
+**64 / 68 fixtures (94%) now have matching SHAPE.** 35/68 are PERFECT
+(shape + all four checkers agree across orig vs rec).
 
-### Six remaining NEQ — categorized
+### Four remaining NEQ — categorized
 
-- **out-of-bundle rigs hash (2)**: `cork_missing_rigging`,
-  `missing_rigging`. Same pattern as missing_shield was — the rigs
-  hash exists in body but the referenced atom isn't in the bundle.
-  Fixable by adding `rigs: {hash: …}` form (analogue of the new
-  `shld: {hash}`).
 - **reqsat fixtures (2)**: `cork_reqsat_fail`,
   `lash_succession_reqsat_fail`. Need extension #4
   (reqs/sats override).
