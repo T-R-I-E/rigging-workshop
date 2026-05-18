@@ -14,7 +14,7 @@ export async function compile(trdl_text) {
   return { bytes: bytes.buffer, lineHashes, corkline: corkline_h }
 }
 
-export async function decompile(toda_buf) {
-  let entities = await toda_decompile(toda_buf)
+export async function decompile(toda_buf, corkline_hint = null) {
+  let entities = await toda_decompile(toda_buf, 'rig', corkline_hint)
   return emit_jsonl(entities)
 }

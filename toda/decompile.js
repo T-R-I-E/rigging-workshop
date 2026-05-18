@@ -329,7 +329,14 @@ function line_shielded(body_cache, twists) {
 
 // ---- public API ------------------------------------------------------------
 
-export async function decompile(buf, name = 'rig') {
+// `corkline_hint`: optional hex hash of the corkline-line root twist as
+// declared by the original .toda's sidecar. When provided, decompile
+// uses the line whose ids[0] matches as the corkline_line_name,
+// bypassing the heuristic below — necessary for rigs whose topology
+// breaks the "topmost line in the hitch stack" convention (e.g.,
+// self-tethering or mutual-tether rigs where the inferred corkline-line
+// disagrees with the rig's true poptop).
+export async function decompile(buf, name = 'rig', corkline_hint = null) {
   let env        = parse_atoms(buf)
   let body_cache = build_body_cache(env)
   let lines      = discover_lines(env, body_cache)
@@ -363,8 +370,19 @@ export async function decompile(buf, name = 'rig') {
     if (line_of(h.fastener)) fastener_lines.add(line_of(h.fastener))
   }
   let corkline_line_name = null
-  for (let l of hoist_lines) {
-    if (!lead_lines.has(l)) { corkline_line_name = l; break }
+  // Honour the explicit corkline hint when caller supplied it — workshop
+  // load paths and the roundtrip bench pass it from sidecar.corkline.
+  // This bypasses the heuristic for rigs whose topology would mis-route
+  // it (self-tether, mutual-tether, loops past the corkline, etc.).
+  if (corkline_hint) {
+    for (let { name: ln, twists } of named) {
+      if (twists[0] === corkline_hint) { corkline_line_name = ln; break }
+    }
+  }
+  if (!corkline_line_name) {
+    for (let l of hoist_lines) {
+      if (!lead_lines.has(l)) { corkline_line_name = l; break }
+    }
   }
   if (!corkline_line_name) {
     for (let l of fastener_lines) {

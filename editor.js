@@ -272,7 +272,11 @@ async function load_bytes(buf) {
   // different bytes, we want to surface that rather than overwriting the
   // first-pass rig-check results.
   try {
-    let text = await decompile(buf)
+    // window.workshop.corkline was just set by load_rig_meta (when the
+    // sidecar carries a corkline hash). Pass it as a hint to decompile
+    // so the corkline-line identification doesn't fall back to the
+    // heuristic on rigs with non-canonical poptop topologies.
+    let text = await decompile(buf, window.workshop?.corkline || null)
     window.workshop.initial_toda_load = {
       bytes,
       rig_id:  active_rig,
@@ -605,10 +609,21 @@ async function load_rig_meta(rig_url, explicit_json_url) {
     if (m.colour)   parts.push(`<span class="rm-colour ${escape_html(m.colour)}">${escape_html(m.colour)}</span>`)
     if (m.corkline) parts.push(`<span class="rm-cork" title="${escape_html(m.corkline)}">cork: ${escape_html(truncate_hash(m.corkline))}</span>`)
     // `issue` historically was a flat string ('INVALID', 'MISSING'); newer
-    // sidecars use a structured tree (object with structype/colour/children).
-    // Only render the scalar form here; the tree is too verbose for a header.
-    if (typeof m.issue === 'string') {
-      parts.push(`<span class="rm-issue">issue: ${escape_html(m.issue)}</span>`)
+    // sidecars use a structured tree. Render either — JSON-stringify the
+    // tree form so it's at least visible in the header rather than dropped.
+    if (m.issue != null) {
+      let s = typeof m.issue === 'string' ? m.issue : JSON.stringify(m.issue)
+      parts.push(`<span class="rm-issue">issue: ${escape_html(s)}</span>`)
+    }
+    if (m.invariant) {
+      let s = typeof m.invariant === 'string' ? m.invariant : JSON.stringify(m.invariant)
+      parts.push(`<span class="rm-invariant">invariant: ${escape_html(s)}</span>`)
+    }
+    if (m.notes != null) {
+      let s = Array.isArray(m.notes) ? m.notes.join(' • ')
+            : typeof m.notes === 'string' ? m.notes
+            : JSON.stringify(m.notes)
+      parts.push(`<span class="rm-notes">notes: ${escape_html(s)}</span>`)
     }
     // Update only the title span, not the whole H4 — the H4 also contains
     // the chevron used by the collapsible toggle.

@@ -364,7 +364,10 @@ async function run_one(path) {
   let bytes_rec, corkline_rec
   try {
     let pipeline = (async () => {
-      let entities  = await decompile(bytes_orig.buffer)
+      // Pass corkline_orig as a hint so decompile picks the same poptop
+      // line as the original .toda intended — important for rigs with
+      // non-canonical topologies (self-tether, mutual cycles, etc.).
+      let entities  = await decompile(bytes_orig.buffer, 'rig', corkline_orig)
       let trdl_text = emit_jsonl(entities)
       let parsed    = parse_trdl_string(trdl_text)
       let spec      = trdl_to_spec(parsed)
