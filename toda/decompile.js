@@ -635,10 +635,12 @@ export async function decompile(buf, name = 'rig') {
               shape: shape_name || `0x${rigs_atom.shape.toString(16)}`,
             })
           }
+        } else {
+          // Out-of-bundle rigs hash (missing_rigging, cork_missing_rigging).
+          // Emit literal-hash form so compile writes the hex into the body
+          // slot verbatim; the referenced atom stays missing as in orig.
+          set_override(id, 'rigs', { hash: rigs_h })
         }
-        // Out-of-file rigs hash: no override, fall back to the hitch
-        // entity's canonical reconstruction (the recompile won't match
-        // bytes but at least produces a valid rig).
       }
     })
   }

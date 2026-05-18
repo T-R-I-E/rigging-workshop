@@ -172,20 +172,29 @@ function collect_twist_overrides(twist_entities) {
       }
     }
     if ('rigs'  in e) {
-      // Three forms of the rigs override:
+      // Four forms of the rigs override (mirrors shld):
       //   "rigs": "null"                         → explicit NULL slot
-      //   "rigs": { "raw": "<hex>", ... }        → verbatim atom content
+      //   "rigs": { "raw": "<hex>", "shape":… }  → verbatim atom content
+      //   "rigs": { "hash": "<hex>" }            → literal hash, no atom
+      //                                            (out-of-bundle rigs)
       //   "rigs": { ...pair-entries }            → legacy: extra pairs
       //                                            merged with hitch-derived
-      // The raw form takes precedence over hitch-derived rigtrie when both
-      // are present — used for designed-bad-rig fixtures where the original
-      // body.rigs holds pairs that the {hitch, lead, meet, hoist, fastener}
-      // canonical reconstruction can't produce.
+      // raw / hash forms take precedence over hitch-derived rigtrie:
+      //   raw  → designed-bad pairs that canonical reconstruction can't
+      //          produce (hh_wrong_hoist_values etc.)
+      //   hash → rigs hash refers to an atom absent from the bundle
+      //          (missing_rigging, cork_missing_rigging)
       if (e.rigs === 'null') {
         o.rigs_null = true
-      } else if (e.rigs && typeof e.rigs === 'object' && 'raw' in e.rigs) {
-        o.rigs_raw   = e.rigs.raw
-        o.rigs_shape = e.rigs.shape || 'pairtrie'
+      } else if (e.rigs && typeof e.rigs === 'object') {
+        if ('raw' in e.rigs) {
+          o.rigs_raw   = e.rigs.raw
+          o.rigs_shape = e.rigs.shape || 'pairtrie'
+        } else if ('hash' in e.rigs) {
+          o.rigs_hash = e.rigs.hash
+        } else {
+          o.extra_rigs = e.rigs
+        }
       } else {
         o.extra_rigs = e.rigs
       }
@@ -264,6 +273,8 @@ export function trdl_to_spec(entities) {
       if (override.rigs_raw) {
         spec.rigs_raw   = override.rigs_raw
         spec.rigs_shape = override.rigs_shape || 'pairtrie'
+      } else if (override.rigs_hash) {
+        spec.rigs_hash = override.rigs_hash
       } else if (override.rigs_null) {
         spec.rigs_null = true
       } else if (Object.keys(rig_entries).length) {

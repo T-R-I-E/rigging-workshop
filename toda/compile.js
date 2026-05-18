@@ -143,7 +143,7 @@ async function build_twists(lines) {
   for (let spec of sorted) {
     let { id, prev_id, tether, cargo, shield, rig, shield_source,
           poptop, reqsat, line, rigs_raw, rigs_shape, rigs_null,
-          cargo_raw, cargo_shape, shield_raw, shield_shape,
+          rigs_hash, cargo_raw, cargo_shape, shield_raw, shield_shape,
           shield_hash } = spec
 
     let prev_lat
@@ -229,16 +229,20 @@ async function build_twists(lines) {
       if (src_spec?.shield) rig_shield = hex_to_bytes(src_spec.shield)
     }
 
-    // rigs slot precedence: explicit raw bytes > explicit null > hitch-
-    // derived pairtrie. Raw lets designed-bad-rig fixtures preserve a
-    // body.rigs atom whose pairs don't satisfy the canonical hitch quad,
-    // and lets the non-pairtrie shapes (rigs pointing at a hashlist /
-    // arb / twist) survive the roundtrip — `shape` in the spec maps
-    // to the SHAPE byte we hand to from_packet.
+    // rigs slot precedence: explicit raw bytes > explicit hash > explicit
+    // null > hitch-derived pairtrie.
+    //   raw  → designed-bad pairs (any shape) — from_packet builds the
+    //          atom, its hash goes in the body slot.
+    //   hash → out-of-bundle rigs reference (missing_rigging) — the hex
+    //          passes straight through to the body slot, no atom is
+    //          synthesized, checkers see "missing" as in orig.
+    //   null → explicit NULL slot.
     let rig_lat
     if (rigs_raw) {
       let shape_byte = SHAPE[rigs_shape] ?? SHAPE.pairtrie
       rig_lat = await from_packet(shape_byte, hex_to_bytes(rigs_raw))
+    } else if (rigs_hash) {
+      rig_lat = rigs_hash  // pass-through hex; factory writes verbatim
     } else if (rigs_null) {
       rig_lat = null
     } else {
