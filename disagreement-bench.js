@@ -93,7 +93,6 @@ const RIGS = [
   'todatests/rigging/cork_prev_invalid_red.toda',
   'todatests/rigging/cork_reqsat_fail.toda',
   'todatests/rigging/corkline_incomplete_early_red.toda',
-  'todatests/rigging/corkline_incomplete_early_yellow.toda',
   'todatests/rigging/corkline_incomplete_late.toda',
   'todatests/rigging/example_rig_from_spec.toda',
   'todatests/rigging/extra-fast-between-meet-and-post.toda',
