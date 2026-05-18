@@ -271,6 +271,7 @@ fixture. Verdict `PERFECT` requires both checker-eq AND shape-eq.
 | 2026-05-17 (post-cargo-fix, firsts-sort) | 13 / 68 | 10 | 45 | +2 perfect |
 | 2026-05-17 (rigs-raw + mid-line cargo) | 18 / 68 | 17 | 33 | +5 perfect |
 | 2026-05-17 (cargo-raw for non-arb) | **33 / 68** | 22 | **13** | +15 perfect |
+| 2026-05-17 (conflicting-prev + prev-non-twist) | 33 / 68 | 23 | **12** | +1 shape-eq |
 
 The shape-eq-but-checker-diverge bucket grew from 9 → 22 over these
 changes: the recompile produces a structurally-equivalent rig
@@ -282,11 +283,30 @@ checker stability work, not decompile-loop work.
 
 Clustered by diff position (suggests shared root cause):
 
-**char 22 — twist-count drops (5 fixtures):**
-`conflicting_successors` (7→6), `cork_prev_invalid_green` (19→8),
-`cork_prev_invalid_red` (19→13), `lashed_non_colinear` (15→12),
-`splice_mismatch` (59→57). All lose twists. Probably one root cause
-in line discovery / prev resolution; needs investigation.
+**char 22 — twist-count drops (was 5 fixtures, now 4 after the
+conflicting-successors + prev-to-non-twist fixes; counts now match
+across all 5, but 4 still SHAPE NEQ on layout because they reference
+non-twist atoms that aren't synthesized in the recompile):**
+`splice_mismatch` — **now PERFECT**.
+Still NEQ but with matching twist counts:
+`conflicting_successors`, `cork_prev_invalid_green`,
+`cork_prev_invalid_red`, `lashed_non_colinear`.
+
+The remaining diff: `body.prev` (or other slot) points at an arb /
+pairtrie / etc. atom in the original bundle. The literal-hex prev
+override makes the body bytes match, but the referenced atom itself
+isn't carried into the rec bundle. Shape extractor's prev-walk
+therefore can't reach the atom in rec → layout differs.
+
+**Proposed extension #8 — raw atom entities:**
+```jsonl
+{"atom": "<hash-hex>", "shape": "arb", "raw": "<bytes-hex>"}
+```
+Standalone TRDL line that synthesizes the named atom into the
+output bundle. Compile registers it in the global lat regardless of
+whether any spec.lines twist references it. Lets designed-bad rigs
+preserve "orphan" atoms (referenced only by body slots via literal
+hex) through the roundtrip.
 
 **chars 71–2004 — single-edge differences (6 fixtures):**
 `lead_shield_non_arb` (71), `lash_succession_reqsat_fail` (114),
