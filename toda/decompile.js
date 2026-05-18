@@ -689,24 +689,54 @@ export async function decompile(buf, name = 'rig') {
   }
   for (let [id, o] of twist_overrides) out.push({ id, ...o })
 
-  // Raw atom entities: emit one {atom, shape, raw} for every non-twist
-  // non-body atom in env. This is broader than strictly necessary —
-  // shield arbs, rigs pairtries, and cargo atoms are already rebuilt
-  // by their dedicated overrides — but it catches references hiding
-  // inside pairtrie / hashlist content bytes (post-rig keys pointing
-  // at out-of-line atoms; designed-bad references). Compile's out_lat
-  // is a hash-keyed Map so duplicates collapse automatically.
+  // Raw atom entities: targeted scan for non-twist atoms in env that
+  // are referenced but NOT pulled in by any override's lat-merge path.
+  // Compile's shld / rigs / cargo overrides already rebuild and
+  // include the directly-referenced atom; we only need to pick up
+  // atoms reachable through pairtrie / hashlist content hashes.
   //
-  // Skipped: twist atoms (focuses of named twist lats),
-  //          body atoms (part of each twist's lat naturally).
+  // What we emit:
+  //   1. Non-twist atoms referenced by body.prev / body.teth.
+  //      Already handled by cork_prev_invalid_*; the slot override
+  //      writes the hex but doesn't synthesize the referent.
+  //   2. Non-twist atoms whose hash appears INSIDE a rigs/cargo
+  //      pairtrie's pair keys/values (post_rigging_missing_post_key:
+  //      a rigs pair key points at an arb that no other override
+  //      pulls in). The pairtrie itself is built by rigs:{raw};
+  //      its content's referenced atoms need explicit entities.
+  //
+  // Broader "emit every non-twist atom" was tried; it ships extra
+  // ed25519/shield atoms that re-insert at the end of out_lat,
+  // shifting byte order and breaking checker stability on previously-
+  // perfect valid rigs.
   let seen_atoms = new Set()
-  for (let atom of env.atoms || []) {
-    if (atom.shape === TWIST || atom.shape === BODY) continue
-    if (seen_atoms.has(atom.hash)) continue
-    seen_atoms.add(atom.hash)
+  function emit_atom_for(h) {
+    if (!h || is_null(h) || seen_atoms.has(h)) return
+    let atom = env.index[h]
+    if (!atom || atom.shape === TWIST || atom.shape === BODY) return
+    seen_atoms.add(h)
     let shape_name = SHAPE_NAMES[atom.shape] || `0x${atom.shape.toString(16)}`
     let raw_hex = bytes_to_hex(env.bytes.subarray(atom.cfirst, atom.last + 1))
-    out.push({ atom: atom.hash, shape: shape_name, raw: raw_hex })
+    out.push({ atom: h, shape: shape_name, raw: raw_hex })
+  }
+  for (let t of env.shapes[TWIST] || []) {
+    let body = body_cache.get(t.hash)
+    if (!body) continue
+    // (1) prev / teth slots pointing at non-twist atoms
+    emit_atom_for(body.prev)
+    emit_atom_for(body.teth)
+    // (2) hashes inside rigs / cargo pairtrie pair contents.
+    for (let slot of ['rigs', 'carg']) {
+      let h = body[slot]
+      if (!h || is_null(h)) continue
+      let atom = env.index[h]
+      if (!atom || atom.shape !== PAIRTRIE) continue
+      let pairs = read_pairtrie(env, atom)
+      for (let [k, v] of pairs) {
+        emit_atom_for(k)
+        emit_atom_for(v)
+      }
+    }
   }
   return out
 }
