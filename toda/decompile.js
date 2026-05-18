@@ -782,7 +782,19 @@ export async function decompile(buf, name = 'rig', corkline_hint = null) {
     //     them. Cargo content scan is INTENTIONALLY skipped — the
     //     workshop ignores cargo for verification purposes; preserving
     //     it would needlessly bloat the rec bundle.
-    for (let slot of ['rigs', 'reqs']) {
+    // Body slots that may carry a pairtrie whose content references
+    // atoms not pulled in by any other override.
+    //
+    // rigs / reqs are required (rust + clj walk these) — without them,
+    // the rec verdict diverges on the hh_* / kiwano-family fixtures.
+    //
+    // carg is included to cover lash_succession_no_fast_twist and
+    // similar rigs that embed rig-affecting hashes inside cargo
+    // pairtries (e.g. a sats-like structure). The previous rationale
+    // ("workshop ignores cargo for verification") turned out to be
+    // wrong for fixtures whose cargo pairtrie holds atoms that the
+    // checker resolves during the lash-succession walk.
+    for (let slot of ['rigs', 'reqs', 'carg']) {
       let h = body[slot]
       if (!h || is_null(h)) continue
       let atom = env.index[h]

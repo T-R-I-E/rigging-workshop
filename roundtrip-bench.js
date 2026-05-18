@@ -388,14 +388,20 @@ async function run_one(path) {
   }
   r.recLen = bytes_rec.length
 
-  if (!corkline_rec) {
-    r.recompileError = 'compile produced no corkline'
-    return r
-  }
-
   // --- pass 2: recompile bytes ---
+  // Use the SAME corkline as pass 1 (sidecar's). compile's corkline_h
+  // can drift when decompile's line-naming heuristic re-labels lines
+  // (e.g., lash_succession_no_fast_twist: sidecar cork lives on what
+  // compile internally calls c_1[4], so compiled.corkline_h points
+  // at a different twist hash entirely). Feeding rust two different
+  // corks would compare unrelated rigs — and silently flip red→green.
+  // The point of the bench is "did roundtrip preserve the rig?", so
+  // both passes must verify against the same corkline.
+  if (corkline_rec && corkline_rec !== corkline_orig) {
+    r.corklineDrift = { orig: corkline_orig, rec: corkline_rec }
+  }
   let ctx_rec
-  try { ctx_rec = build_ctx(bytes_rec, corkline_rec) }
+  try { ctx_rec = build_ctx(bytes_rec, corkline_orig) }
   catch (e) { r.recompileError = 'ctx_rec: ' + (e.message || String(e)); return r }
   r.rec = await run_all_checkers(ctx_rec)
 
