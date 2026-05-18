@@ -362,14 +362,15 @@ document.getElementById('url-input').addEventListener('keydown', e => {
 
 // --- examples panel ---------------------------------------------------------
 
-// Each entry: [path, colour, json_url?]. path is relative to the workshop
-// root; loader fetches the sibling .json sidecar (same path, .trdl →
-// .json or .toda → .json) for moniker / corkline / canonical colour.
+// Each entry is a path relative to the workshop root. The loader fetches
+// the sibling .json sidecar (same path, .toda → .json or .trdl → .json)
+// for moniker / corkline / canonical colour. Dot colours render after the
+// list is built, via update_dot_colours() fanning out to all sidecars.
 //
 // Workshop rigs that used to live as bare rigs/*.trdl (with no sidecar)
-// are now imported into todatests/rigging/ as .toda + .json pairs.
-// Open those instead — decompile populates the editor with the
-// reconstructed TRDL, which can then be edited and recompiled.
+// are imported into todatests/rigging/ as .toda + .json pairs. Open those
+// — decompile populates the editor with the reconstructed TRDL, which
+// can then be edited and recompiled.
 const RIGS = [
   // todatests/rigging + todatests/reqsat/ed25519-rigs — pre-compiled
   // .toda + .json pairs. Loading these goes through decompile.
@@ -380,135 +381,135 @@ const RIGS = [
   // walks) belong in abject-workshop. See abject-workshop.md →
   // "Tests excluded from rigging-workshop". workshop_bail_check in
   // app.js refuses abject .toda loads with a clear ABJECT ERROR banner.
-  ['todatests/reqsat/ed25519-rigs/twist-chain-with-fields.toda',                        'green'],
-  ['todatests/reqsat/ed25519-rigs/twist-isolation-multi-line.toda',                     'green'],
-  ['todatests/rigging/1-splice-no-post.toda',                                           'green'],
-  ['todatests/rigging/11-bottom-fastener-not-fast.toda',                                'red'],
-  ['todatests/rigging/12-bottom-hoist-not-fast.toda',                                   'red'],
-  ['todatests/rigging/13-bottom-corkline-top-leadline.toda',                            'green'],
-  ['todatests/rigging/14-bottom-corkline-shorter-than-top-leadline-both-sides.toda',    'yellow'],
-  ['todatests/rigging/15-splicing-hitches-with-identical-toplines.toda',                'green'],
-  ['todatests/rigging/17-lashing-2-non-consecutive-hitches-to-15.toda',                 'green'],
-  ['todatests/rigging/18-lashing-to-2-hitch-splice-with-missing-right-hoist.toda',      'yellow'],
-  ['todatests/rigging/2-right-fast-first.toda',                                         'red'],
-  ['todatests/rigging/21-direct-tether-spliced-to-indirect-tether.toda',                'green'],
-  ['todatests/rigging/22-indirect-tether-spliced-to-direct-tether.toda',                'green'],
-  ['todatests/rigging/23-indirect-tether-spliced-to-direct-tether-bad-post.toda',       'red'],
-  ['todatests/rigging/24-direct-tether-spliced-to-indirect-tether-bad-post.toda',       'red'],
-  ['todatests/rigging/25-lashed-rigs-spliced-for-maximal-time-crossing.toda',           'green'],
-  ['todatests/rigging/26-like-above-back-and-forth.toda',                               'green'],
-  ['todatests/rigging/27-intermediate-lines-change-tether-direction-via-corkline.toda', 'green'],
-  ['todatests/rigging/28-intermediate-lines-change-tether-direction-via-new-line.toda', 'green'],
-  ['todatests/rigging/29a-attempt-to-trigger-false-positive-on-tether-loop-detection.toda', 'green'],
-  ['todatests/rigging/3-normally-expected-splice.toda',                                 'green'],
-  ['todatests/rigging/31-irrelevent-tether-loop-after-corkline-reached.toda',           'green'],
-  ['todatests/rigging/4-lash-left-non-overlap-null.toda',                               'red'],
-  ['todatests/rigging/5-lash-left-non-overlap-missing.toda',                            'yellow'],
-  ['todatests/rigging/6-lash-right-non-overlap.toda',                                   'red'],
-  ['todatests/rigging/7-corkline-self-tether.toda',                                     'red'],
-  ['todatests/rigging/8-splice-on-mutual-tether.toda',                                  'red'],
-  ['todatests/rigging/9-leadline-equivocal-from-corkline.toda',                         'red'],
-  ['todatests/rigging/api-valid-lashed-rig.toda',                                       'green'],
-  ['todatests/rigging/basic-half-hitch.toda',                                           'green'],
-  ['todatests/rigging/complex_bad_hoist_direct_to_indirect.toda',                       'red'],
-  ['todatests/rigging/complex_bad_hoist_indirect_to_direct.toda',                       'red'],
-  ['todatests/rigging/complex_direct_to_indirect_splice.toda',                          'green'],
-  ['todatests/rigging/complex_indirect_to_direct_splice.toda',                          'green'],
-  ['todatests/rigging/complex_maximal_time_crossing.toda',                              'green'],
-  ['todatests/rigging/complex_maximal_time_crossing_complex.toda',                      'green'],
-  ['todatests/rigging/complex_tether_direction_change.toda',                            'green'],
-  ['todatests/rigging/conflicting_successors.toda',                                     'red'],
-  ['todatests/rigging/cork_missing_rigging.toda',                                       'yellow'],
-  ['todatests/rigging/cork_prev_invalid_green.toda',                                    'green'],
-  ['todatests/rigging/cork_prev_invalid_red.toda',                                      'yellow'],
-  ['todatests/rigging/cork_reqsat_fail.toda',                                           'red'],
-  ['todatests/rigging/corkline_incomplete_early_red.toda',                              'red'],
-  ['todatests/rigging/corkline_incomplete_early_yellow.toda',                           'yellow'],
-  ['todatests/rigging/corkline_incomplete_late.toda',                                   'yellow'],
-  ['todatests/rigging/example_rig_from_spec.toda',                                      'green'],
-  ['todatests/rigging/extra-fast-between-meet-and-post.toda',                           'red'],
-  ['todatests/rigging/full-hitch-with-post.toda',                                       'green'],
-  ['todatests/rigging/half-hitch-footline-reaches-null.toda',                           'red'],
-  ['todatests/rigging/half-hitch-lead-mismatch.toda',                                   'red'],
-  ['todatests/rigging/half-hitch-lead-not-fast.toda',                                   'red'],
-  ['todatests/rigging/half-hitch-meet-not-fast.toda',                                   'red'],
-  ['todatests/rigging/half-hitch-topline-fastener-not-found.toda',                      'yellow'],
-  ['todatests/rigging/half-hitch-valid.toda',                                           'green'],
-  ['todatests/rigging/hh_corkline_twist_missing.toda',                                  'yellow'],
-  ['todatests/rigging/hh_footline_prev_gap.toda',                                       'red'],
-  ['todatests/rigging/hh_mismatched_s_ss_values.toda',                                  'red'],
-  ['todatests/rigging/hh_no_s_lead.toda',                                               'yellow'],
-  ['todatests/rigging/hh_no_ss_lead.toda',                                              'yellow'],
-  ['todatests/rigging/hh_non_fast_meet.toda',                                           'red'],
-  ['todatests/rigging/hh_self_referential_rig.toda',                                    'red'],
-  ['todatests/rigging/hh_tether_missing.toda',                                          'yellow'],
-  ['todatests/rigging/hh_tether_not_twist.toda',                                        'red'],
-  ['todatests/rigging/hh_tether_null.toda',                                             'red'],
-  ['todatests/rigging/hh_tether_symbol.toda',                                           'red'],
-  ['todatests/rigging/hh_valid_lead_root.toda',                                         'green'],
-  ['todatests/rigging/hh_valid_self_ref_subsequent_valid.toda',                         'green'],
-  ['todatests/rigging/hh_valid_shield_non_null.toda',                                   'green'],
-  ['todatests/rigging/hh_valid_shield_null.toda',                                       'green'],
-  ['todatests/rigging/hh_wrong_hoist_values.toda',                                      'red'],
-  ['todatests/rigging/hh_wrong_shield.toda',                                            'yellow'],
-  ['todatests/rigging/hitch-lead-footline-reaches-null.toda',                           'yellow'],
-  ['todatests/rigging/hitch-post-footline-reaches-null.toda',                           'red'],
-  ['todatests/rigging/hitch-post-not-fast.toda',                                        'red'],
-  ['todatests/rigging/hitch-valid.toda',                                                'green'],
-  ['todatests/rigging/hitch_extra_fast_in_footline.toda',                               'red'],
-  ['todatests/rigging/hitch_hoist_rigs_missing.toda',                                   'yellow'],
-  ['todatests/rigging/hitch_meet_tether_null.toda',                                     'red'],
-  ['todatests/rigging/hitch_splice_post_no_lead_entry.toda',                            'red'],
-  ['todatests/rigging/hitch_splice_post_wrong_hoist.toda',                              'red'],
-  ['todatests/rigging/hitch_valid_basic_splice.toda',                                   'green'],
-  ['todatests/rigging/invalid_rigging_green.toda',                                      'green'],
-  ['todatests/rigging/invalid_shielding_green.toda',                                    'green'],
-  ['todatests/rigging/lash_succession_missing_prev.toda',                               'yellow'],
-  ['todatests/rigging/lash_succession_no_fast_twist.toda',                              'red'],
-  ['todatests/rigging/lash_succession_reqsat_fail.toda',                                'red'],
-  ['todatests/rigging/lashed_non_colinear.toda',                                        'red'],
-  ['todatests/rigging/lead_shield_non_arb.toda',                                        'red'],
-  ['todatests/rigging/meets_do_not_match.toda',                                         'red'],
-  ['todatests/rigging/missing_rigging.toda',                                            'yellow'],
-  ['todatests/rigging/missing_shield.toda',                                             'yellow'],
-  ['todatests/rigging/multi-level-rig.toda',                                            'green'],
-  ['todatests/rigging/multiple_hoists_green.toda',                                      'green'],
-  ['todatests/rigging/nested_lash_in_splice.toda',                                      'green'],
-  ['todatests/rigging/post_rigging_missing_post_key.toda',                              'red'],
-  ['todatests/rigging/rigging-corkline-incomplete-early.toda',                          'yellow'],
-  ['todatests/rigging/rigging-corkline-incomplete-late.toda',                           'yellow'],
-  ['todatests/rigging/rigging-lash-non-colinear.toda',                                  'red'],
-  ['todatests/rigging/rigging-valid-lash-and-splice.toda',                              'green'],
-  ['todatests/rigging/rigging-valid-simple-lash.toda',                                  'green'],
-  ['todatests/rigging/rigging-valid-spliced-unit-rigs.toda',                            'green'],
-  ['todatests/rigging/rigging-valid-unit-rig.toda',                                     'green'],
-  ['todatests/rigging/self_referential.toda',                                           'red'],
-  ['todatests/rigging/simple_lash_f1.toda',                                             'green'],
-  ['todatests/rigging/simple_lash_f2.toda',                                             'green'],
-  ['todatests/rigging/simple_last.toda',                                                'green'],
-  ['todatests/rigging/splice_chain_4hitches.toda',                                      'green'],
-  ['todatests/rigging/splice_mismatch.toda',                                            'red'],
-  ['todatests/rigging/terminating_half_hitches_on_corkline.toda',                       'green'],
-  ['todatests/rigging/test-suite-complex-rig-21-direct-to-indirect-tether.toda',        'green'],
-  ['todatests/rigging/test-suite-complex-rig-22-indirect-to-direct-tether.toda',        'green'],
-  ['todatests/rigging/test-suite-complex-rig-25-lashed-maximal-time-crossing.toda',     'green'],
-  ['todatests/rigging/test-suite-complex-rig-26-lashed-complex.toda',                   'green'],
-  ['todatests/rigging/test-suite-half-hitch-invalid-lead-not-tethered.toda',            'red'],
-  ['todatests/rigging/test-suite-half-hitch-invalid-meet-not-fast.toda',                'red'],
-  ['todatests/rigging/test-suite-half-hitch-valid-null-shield.toda',                    'green'],
-  ['todatests/rigging/test-suite-half-hitch-valid-with-shield.toda',                    'green'],
-  ['todatests/rigging/tether_loop.toda',                                                'yellow'],
-  ['todatests/rigging/three-hitches-horizontal.toda',                                   'green'],
-  ['todatests/rigging/three-hitches-vertical.toda',                                     'green'],
-  ['todatests/rigging/topline_rigs_non_trie.toda',                                      'red'],
-  ['todatests/rigging/unit_rig.toda',                                                   'green'],
-  ['todatests/rigging/unit_rig_multi.toda',                                             'green'],
-  ['todatests/rigging/valid_kiwano.toda',                                               'green'],
-  ['todatests/rigging/valid_kiwano_0.toda',                                             'green'],
-  ['todatests/rigging/valid_kiwano_1.toda',                                             'green'],
-  ['todatests/rigging/valid_kiwano_f1.toda',                                            'green'],
-  ['todatests/rigging/valid_kiwano_f2.toda',                                            'green'],
-  ['todatests/rigging/valid_kiwano_f5.toda',                                            'green'],
+  'todatests/reqsat/ed25519-rigs/twist-chain-with-fields.toda',
+  'todatests/reqsat/ed25519-rigs/twist-isolation-multi-line.toda',
+  'todatests/rigging/1-splice-no-post.toda',
+  'todatests/rigging/11-bottom-fastener-not-fast.toda',
+  'todatests/rigging/12-bottom-hoist-not-fast.toda',
+  'todatests/rigging/13-bottom-corkline-top-leadline.toda',
+  'todatests/rigging/14-bottom-corkline-shorter-than-top-leadline-both-sides.toda',
+  'todatests/rigging/15-splicing-hitches-with-identical-toplines.toda',
+  'todatests/rigging/17-lashing-2-non-consecutive-hitches-to-15.toda',
+  'todatests/rigging/18-lashing-to-2-hitch-splice-with-missing-right-hoist.toda',
+  'todatests/rigging/2-right-fast-first.toda',
+  'todatests/rigging/21-direct-tether-spliced-to-indirect-tether.toda',
+  'todatests/rigging/22-indirect-tether-spliced-to-direct-tether.toda',
+  'todatests/rigging/23-indirect-tether-spliced-to-direct-tether-bad-post.toda',
+  'todatests/rigging/24-direct-tether-spliced-to-indirect-tether-bad-post.toda',
+  'todatests/rigging/25-lashed-rigs-spliced-for-maximal-time-crossing.toda',
+  'todatests/rigging/26-like-above-back-and-forth.toda',
+  'todatests/rigging/27-intermediate-lines-change-tether-direction-via-corkline.toda',
+  'todatests/rigging/28-intermediate-lines-change-tether-direction-via-new-line.toda',
+  'todatests/rigging/29a-attempt-to-trigger-false-positive-on-tether-loop-detection.toda',
+  'todatests/rigging/3-normally-expected-splice.toda',
+  'todatests/rigging/31-irrelevent-tether-loop-after-corkline-reached.toda',
+  'todatests/rigging/4-lash-left-non-overlap-null.toda',
+  'todatests/rigging/5-lash-left-non-overlap-missing.toda',
+  'todatests/rigging/6-lash-right-non-overlap.toda',
+  'todatests/rigging/7-corkline-self-tether.toda',
+  'todatests/rigging/8-splice-on-mutual-tether.toda',
+  'todatests/rigging/9-leadline-equivocal-from-corkline.toda',
+  'todatests/rigging/api-valid-lashed-rig.toda',
+  'todatests/rigging/basic-half-hitch.toda',
+  'todatests/rigging/complex_bad_hoist_direct_to_indirect.toda',
+  'todatests/rigging/complex_bad_hoist_indirect_to_direct.toda',
+  'todatests/rigging/complex_direct_to_indirect_splice.toda',
+  'todatests/rigging/complex_indirect_to_direct_splice.toda',
+  'todatests/rigging/complex_maximal_time_crossing.toda',
+  'todatests/rigging/complex_maximal_time_crossing_complex.toda',
+  'todatests/rigging/complex_tether_direction_change.toda',
+  'todatests/rigging/conflicting_successors.toda',
+  'todatests/rigging/cork_missing_rigging.toda',
+  'todatests/rigging/cork_prev_invalid_green.toda',
+  'todatests/rigging/cork_prev_invalid_red.toda',
+  'todatests/rigging/cork_reqsat_fail.toda',
+  'todatests/rigging/corkline_incomplete_early_red.toda',
+  'todatests/rigging/corkline_incomplete_early_yellow.toda',
+  'todatests/rigging/corkline_incomplete_late.toda',
+  'todatests/rigging/example_rig_from_spec.toda',
+  'todatests/rigging/extra-fast-between-meet-and-post.toda',
+  'todatests/rigging/full-hitch-with-post.toda',
+  'todatests/rigging/half-hitch-footline-reaches-null.toda',
+  'todatests/rigging/half-hitch-lead-mismatch.toda',
+  'todatests/rigging/half-hitch-lead-not-fast.toda',
+  'todatests/rigging/half-hitch-meet-not-fast.toda',
+  'todatests/rigging/half-hitch-topline-fastener-not-found.toda',
+  'todatests/rigging/half-hitch-valid.toda',
+  'todatests/rigging/hh_corkline_twist_missing.toda',
+  'todatests/rigging/hh_footline_prev_gap.toda',
+  'todatests/rigging/hh_mismatched_s_ss_values.toda',
+  'todatests/rigging/hh_no_s_lead.toda',
+  'todatests/rigging/hh_no_ss_lead.toda',
+  'todatests/rigging/hh_non_fast_meet.toda',
+  'todatests/rigging/hh_self_referential_rig.toda',
+  'todatests/rigging/hh_tether_missing.toda',
+  'todatests/rigging/hh_tether_not_twist.toda',
+  'todatests/rigging/hh_tether_null.toda',
+  'todatests/rigging/hh_tether_symbol.toda',
+  'todatests/rigging/hh_valid_lead_root.toda',
+  'todatests/rigging/hh_valid_self_ref_subsequent_valid.toda',
+  'todatests/rigging/hh_valid_shield_non_null.toda',
+  'todatests/rigging/hh_valid_shield_null.toda',
+  'todatests/rigging/hh_wrong_hoist_values.toda',
+  'todatests/rigging/hh_wrong_shield.toda',
+  'todatests/rigging/hitch-lead-footline-reaches-null.toda',
+  'todatests/rigging/hitch-post-footline-reaches-null.toda',
+  'todatests/rigging/hitch-post-not-fast.toda',
+  'todatests/rigging/hitch-valid.toda',
+  'todatests/rigging/hitch_extra_fast_in_footline.toda',
+  'todatests/rigging/hitch_hoist_rigs_missing.toda',
+  'todatests/rigging/hitch_meet_tether_null.toda',
+  'todatests/rigging/hitch_splice_post_no_lead_entry.toda',
+  'todatests/rigging/hitch_splice_post_wrong_hoist.toda',
+  'todatests/rigging/hitch_valid_basic_splice.toda',
+  'todatests/rigging/invalid_rigging_green.toda',
+  'todatests/rigging/invalid_shielding_green.toda',
+  'todatests/rigging/lash_succession_missing_prev.toda',
+  'todatests/rigging/lash_succession_no_fast_twist.toda',
+  'todatests/rigging/lash_succession_reqsat_fail.toda',
+  'todatests/rigging/lashed_non_colinear.toda',
+  'todatests/rigging/lead_shield_non_arb.toda',
+  'todatests/rigging/meets_do_not_match.toda',
+  'todatests/rigging/missing_rigging.toda',
+  'todatests/rigging/missing_shield.toda',
+  'todatests/rigging/multi-level-rig.toda',
+  'todatests/rigging/multiple_hoists_green.toda',
+  'todatests/rigging/nested_lash_in_splice.toda',
+  'todatests/rigging/post_rigging_missing_post_key.toda',
+  'todatests/rigging/rigging-corkline-incomplete-early.toda',
+  'todatests/rigging/rigging-corkline-incomplete-late.toda',
+  'todatests/rigging/rigging-lash-non-colinear.toda',
+  'todatests/rigging/rigging-valid-lash-and-splice.toda',
+  'todatests/rigging/rigging-valid-simple-lash.toda',
+  'todatests/rigging/rigging-valid-spliced-unit-rigs.toda',
+  'todatests/rigging/rigging-valid-unit-rig.toda',
+  'todatests/rigging/self_referential.toda',
+  'todatests/rigging/simple_lash_f1.toda',
+  'todatests/rigging/simple_lash_f2.toda',
+  'todatests/rigging/simple_last.toda',
+  'todatests/rigging/splice_chain_4hitches.toda',
+  'todatests/rigging/splice_mismatch.toda',
+  'todatests/rigging/terminating_half_hitches_on_corkline.toda',
+  'todatests/rigging/test-suite-complex-rig-21-direct-to-indirect-tether.toda',
+  'todatests/rigging/test-suite-complex-rig-22-indirect-to-direct-tether.toda',
+  'todatests/rigging/test-suite-complex-rig-25-lashed-maximal-time-crossing.toda',
+  'todatests/rigging/test-suite-complex-rig-26-lashed-complex.toda',
+  'todatests/rigging/test-suite-half-hitch-invalid-lead-not-tethered.toda',
+  'todatests/rigging/test-suite-half-hitch-invalid-meet-not-fast.toda',
+  'todatests/rigging/test-suite-half-hitch-valid-null-shield.toda',
+  'todatests/rigging/test-suite-half-hitch-valid-with-shield.toda',
+  'todatests/rigging/tether_loop.toda',
+  'todatests/rigging/three-hitches-horizontal.toda',
+  'todatests/rigging/three-hitches-vertical.toda',
+  'todatests/rigging/topline_rigs_non_trie.toda',
+  'todatests/rigging/unit_rig.toda',
+  'todatests/rigging/unit_rig_multi.toda',
+  'todatests/rigging/valid_kiwano.toda',
+  'todatests/rigging/valid_kiwano_0.toda',
+  'todatests/rigging/valid_kiwano_1.toda',
+  'todatests/rigging/valid_kiwano_f1.toda',
+  'todatests/rigging/valid_kiwano_f2.toda',
+  'todatests/rigging/valid_kiwano_f5.toda',
 ]
 
 function group_label(path) {
@@ -522,13 +523,18 @@ function rig_label(path) {
 }
 
 let active_rig = null
+// Cache of sidecar colour by rig path, populated by update_dot_colours().
+// render_rigs_list reads this on each call; cells whose sidecar hasn't
+// resolved yet render with an empty dot, which fills in once the fetch
+// lands and update_dot_colours triggers a re-render via patch_dot.
+const sidecar_colour = new Map()
+
 function render_rigs_list() {
   let host = document.getElementById('rigs-list')
   if (!host) return
   let last_group = null
   let html = ''
-  for (let entry of RIGS) {
-    let [path, colour] = entry
+  for (let path of RIGS) {
     let g = group_label(path)
     if (g !== last_group) {
       html += `<div class="rig-group">${escape_html(g)}</div>`
@@ -536,10 +542,41 @@ function render_rigs_list() {
     }
     let label  = rig_label(path)
     let active = path === active_rig ? ' active' : ''
+    let colour = sidecar_colour.get(path) || ''
     html += `<div class="rig-item${active}" data-file="${escape_html(path)}">` +
             `<span class="rig-dot ${colour}"></span>${label}</div>`
   }
   host.innerHTML = html
+}
+
+// Patch the dot for a single rig in-place — cheaper than re-rendering
+// the whole list as each of the 129 sidecar fetches resolves.
+function patch_dot(path, colour) {
+  let host = document.getElementById('rigs-list')
+  if (!host) return
+  let item = host.querySelector(`.rig-item[data-file="${CSS.escape(path)}"] .rig-dot`)
+  if (!item) return
+  item.classList.remove('green', 'yellow', 'red')
+  if (colour) item.classList.add(colour)
+}
+
+// Fan out to every rig's .json sidecar in parallel; update the dot
+// colours as each lands. Errors are swallowed silently — a missing or
+// malformed sidecar just leaves the dot blank, which surfaces the gap
+// without breaking the rest of the list.
+async function update_dot_colours() {
+  await Promise.all(RIGS.map(async path => {
+    try {
+      let json_url = path.replace(/\.(trdl|toda)$/, '.json')
+      let res = await fetch(json_url)
+      if (!res.ok) return
+      let m = await res.json()
+      if (m.colour) {
+        sidecar_colour.set(path, m.colour)
+        patch_dot(path, m.colour)
+      }
+    } catch {}
+  }))
 }
 
 function truncate_hash(h, head=10, tail=8) {
@@ -567,7 +604,12 @@ async function load_rig_meta(rig_url, explicit_json_url) {
     if (m.moniker)  parts.push(`<span class="rm-moniker">${escape_html(m.moniker)}</span>`)
     if (m.colour)   parts.push(`<span class="rm-colour ${escape_html(m.colour)}">${escape_html(m.colour)}</span>`)
     if (m.corkline) parts.push(`<span class="rm-cork" title="${escape_html(m.corkline)}">cork: ${escape_html(truncate_hash(m.corkline))}</span>`)
-    if (m.issue)    parts.push(`<span class="rm-issue">issue: ${escape_html(m.issue)}</span>`)
+    // `issue` historically was a flat string ('INVALID', 'MISSING'); newer
+    // sidecars use a structured tree (object with structype/colour/children).
+    // Only render the scalar form here; the tree is too verbose for a header.
+    if (typeof m.issue === 'string') {
+      parts.push(`<span class="rm-issue">issue: ${escape_html(m.issue)}</span>`)
+    }
     // Update only the title span, not the whole H4 — the H4 also contains
     // the chevron used by the collapsible toggle.
     let title = header?.querySelector('.section-title')
@@ -601,11 +643,10 @@ async function load_rig(path) {
   active_rig = path
   render_rigs_list()
   set_loaded_label(rig_label(path))
-  let entry = RIGS.find(r => r[0] === path)
   // Await the meta fetch so that workshop.corkline is set from the canonical
   // JSON before load_bytes triggers an immediate render — otherwise the
   // .toda rig-check fires with no corkline yet.
-  await load_rig_meta(path, entry?.[2])
+  await load_rig_meta(path)
   // Stale .toda baseline must be cleared when switching rigs. load_bytes
   // resets it for the new .toda load; .trdl loads have no baseline.
   window.workshop.initial_toda_load = null
@@ -708,6 +749,9 @@ if (rc_el) {
 }
 
 render_rigs_list()
+// Kick off sidecar fetches in parallel so each rig's dot fills in as
+// its .json arrives. Independent of the example-rig load below.
+update_dot_colours()
 // On first load, select the spec's appendix B example. Sets active_rig
 // so arrow-key navigation works, loads the sidecar metadata, and seeds
 // the editor with the decompiled TRDL. The fetch is synchronous from
