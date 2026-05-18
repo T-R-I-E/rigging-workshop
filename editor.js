@@ -371,55 +371,15 @@ document.getElementById('url-input').addEventListener('keydown', e => {
 // Open those instead — decompile populates the editor with the
 // reconstructed TRDL, which can then be edited and recompiled.
 const RIGS = [
-  ['tests/test-suite/complex-rig-21-direct-to-indirect-tether.trdl',                   'green'],
-  ['tests/test-suite/complex-rig-22-indirect-to-direct-tether.trdl',                   'yellow'],
-  ['tests/test-suite/complex-rig-25-lashed-maximal-time-crossing.trdl',                'yellow'],
-  ['tests/test-suite/complex-rig-26-lashed-complex.trdl',                              'red'],
-  ['tests/test-suite/half-hitch-invalid-lead-not-tethered.trdl',                       'red'],
-  ['tests/test-suite/half-hitch-invalid-meet-not-fast.trdl',                           'red'],
-  ['tests/test-suite/half-hitch-valid-null-shield.trdl',                               'red'],
-  ['tests/test-suite/half-hitch-valid-with-shield.trdl',                               'red'],
-
-  ['tests/toda-rig-checker/api-valid-lashed-rig.trdl',                                 'yellow'],
-  ['tests/toda-rig-checker/half-hitch-footline-reaches-null.trdl',                     'red'],
-  ['tests/toda-rig-checker/half-hitch-lead-mismatch.trdl',                             'red'],
-  ['tests/toda-rig-checker/half-hitch-lead-not-fast.trdl',                             'red'],
-  ['tests/toda-rig-checker/half-hitch-meet-not-fast.trdl',                             'red'],
-  ['tests/toda-rig-checker/half-hitch-topline-fastener-not-found.trdl',                'red'],
-  ['tests/toda-rig-checker/half-hitch-valid.trdl',                                     'red'],
-  ['tests/toda-rig-checker/hitch-lead-footline-reaches-null.trdl',                     'red'],
-  ['tests/toda-rig-checker/hitch-post-footline-reaches-null.trdl',                     'red'],
-  ['tests/toda-rig-checker/hitch-post-not-fast.trdl',                                  'red'],
-  ['tests/toda-rig-checker/hitch-valid.trdl',                                          'red'],
-  ['tests/toda-rig-checker/rigging-corkline-incomplete-early.trdl',                    'green'],
-  ['tests/toda-rig-checker/rigging-corkline-incomplete-late.trdl',                     'red'],
-  ['tests/toda-rig-checker/rigging-lash-non-colinear.trdl',                            'green'],
-  ['tests/toda-rig-checker/rigging-valid-lash-and-splice.trdl',                        'red'],
-  ['tests/toda-rig-checker/rigging-valid-simple-lash.trdl',                            'red'],
-  ['tests/toda-rig-checker/rigging-valid-spliced-unit-rigs.trdl',                      'green'],
-  ['tests/toda-rig-checker/rigging-valid-unit-rig.trdl',                               'red'],
-
-  ['tests/toda-graph/basic-half-hitch.trdl',                                           'green'],
-  ['tests/toda-graph/extra-fast-between-meet-and-post.trdl',                           'yellow'],
-  ['tests/toda-graph/full-hitch-with-post.trdl',                                       'red'],
-  ['tests/toda-graph/multi-level-rig.trdl',                                            'yellow'],
-  ['tests/toda-graph/three-hitches-horizontal.trdl',                                   'green'],
-  ['tests/toda-graph/three-hitches-vertical.trdl',                                     'green'],
-
-  // tests/toda-abject/* — excluded. The Rigging Workshop is exclusively
-  // for single rigs; abject fixtures (delegation chains, multi-rig
-  // walks) belong in abject-workshop. See abject-workshop.md → "Tests
-  // excluded from rigging-workshop" for the list and reasoning. The
-  // workshop still refuses-to-process abject .toda loads at the byte
-  // level (workshop_bail_check in app.js) so a user dropping one in by
-  // accident sees a clear ABJECT ERROR banner pointing at the spec doc.
-
-  ['tests/toda-core/twist-chain-with-fields.trdl',                                     'green'],
-  ['tests/toda-core/twist-isolation-multi-line.trdl',                                  'green'],
-
   // todatests/rigging + todatests/reqsat/ed25519-rigs — pre-compiled
   // .toda + .json pairs. Loading these goes through decompile.
   // Colour reflects the sibling .json sidecar.
+  //
+  // tests/toda-abject/* — explicitly excluded. The Rigging Workshop is
+  // for single rigs; abject fixtures (delegation chains, multi-rig
+  // walks) belong in abject-workshop. See abject-workshop.md →
+  // "Tests excluded from rigging-workshop". workshop_bail_check in
+  // app.js refuses abject .toda loads with a clear ABJECT ERROR banner.
   ['todatests/reqsat/ed25519-rigs/twist-chain-with-fields.toda',                        'green'],
   ['todatests/reqsat/ed25519-rigs/twist-isolation-multi-line.toda',                     'green'],
   ['todatests/rigging/1-splice-no-post.toda',                                           'green'],
@@ -552,12 +512,8 @@ const RIGS = [
 ]
 
 function group_label(path) {
-  if (path.startsWith('todatests/')) {
-    let m = path.match(/^todatests\/([^/]+)/)
-    return m ? `todatests/${m[1]}` : 'todatests'
-  }
-  let m = path.match(/^tests\/([^/]+)/)
-  return m ? m[1] : 'other'
+  let m = path.match(/^todatests\/([^/]+)/)
+  return m ? `todatests/${m[1]}` : 'other'
 }
 
 function rig_label(path) {
