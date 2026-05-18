@@ -722,19 +722,34 @@ export async function decompile(buf, name = 'rig') {
   for (let t of env.shapes[TWIST] || []) {
     let body = body_cache.get(t.hash)
     if (!body) continue
-    // (1) prev / teth slots pointing at non-twist atoms
+    // (1) prev / teth slots pointing at non-twist atoms.
     emit_atom_for(body.prev)
     emit_atom_for(body.teth)
-    // (2) hashes inside rigs / cargo pairtrie pair contents.
-    for (let slot of ['rigs', 'carg']) {
-      let h = body[slot]
-      if (!h || is_null(h)) continue
-      let atom = env.index[h]
-      if (!atom || atom.shape !== PAIRTRIE) continue
-      let pairs = read_pairtrie(env, atom)
-      for (let [k, v] of pairs) {
-        emit_atom_for(k)
-        emit_atom_for(v)
+    // (2) hashes inside reqs pairtrie + twist.sats pairtrie content.
+    //     Ed25519 sigs reference pubkey arbs that need explicit atom
+    //     entities or the recompile is missing them and checkers flip.
+    //     Limited to reqs+sats (not rigs/cargo) — rigs/cargo content
+    //     scanning broke valid_kiwano family, separate investigation.
+    let reqs_h = body.reqs
+    if (reqs_h && !is_null(reqs_h)) {
+      let reqs_atom = env.index[reqs_h]
+      if (reqs_atom && reqs_atom.shape === PAIRTRIE) {
+        for (let [k, v] of read_pairtrie(env, reqs_atom)) {
+          emit_atom_for(k); emit_atom_for(v)
+        }
+      }
+    }
+    let twist_atom = env.index[t.hash]
+    if (twist_atom) {
+      let body_h_at = pluck_hash(env.bytes, twist_atom.cfirst)
+      let sats_h_at = pluck_hash(env.bytes, twist_atom.cfirst + body_h_at.len)
+      if (sats_h_at && !is_null(sats_h_at.hex)) {
+        let sats_atom = env.index[sats_h_at.hex]
+        if (sats_atom && sats_atom.shape === PAIRTRIE) {
+          for (let [k, v] of read_pairtrie(env, sats_atom)) {
+            emit_atom_for(k); emit_atom_for(v)
+          }
+        }
       }
     }
   }
