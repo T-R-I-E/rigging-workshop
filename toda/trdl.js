@@ -133,6 +133,40 @@ function collect_twist_overrides(twist_entities) {
     let o  = {}
     if ('prev'  in e) o.prev_id    = ref_to_kw(e.prev)
     if ('teth'  in e) o.tether     = ref_to_kw(e.teth)
+    // reqs override (body.reqs slot). Four forms mirror shld/rigs/cargo:
+    //   "reqs": "null"                            → explicit NULL slot
+    //   "reqs": { "raw": "<hex>", "shape":… }    → verbatim atom
+    //   "reqs": { "hash": "<hex>" }               → literal hash, no atom
+    // Designed-bad reqsat fixtures: cork_reqsat_fail,
+    // lash_succession_reqsat_fail. Without this, the workshop
+    // auto-generates ed25519 req tries and the body.reqs slot diverges.
+    if ('reqs'  in e) {
+      if (e.reqs === 'null') {
+        o.reqs_null = true
+      } else if (e.reqs && typeof e.reqs === 'object') {
+        if ('raw' in e.reqs) {
+          o.reqs_raw   = e.reqs.raw
+          o.reqs_shape = e.reqs.shape || 'pairtrie'
+        } else if ('hash' in e.reqs) {
+          o.reqs_hash = e.reqs.hash
+        }
+      }
+    }
+    // sats override (twist.sats slot — separate from body). Same forms.
+    // sats lives on the twist atom itself, not the body, so it threads
+    // through factory.twist via sat_override (added alongside this).
+    if ('sats'  in e) {
+      if (e.sats === 'null') {
+        o.sats_null = true
+      } else if (e.sats && typeof e.sats === 'object') {
+        if ('raw' in e.sats) {
+          o.sats_raw   = e.sats.raw
+          o.sats_shape = e.sats.shape || 'pairtrie'
+        } else if ('hash' in e.sats) {
+          o.sats_hash = e.sats.hash
+        }
+      }
+    }
     if ('shld'  in e) {
       // Four forms:
       //   "shld": "null"                           → explicit NULL slot
@@ -279,6 +313,25 @@ export function trdl_to_spec(entities) {
         spec.rigs_null = true
       } else if (Object.keys(rig_entries).length) {
         spec.rig = rig_entries
+      }
+      // reqs / sats overrides: propagate raw / hash / null to spec.
+      // The presence of any reqs/sats override implies the workshop's
+      // ed25519 auto-generation should NOT fire for this twist.
+      if (override.reqs_raw) {
+        spec.reqs_raw   = override.reqs_raw
+        spec.reqs_shape = override.reqs_shape || 'pairtrie'
+      } else if (override.reqs_hash) {
+        spec.reqs_hash = override.reqs_hash
+      } else if (override.reqs_null) {
+        spec.reqs_null = true
+      }
+      if (override.sats_raw) {
+        spec.sats_raw   = override.sats_raw
+        spec.sats_shape = override.sats_shape || 'pairtrie'
+      } else if (override.sats_hash) {
+        spec.sats_hash = override.sats_hash
+      } else if (override.sats_null) {
+        spec.sats_null = true
       }
       // Decompile emits shld: 'null' explicitly to mean "no shield" even
       // for fast twists on shielded lines. Distinguish from no-override.

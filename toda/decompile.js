@@ -642,6 +642,49 @@ export async function decompile(buf, name = 'rig') {
           set_override(id, 'rigs', { hash: rigs_h })
         }
       }
+      // reqs (body slot): preserve verbatim. Designed-bad reqsat fixtures
+      // (cork_reqsat_fail, lash_succession_reqsat_fail) have specific
+      // pairtries here that the workshop's ed25519 auto-keygen can't
+      // reproduce. Same encoding family as rigs/cargo/shld.
+      let reqs_h = body?.reqs
+      if (reqs_h && !is_null(reqs_h)) {
+        let reqs_atom = env.index[reqs_h]
+        if (reqs_atom) {
+          let content = env.bytes.subarray(reqs_atom.cfirst, reqs_atom.last + 1)
+          let raw_hex = bytes_to_hex(content)
+          let shape_name = SHAPE_NAMES[reqs_atom.shape] || `0x${reqs_atom.shape.toString(16)}`
+          if (shape_name === 'pairtrie') {
+            set_override(id, 'reqs', { raw: raw_hex })
+          } else {
+            set_override(id, 'reqs', { raw: raw_hex, shape: shape_name })
+          }
+        } else {
+          set_override(id, 'reqs', { hash: reqs_h })
+        }
+      }
+      // sats (twist slot — separate from body). Read the second hash
+      // out of the twist atom's content.
+      let twist_atom = env.index[h]
+      if (twist_atom) {
+        let body_h_at = pluck_hash(env.bytes, twist_atom.cfirst)
+        let sats_h_at = pluck_hash(env.bytes, twist_atom.cfirst + body_h_at.len)
+        let sats_hex = sats_h_at?.hex
+        if (sats_hex && !is_null(sats_hex)) {
+          let sats_atom = env.index[sats_hex]
+          if (sats_atom) {
+            let content = env.bytes.subarray(sats_atom.cfirst, sats_atom.last + 1)
+            let raw_hex = bytes_to_hex(content)
+            let shape_name = SHAPE_NAMES[sats_atom.shape] || `0x${sats_atom.shape.toString(16)}`
+            if (shape_name === 'pairtrie') {
+              set_override(id, 'sats', { raw: raw_hex })
+            } else {
+              set_override(id, 'sats', { raw: raw_hex, shape: shape_name })
+            }
+          } else {
+            set_override(id, 'sats', { hash: sats_hex })
+          }
+        }
+      }
     })
   }
   for (let [id, o] of twist_overrides) out.push({ id, ...o })

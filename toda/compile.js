@@ -144,7 +144,8 @@ async function build_twists(lines) {
     let { id, prev_id, tether, cargo, shield, rig, shield_source,
           poptop, reqsat, line, rigs_raw, rigs_shape, rigs_null,
           rigs_hash, cargo_raw, cargo_shape, shield_raw, shield_shape,
-          shield_hash } = spec
+          shield_hash, reqs_raw, reqs_shape, reqs_hash, reqs_null,
+          sats_raw, sats_shape, sats_hash, sats_null } = spec
 
     let prev_lat
     if (prev_id == null || prev_id === 'null') prev_lat = null
@@ -253,6 +254,29 @@ async function build_twists(lines) {
     let req_lat   = kp ? await req_pairtrie(kp.pub) : null
     let signFn    = kp ? sign_fn(kp.secret) : null
 
+    // reqs override: raw > hash > null > ed25519-derived (above).
+    // Used for designed-bad reqsat fixtures whose body.reqs slot holds
+    // a specific pairtrie that won't be reproduced by ed25519 keygen.
+    if (reqs_raw) {
+      req_lat = await from_packet(SHAPE[reqs_shape] ?? SHAPE.pairtrie, hex_to_bytes(reqs_raw))
+    } else if (reqs_hash) {
+      req_lat = reqs_hash
+    } else if (reqs_null) {
+      req_lat = null
+    }
+
+    // sats override: raw > hash > null > signFn-derived. Lives on the
+    // twist atom (not body); threads through factory.twist via
+    // sat_override which wins over signFn when present.
+    let sat_override
+    if (sats_raw) {
+      sat_override = await from_packet(SHAPE[sats_shape] ?? SHAPE.pairtrie, hex_to_bytes(sats_raw))
+    } else if (sats_hash) {
+      sat_override = sats_hash
+    } else if (sats_null) {
+      sat_override = NULL_HASH
+    }
+
     let twist_lat = await build_twist({
       prev:   prev_lat,
       tether: tether_lat,
@@ -261,6 +285,7 @@ async function build_twists(lines) {
       rig:    rig_lat,
       cargo:  cargo_val,
       signFn,
+      sat_override,
     })
 
     twists.set(id, twist_lat)
