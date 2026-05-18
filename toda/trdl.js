@@ -368,6 +368,18 @@ export function trdl_to_spec(entities) {
     .map(ln => lines_map.get(ln)?.ids.at(-1))
     .filter(Boolean)
 
+  // If the rig declares a focus, ensure that twist's lat is merged
+  // LAST so its twist atom is the last atom of the recompile bundle.
+  // Reorder merge: remove focus_id if present, append it at the end.
+  // If focus_id isn't already in last_ids (e.g., focus is a mid-line
+  // twist, not a line's last), append it anyway so its lat is built
+  // and merged.
+  let focus_id_kw = rig_entity?.focus ? ref_to_kw(rig_entity.focus) : null
+  if (focus_id_kw) {
+    last_ids = last_ids.filter(id => id !== focus_id_kw)
+    last_ids.push(focus_id_kw)
+  }
+
   // Raw atom entities: {"atom":"<hash>", "shape":"arb", "raw":"<hex>"}
   // get registered as standalone atoms in the output bundle, regardless
   // of whether any twist spec references them. Designed-bad rigs whose
@@ -383,6 +395,7 @@ export function trdl_to_spec(entities) {
     lines:  edn_lines,
     atoms,
     output: {
+      focus: focus_id_kw,
       merge:    last_ids,
       exclude:  [],
       // Resolve the corkline ID to the named poptop line when present;

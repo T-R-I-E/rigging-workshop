@@ -383,9 +383,20 @@ export async function decompile(buf, name = 'rig') {
   }
 
   let out = []
-  out.push(corkline_line_name
+  // Identify the rig's focus: the LAST atom of the bundle, which
+  // checkers treat as the rig's anchoring twist. To make rec preserve
+  // checker behavior, the recompile must put this same twist last.
+  // We emit it on the rig entity so trdl_to_spec can route it into
+  // spec.output.focus and compile can arrange the merge accordingly.
+  let last_atom = env.atoms[env.atoms.length - 1]
+  let focus_ref = (last_atom && last_atom.shape === TWIST)
+                    ? hash_to_ref.get(last_atom.hash)
+                    : null
+  let rig_entity = corkline_line_name
     ? { rig: name, poptop: corkline_line_name }
-    : { rig: name })
+    : { rig: name }
+  if (focus_ref) rig_entity.focus = focus_ref
+  out.push(rig_entity)
   for (let { name: ln, twists } of named) {
     let shielded = line_shielded(body_cache, twists)
     // Always emit reqsat:'null'. The default in trdl.js is ed25519, but the
