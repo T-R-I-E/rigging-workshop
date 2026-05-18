@@ -108,10 +108,22 @@ function discover_lines(env, body_cache) {
   // predecessor (since prev_ref !== expected for the new line-first).
   for (let th of twist_hashes) {
     let prev = body_cache.get(th)?.prev
-    if (is_null(prev) || !env.index[prev]) {
+    let prev_atom = env.index[prev]
+    // Treat as genesis when:
+    //   - prev is NULL                       — natural line start
+    //   - prev hash isn't in the bundle      — dangling
+    //   - prev points at a non-twist atom    — designed-bad rig: an
+    //     arb or pairtrie sits where a twist hash should be (the
+    //     cork_prev_invalid_* fixtures). Without this check, env.index
+    //     [prev] is truthy so we'd fall through to succ.set; but
+    //     nothing has prev=arb, so the chain-builder never visits
+    //     this twist → 10+ twists silently dropped.
+    //   - the prev's slot in succ is already taken (conflicting
+    //     successor, see comment above this loop)
+    if (is_null(prev) || !prev_atom || prev_atom.shape !== TWIST) {
       genesis.push(th)
     } else if (succ.has(prev)) {
-      genesis.push(th)         // conflicting successor → new line
+      genesis.push(th)
     } else {
       succ.set(prev, th)
     }
@@ -471,8 +483,22 @@ export async function decompile(buf, name = 'rig') {
       //     override needed; trdl_to_spec computes it by position.
       let prev = body?.prev
       if (!is_null(prev)) {
-        if (!env.index[prev]) {
+        let prev_atom = env.index[prev]
+        if (!prev_atom) {
+          // Dangling — atom not in bundle. Emit literal for line-firsts;
+          // mid-line dangling is unusual but harmless to skip (positional
+          // default ends up referencing the previous twist on the line,
+          // which won't match the original body hash — but at least the
+          // twist isn't dropped).
           if (i === 0) set_override(id, 'prev', prev)
+        } else if (prev_atom.shape !== TWIST) {
+          // prev points at a non-twist atom (designed-bad rig:
+          // cork_prev_invalid_*). Emit the literal hex so compile
+          // writes the same hash into the body slot — the body bytes
+          // match the original even though the referenced atom isn't a
+          // twist. discover_lines already promoted this twist to a
+          // genesis so it gets its own line.
+          set_override(id, 'prev', prev)
         } else {
           let prev_ref = hash_to_ref.get(prev)
           if (prev_ref) {
