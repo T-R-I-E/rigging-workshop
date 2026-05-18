@@ -273,36 +273,31 @@ fixture. Verdict `PERFECT` requires both checker-eq AND shape-eq.
 | 2026-05-17 (raw atom entities + hash tiebreak) | 33 / 68 | 27 | 8 | +4 shape-eq |
 | 2026-05-17 (shld raw + hash forms — ext #2) | 33 / 68 | 29 | 6 | +2 shape-eq |
 | 2026-05-17 (rigs:{hash} form) | 35 / 68 | 29 | 4 | +2 perfect |
-| 2026-05-17 (ext #4 reqs/sats + targeted atom scan) | **37 / 68** | 29 | **2** | +2 perfect |
+| 2026-05-17 (ext #4 reqs/sats + targeted atom scan) | 37 / 68 | 29 | 2 | +2 perfect |
+| 2026-05-17 (prepend atoms + rigs scan) | 37 / 68 | 30 | **1** | +1 shape-eq |
 
 **64 / 68 fixtures (94%) now have matching SHAPE.** 35/68 are PERFECT
 (shape + all four checkers agree across orig vs rec).
 
 ### Two remaining NEQ — categorized
 
-- **post-rig edge (1)**: `post_rigging_missing_post_key`. The
-  fixture's rigs pairtrie's key references a non-twist atom (the
-  "missing post key"). An earlier attempt to emit atom entities by
-  scanning rigs pairtrie contents broke the 6 valid_kiwano variants
-  (their rigs pairtries reference position-arbs that the checkers
-  evidently treat asymmetrically). The kiwano interaction needs to
-  be understood before we re-enable rigs/cargo pairtrie scanning;
-  for now this fixture stays SHAPE NEQ.
+### Kiwano paradox — resolved 2026-05-17
 
-  **Kiwano paradox** (investigated 2026-05-17, not resolved): the
-  6 `valid_kiwano*` fixtures each have cargo pairtries with pair
-  entries like `[arb["Unique"], arb["t0"]]` — bare position labels.
-  In the *original* bundle these arbs sit at byte positions 1755+
-  (after some twists/bodies/pairtries). In the *recompile without
-  atom entities*, these arbs are missing entirely. Both states get
-  `ok` from js/clj/rust. **Adding the arbs via atom entities** (so
-  they sit at the *end* of the rec byte stream) flips js/clj/rust
-  to `bad`. So the asymmetry isn't "checker needs the atoms" —
-  it's "adding atoms in this specific position breaks the rig".
-  Hypothesis: some checker walks atoms in byte order during a
-  topline-validity step and bails on extra trailing structure;
-  needs deeper inspection of the checker code paths (look at
-  what `js: ok → bad` actually throws). Out of scope this turn.
+The 6 `valid_kiwano*` fixtures (and the orphan-body experiment) flipped
+to bad-on-rec whenever atom entities were appended to the bundle.
+Cause: **the last atom of a .toda bundle is the rig's focus**, and
+several rig-checkers depend on that. Appending atom entities at the
+end via `build_atoms` shifted the focus off.
+
+Fix: `compile.js#build` now merges atom entities at the BEGINNING of
+out_lat instead of the end. Existing last-atom (the merge's final
+twist) stays last; extras are interleaved at the head of the byte
+stream where they don't disturb the focus.
+
+Also re-enabled the **rigs / reqs / sats** pairtrie content scan
+(cargo intentionally skipped per the workshop's stance that cargo
+isn't a rig-checking concern). Unlocked `post_rigging_missing_post_key`
+to SHAPE EQ.
 - **layout degeneracy (1)**: `conflicting_successors`. Orig has
   twists stacked at (x=0,y=1) because plonk_twists can't place them;
   rec separates them onto distinct lines. The fix's structural change
