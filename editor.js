@@ -752,4 +752,11 @@ if (rc_el) {
 }
 
 render_rigs_list()
-schedule_build()                                // initial build of the starter doc
+// On first load, select the spec's appendix B example. Sets active_rig
+// so arrow-key navigation works, loads the sidecar metadata, and seeds
+// the editor with the decompiled TRDL. The fetch is synchronous from
+// the user's perspective (single round-trip to localhost).
+load_rig('todatests/rigging/example_rig_from_spec.toda').catch(e => {
+  console.warn('initial example load failed; falling back to inline STARTER doc', e)
+  schedule_build()
+})
