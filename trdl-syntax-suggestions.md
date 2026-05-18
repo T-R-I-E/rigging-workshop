@@ -272,18 +272,22 @@ fixture. Verdict `PERFECT` requires both checker-eq AND shape-eq.
 | 2026-05-17 (conflicting-prev + prev-non-twist) | 33 / 68 | 23 | **12** | +1 shape-eq |
 | 2026-05-17 (raw atom entities + hash tiebreak) | 33 / 68 | 27 | 8 | +4 shape-eq |
 | 2026-05-17 (shld raw + hash forms — ext #2) | 33 / 68 | 29 | 6 | +2 shape-eq |
-| 2026-05-17 (rigs:{hash} form) | **35 / 68** | 29 | **4** | +2 perfect |
+| 2026-05-17 (rigs:{hash} form) | 35 / 68 | 29 | 4 | +2 perfect |
+| 2026-05-17 (ext #4 reqs/sats + targeted atom scan) | **37 / 68** | 29 | **2** | +2 perfect |
 
 **64 / 68 fixtures (94%) now have matching SHAPE.** 35/68 are PERFECT
 (shape + all four checkers agree across orig vs rec).
 
-### Four remaining NEQ — categorized
+### Two remaining NEQ — categorized
 
-- **reqsat fixtures (2)**: `cork_reqsat_fail`,
-  `lash_succession_reqsat_fail`. Need extension #4
-  (reqs/sats override).
-- **post-rig edge (1)**: `post_rigging_missing_post_key`
-  (char 1435 — single edge). Needs investigation.
+- **post-rig edge (1)**: `post_rigging_missing_post_key`. The
+  fixture's rigs pairtrie's key references a non-twist atom (the
+  "missing post key"). An earlier attempt to emit atom entities by
+  scanning rigs pairtrie contents broke the 6 valid_kiwano variants
+  (their rigs pairtries reference position-arbs that the checkers
+  evidently treat asymmetrically). The kiwano interaction needs to
+  be understood before we re-enable rigs/cargo pairtrie scanning;
+  for now this fixture stays SHAPE NEQ.
 - **layout degeneracy (1)**: `conflicting_successors`. Orig has
   twists stacked at (x=0,y=1) because plonk_twists can't place them;
   rec separates them onto distinct lines. The fix's structural change
