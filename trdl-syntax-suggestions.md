@@ -272,6 +272,12 @@ fixture. Verdict `PERFECT` requires both checker-eq AND shape-eq.
 | 2026-05-17 (rigs-raw + mid-line cargo) | 18 / 68 | 17 | 33 | +5 perfect |
 | 2026-05-17 (cargo-raw for non-arb) | **33 / 68** | 22 | **13** | +15 perfect |
 | 2026-05-17 (conflicting-prev + prev-non-twist) | 33 / 68 | 23 | **12** | +1 shape-eq |
+| 2026-05-17 (raw atom entities + hash tiebreak) | 33 / 68 | **27** | **8**  | +4 shape-eq |
+
+**60 / 68 fixtures (88%) now have matching SHAPE.** Remaining work
+to close the gap to PERFECT is mostly checker-stability — same shape
+but different checker verdict due to non-structural bytes (random
+shields, random ed25519 sigs, etc.) that shift what the checkers see.
 
 The shape-eq-but-checker-diverge bucket grew from 9 → 22 over these
 changes: the recompile produces a structurally-equivalent rig
@@ -298,15 +304,23 @@ override makes the body bytes match, but the referenced atom itself
 isn't carried into the rec bundle. Shape extractor's prev-walk
 therefore can't reach the atom in rec → layout differs.
 
-**Proposed extension #8 — raw atom entities:**
+**Extension #8 — raw atom entities (landed 2026-05-17):**
 ```jsonl
 {"atom": "<hash-hex>", "shape": "arb", "raw": "<bytes-hex>"}
 ```
 Standalone TRDL line that synthesizes the named atom into the
 output bundle. Compile registers it in the global lat regardless of
-whether any spec.lines twist references it. Lets designed-bad rigs
-preserve "orphan" atoms (referenced only by body slots via literal
-hex) through the roundtrip.
+whether any spec.lines twist references it. Implemented in
+toda/{trdl,compile,decompile}.js. Decompile emits one per unique
+non-twist atom referenced by a body's prev/teth slot (which are the
+only slots without their own dedicated raw-form override).
+
+Unlocked: `cork_prev_invalid_green`, `cork_prev_invalid_red`,
+`lashed_non_colinear` flipped to SHAPE EQ. `conflicting_successors`
+remains NEQ for a different reason (layout-degeneracy: orig has
+twists stacked at x=0 because plonk_twists couldn't place them;
+rec separates them onto distinct lines — structurally cleaner but
+visibly different).
 
 **chars 71–2004 — single-edge differences (6 fixtures):**
 `lead_shield_non_arb` (71), `lash_succession_reqsat_fail` (114),
