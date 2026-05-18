@@ -362,52 +362,15 @@ document.getElementById('url-input').addEventListener('keydown', e => {
 
 // --- examples panel ---------------------------------------------------------
 
-// Each entry: [trdl_url, colour, json_url?]. trdl_url is relative to the
-// workshop root. json_url override is rare; the loader otherwise falls back
-// to the sibling .json (same path, .trdl → .json) — so anything under
-// tests/<subdir>/ that ships a paired descriptor lights up automatically.
+// Each entry: [path, colour, json_url?]. path is relative to the workshop
+// root; loader fetches the sibling .json sidecar (same path, .trdl →
+// .json or .toda → .json) for moniker / corkline / canonical colour.
 //
-// Workshop rigs (rigs/*.trdl) are the unshielded twist-maker examples and
-// have no canonical .json in the codebase; their colours are heuristic
-// guesses. Test rigs (tests/<subdir>/*.trdl) come paired with a .json that
-// declares the canonical expected colour.
+// Workshop rigs that used to live as bare rigs/*.trdl (with no sidecar)
+// are now imported into todatests/rigging/ as .toda + .json pairs.
+// Open those instead — decompile populates the editor with the
+// reconstructed TRDL, which can then be edited and recompiled.
 const RIGS = [
-  ['rigs/1-splice-no-post.trdl',                                                       'green'],
-  ['rigs/2-right-fast-first.trdl',                                                     'green'],
-  ['rigs/3-normally-expected-splice.trdl',                                             'green'],
-  ['rigs/4-lash-left-non-overlap-null.trdl',                                           'green'],
-  ['rigs/5-lash-left-non-overlap-missing.trdl',                                        'yellow'],
-  ['rigs/6-lash-right-non-overlap.trdl',                                               'green'],
-  ['rigs/7-corkline-self-tether.trdl',                                                 'green'],
-  ['rigs/8-splice-on-mutual-tether.trdl',                                              'green'],
-  ['rigs/9-leadline-equivocal-from-corkline.trdl',                                     'red'],
-  ['rigs/10-leadline-has-corkline-predecessor.trdl',                                   'green'],
-  ['rigs/11-bottom-fastener-not-fast.trdl',                                            'red'],
-  ['rigs/12-bottom-hoist-not-fast.trdl',                                               'red'],
-  ['rigs/13-bottom-corkline-top-leadline.trdl',                                        'green'],
-  ['rigs/14-bottom-corkline-shorter-than-top-leadline-both-sides.trdl',                'green'],
-  ['rigs/15-splicing-hitches-with-identical-toplines.trdl',                            'green'],
-  ['rigs/16-lashing-2-hitches-to-15.trdl',                                             'green'],
-  ['rigs/17-lashing-2-non-consecutive-hitches-to-15.trdl',                             'green'],
-  ['rigs/18-lashing-to-2-hitch-splice-with-missing-right-hoist.trdl',                  'yellow'],
-  // 19, 20: spec graph is circular (interlocking lashings). Both the JS
-  // compiler and the Clojure server reject these as "Circular dependency
-  // in twist specs", so they never even reach rig-check.
-  ['rigs/19-fast-line-multiply-lashed-up-to-slow-line.trdl',                           'yellow'],
-  ['rigs/20-slow-line-lashed-up-to-fast-line.trdl',                                    'yellow'],
-  ['rigs/21-direct-tether-spliced-to-indirect-tether.trdl',                            'green'],
-  ['rigs/22-indirect-tether-spliced-to-direct-tether.trdl',                            'yellow'],
-  ['rigs/23-indirect-tether-spliced-to-direct-tether-bad-post.trdl',                   'red'],
-  ['rigs/24-direct-tether-spliced-to-indirect-tether-bad-post.trdl',                   'red'],
-  ['rigs/25-lashed-rigs-spliced-for-maximal-time-crossing.trdl',                       'yellow'],
-  ['rigs/26-like-above-back-and-forth.trdl',                                           'red'],
-  ['rigs/27-intermediate-lines-change-tether-direction-via-corkline.trdl',             'green'],
-  ['rigs/28-intermediate-lines-change-tether-direction-via-new-line.trdl',             'green'],
-  ['rigs/29-intermediate-lines-change-tether-direction-via-tether-loop.trdl',          'green'],
-  ['rigs/29a-attempt-to-trigger-false-positive-on-tether-loop-detection.trdl',         'green'],
-  ['rigs/30-example-rig-from-spec.trdl',                                               'green'],
-  ['rigs/31-irrelevent-tether-loop-after-corkline-reached.trdl',                       'green'],
-
   ['tests/test-suite/complex-rig-21-direct-to-indirect-tether.trdl',                   'green'],
   ['tests/test-suite/complex-rig-22-indirect-to-direct-tether.trdl',                   'yellow'],
   ['tests/test-suite/complex-rig-25-lashed-maximal-time-crossing.trdl',                'yellow'],
@@ -589,7 +552,6 @@ const RIGS = [
 ]
 
 function group_label(path) {
-  if (path.startsWith('rigs/'))      return 'workshop'
   if (path.startsWith('todatests/')) {
     let m = path.match(/^todatests\/([^/]+)/)
     return m ? `todatests/${m[1]}` : 'todatests'
