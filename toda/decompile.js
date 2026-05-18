@@ -97,14 +97,24 @@ function discover_lines(env, body_cache) {
   let twist_hashes = (env.shapes[TWIST] || []).map(t => t.hash)
   let succ = new Map()
   let genesis = []
+  // Conflicting-successors handling: designed-bad rigs (e.g. the
+  // conflicting_successors fixture) intentionally have two twists
+  // claiming the same predecessor. last-write-wins in succ.set
+  // would silently drop one of them (it isn't a genesis — its prev
+  // IS in env.index — so it ends up in no line). To preserve every
+  // twist, promote the second-encountered conflicting successor to
+  // its own line genesis. The per-twist override loop downstream
+  // will then emit a prev override pointing at the contested
+  // predecessor (since prev_ref !== expected for the new line-first).
   for (let th of twist_hashes) {
     let prev = body_cache.get(th)?.prev
-    // A line starts when prev is null OR when prev points to a hash that
-    // isn't in this file (dangling — the rig lives downstream of a larger
-    // graph). Without the dangling case, files whose every twist links
-    // upstream produce zero lines and an empty TRDL.
-    if (is_null(prev) || !env.index[prev]) genesis.push(th)
-    else succ.set(prev, th)
+    if (is_null(prev) || !env.index[prev]) {
+      genesis.push(th)
+    } else if (succ.has(prev)) {
+      genesis.push(th)         // conflicting successor → new line
+    } else {
+      succ.set(prev, th)
+    }
   }
   return genesis.map(g => {
     let chain = [g], cur = g
