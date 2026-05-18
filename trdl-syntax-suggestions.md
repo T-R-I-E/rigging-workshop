@@ -274,7 +274,8 @@ fixture. Verdict `PERFECT` requires both checker-eq AND shape-eq.
 | 2026-05-17 (shld raw + hash forms — ext #2) | 33 / 68 | 29 | 6 | +2 shape-eq |
 | 2026-05-17 (rigs:{hash} form) | 35 / 68 | 29 | 4 | +2 perfect |
 | 2026-05-17 (ext #4 reqs/sats + targeted atom scan) | 37 / 68 | 29 | 2 | +2 perfect |
-| 2026-05-17 (prepend atoms + rigs scan) | 37 / 68 | 30 | **1** | +1 shape-eq |
+| 2026-05-17 (prepend atoms + rigs scan) | 37 / 68 | 30 | 1 | +1 shape-eq |
+| 2026-05-18 (focus field + orphan bodies) | **43 / 68** | 23 | 2 | +6 perfect |
 
 **64 / 68 fixtures (94%) now have matching SHAPE.** 35/68 are PERFECT
 (shape + all four checkers agree across orig vs rec).
