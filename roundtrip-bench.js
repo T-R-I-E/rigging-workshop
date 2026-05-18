@@ -126,6 +126,7 @@ const FIXTURES = [
   'todatests/rigging/splice_mismatch.toda',
   'todatests/rigging/terminating_half_hitches_on_corkline.toda',
   'todatests/rigging/tether_loop.toda',
+  'todatests/rigging/topline_rigs_non_trie.toda',
   'todatests/rigging/unit_rig.toda',
   'todatests/rigging/unit_rig_multi.toda',
   'todatests/rigging/valid_kiwano.toda',
