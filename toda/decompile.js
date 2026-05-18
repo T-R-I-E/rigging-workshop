@@ -719,14 +719,26 @@ export async function decompile(buf, name = 'rig') {
     let raw_hex = bytes_to_hex(env.bytes.subarray(atom.cfirst, atom.last + 1))
     out.push({ atom: h, shape: shape_name, raw: raw_hex })
   }
-  // Orphan-body emission: some imPERFECT fixtures have body atoms in
-  // orig that no twist references (hh_tether_missing, hh_wrong_hoist_values
-  // etc. — bodies for "what the missing twist's body would have been").
-  // Emitting atom entities for these makes the rec atom-count match
-  // orig, BUT flips 3 hh_valid_* rigs from ok→bad on js/clj/rust.
-  // Same pattern as the kiwano paradox: adding atoms to rec at the
-  // tail of out_lat changes checker behavior. Disabled for now until
-  // byte-order sensitivity is understood.
+  // Orphan-body emission: some imPERFECT fixtures (hh_tether_missing,
+  // hh_wrong_hoist_values, ...) have body atoms in orig that no twist
+  // references — likely the bodies of "missing" twists referenced by
+  // hash from elsewhere (e.g., as a hitch's fastener). Now that atom
+  // entities prepend at the head of out_lat (preserving the last-atom
+  // focus invariant), it's safe to re-enable. Build a set of body
+  // hashes that ARE referenced by a twist; emit atom entities for
+  // the rest.
+  let referenced_bodies = new Set()
+  for (let t of env.shapes[TWIST] || []) {
+    let body_h = pluck_hash(env.bytes, t.cfirst)
+    if (body_h) referenced_bodies.add(body_h.hex)
+  }
+  for (let body_atom of env.shapes[BODY] || []) {
+    if (referenced_bodies.has(body_atom.hash)) continue
+    if (seen_atoms.has(body_atom.hash)) continue
+    seen_atoms.add(body_atom.hash)
+    let raw_hex = bytes_to_hex(env.bytes.subarray(body_atom.cfirst, body_atom.last + 1))
+    out.push({ atom: body_atom.hash, shape: 'body', raw: raw_hex })
+  }
   for (let t of env.shapes[TWIST] || []) {
     let body = body_cache.get(t.hash)
     if (!body) continue
