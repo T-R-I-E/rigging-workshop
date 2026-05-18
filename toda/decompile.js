@@ -689,34 +689,24 @@ export async function decompile(buf, name = 'rig') {
   }
   for (let [id, o] of twist_overrides) out.push({ id, ...o })
 
-  // Raw atom entities: scan every twist's body for slots that point at
-  // a non-twist atom in the bundle. Emit one {atom, shape, raw} entity
-  // per such atom so compile.js synthesizes them into the rec bundle.
+  // Raw atom entities: emit one {atom, shape, raw} for every non-twist
+  // non-body atom in env. This is broader than strictly necessary —
+  // shield arbs, rigs pairtries, and cargo atoms are already rebuilt
+  // by their dedicated overrides — but it catches references hiding
+  // inside pairtrie / hashlist content bytes (post-rig keys pointing
+  // at out-of-line atoms; designed-bad references). Compile's out_lat
+  // is a hash-keyed Map so duplicates collapse automatically.
   //
-  // Without this, designed-bad rigs like cork_prev_invalid_* have a
-  // body.prev hash whose referent isn't a twist; the literal-hex prev
-  // override gets the body bytes right but the arb atom itself isn't
-  // pulled in by the lat-merging path, so the rec is missing it.
-  // shape-extractor's prev-walk then can't reach the same atom in rec
-  // → SHAPE NEQ even with matching twist counts.
-  //
-  // Scope: prev and teth slots only. Shld / rigs / cargo already have
-  // dedicated raw-form overrides that pull the atom in.
+  // Skipped: twist atoms (focuses of named twist lats),
+  //          body atoms (part of each twist's lat naturally).
   let seen_atoms = new Set()
-  for (let t of env.shapes[TWIST] || []) {
-    let body = body_cache.get(t.hash)
-    if (!body) continue
-    for (let slot of ['prev', 'teth']) {
-      let h = body[slot]
-      if (!h || is_null(h)) continue
-      let atom = env.index[h]
-      if (!atom || atom.shape === TWIST) continue
-      if (seen_atoms.has(h)) continue
-      seen_atoms.add(h)
-      let shape_name = SHAPE_NAMES[atom.shape] || `0x${atom.shape.toString(16)}`
-      let raw_hex = bytes_to_hex(env.bytes.subarray(atom.cfirst, atom.last + 1))
-      out.push({ atom: h, shape: shape_name, raw: raw_hex })
-    }
+  for (let atom of env.atoms || []) {
+    if (atom.shape === TWIST || atom.shape === BODY) continue
+    if (seen_atoms.has(atom.hash)) continue
+    seen_atoms.add(atom.hash)
+    let shape_name = SHAPE_NAMES[atom.shape] || `0x${atom.shape.toString(16)}`
+    let raw_hex = bytes_to_hex(env.bytes.subarray(atom.cfirst, atom.last + 1))
+    out.push({ atom: atom.hash, shape: shape_name, raw: raw_hex })
   }
   return out
 }
