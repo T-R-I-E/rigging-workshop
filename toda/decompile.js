@@ -589,10 +589,24 @@ export async function decompile(buf, name = 'rig') {
       if (!shld_hash || is_null(shld_hash)) {
         set_override(id, 'shld', 'null')
       } else {
-        let arb_atom = env.index[shld_hash]
-        if (arb_atom && arb_atom.shape === ARB) {
-          let arb_bytes = env.bytes.subarray(arb_atom.cfirst, arb_atom.last + 1)
+        let shld_atom = env.index[shld_hash]
+        if (shld_atom && shld_atom.shape === ARB) {
+          let arb_bytes = env.bytes.subarray(shld_atom.cfirst, shld_atom.last + 1)
           set_override(id, 'shld', bytes_to_hex(arb_bytes))
+        } else if (shld_atom) {
+          // Non-arb shield atom (designed-bad: lead_shield_non_arb).
+          // Emit raw form so compile recreates the exact shape.
+          let content = env.bytes.subarray(shld_atom.cfirst, shld_atom.last + 1)
+          let raw_hex = bytes_to_hex(content)
+          let shape_name = SHAPE_NAMES[shld_atom.shape] || `0x${shld_atom.shape.toString(16)}`
+          set_override(id, 'shld', { raw: raw_hex, shape: shape_name })
+        } else {
+          // Out-of-bundle shld hash (designed-bad: missing_shield).
+          // Emit literal hash form so compile writes the hex into the
+          // body slot verbatim, without synthesizing an arb. The body
+          // bytes then match the original; the referenced atom remains
+          // genuinely missing from the bundle (same as orig).
+          set_override(id, 'shld', { hash: shld_hash })
         }
       }
       // Rigs: emit raw override whenever body.rigs is non-null. The

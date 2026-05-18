@@ -133,7 +133,27 @@ function collect_twist_overrides(twist_entities) {
     let o  = {}
     if ('prev'  in e) o.prev_id    = ref_to_kw(e.prev)
     if ('teth'  in e) o.tether     = ref_to_kw(e.teth)
-    if ('shld'  in e) o.shield     = e.shld
+    if ('shld'  in e) {
+      // Four forms:
+      //   "shld": "null"                           → explicit NULL slot
+      //   "shld": { "raw": "<hex>", "shape":… }   → verbatim non-arb atom
+      //   "shld": { "hash": "<hex>" }              → literal hash, no atom
+      //                                              (out-of-bundle shield)
+      //   "shld": "<arb-bytes-hex>"                → arb form (legacy)
+      // raw / hash forms preserve designed-bad shield references:
+      //   raw  → lead_shield_non_arb (body.shld points at a non-arb atom)
+      //   hash → missing_shield (body.shld hash not present in bundle)
+      if (e.shld && typeof e.shld === 'object') {
+        if ('raw' in e.shld) {
+          o.shield_raw   = e.shld.raw
+          o.shield_shape = e.shld.shape || 'arb'
+        } else if ('hash' in e.shld) {
+          o.shield_hash = e.shld.hash
+        }
+      } else {
+        o.shield = e.shld
+      }
+    }
     if ('cargo' in e) {
       // Three forms (matching rigs):
       //   "cargo": "null"                          → explicit NULL slot
@@ -251,10 +271,19 @@ export function trdl_to_spec(entities) {
       }
       // Decompile emits shld: 'null' explicitly to mean "no shield" even
       // for fast twists on shielded lines. Distinguish from no-override.
-      let hasShieldOverride = 'shield' in override
-      if (hasShieldOverride && override.shield && override.shield !== 'null') {
+      // shld raw form (override.shield_raw) wins over both null and arb;
+      // used for designed-bad shield-shape fixtures.
+      let hasShieldOverride     = 'shield' in override
+      let hasShieldRawOverride  = 'shield_raw' in override
+      let hasShieldHashOverride = 'shield_hash' in override
+      if (hasShieldRawOverride) {
+        spec.shield_raw   = override.shield_raw
+        spec.shield_shape = override.shield_shape || 'arb'
+      } else if (hasShieldHashOverride) {
+        spec.shield_hash = override.shield_hash
+      } else if (hasShieldOverride && override.shield && override.shield !== 'null') {
         spec.shield = override.shield
-      } else if (!hasShieldOverride && shield_hex) {
+      } else if (!hasShieldOverride && !hasShieldHashOverride && shield_hex) {
         spec.shield = shield_hex
       }
       if (shield_src)           spec.shield_source = shield_src

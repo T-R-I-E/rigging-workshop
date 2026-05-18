@@ -143,7 +143,8 @@ async function build_twists(lines) {
   for (let spec of sorted) {
     let { id, prev_id, tether, cargo, shield, rig, shield_source,
           poptop, reqsat, line, rigs_raw, rigs_shape, rigs_null,
-          cargo_raw, cargo_shape } = spec
+          cargo_raw, cargo_shape, shield_raw, shield_shape,
+          shield_hash } = spec
 
     let prev_lat
     if (prev_id == null || prev_id === 'null') prev_lat = null
@@ -180,7 +181,21 @@ async function build_twists(lines) {
     else if (twists.has(tether))                            tether_lat = twists.get(tether)
     else if (/^(41|22)[0-9a-f]{64}$/i.test(tether))         tether_lat = tether
     else                                                    tether_lat = null
-    let shield_lat   = shield ? await arb(hex_to_bytes(shield)) : null
+    // shield: precedence raw > hash > arb-bytes > null. Used for
+    // designed-bad shield shapes (raw: lead_shield_non_arb) and for
+    // shields whose target atom isn't in the bundle (hash:
+    // missing_shield — body slot holds the hex, no atom synthesized).
+    let shield_lat
+    if (shield_raw) {
+      let shape_byte = SHAPE[shield_shape] ?? SHAPE.arb
+      shield_lat = await from_packet(shape_byte, hex_to_bytes(shield_raw))
+    } else if (shield_hash) {
+      shield_lat = shield_hash  // pass-through hex; factory writes verbatim
+    } else if (shield) {
+      shield_lat = await arb(hex_to_bytes(shield))
+    } else {
+      shield_lat = null
+    }
     let poptop_lat   = poptop ? twists.get(poptop) || null : null
     // Cargo encodings (from decompile, see toda/decompile.js):
     //   'null'        → explicitly no cargo (body.carg = NULL)
