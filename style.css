@@ -713,6 +713,13 @@ body {
   padding: 8px 12px;
   background: #fff;
   height: 100%;
+  /* When a row's content is wider than the panel, the panel-body
+     scrolls horizontally. min-width: max-content lets the .hex itself
+     grow to the widest row's intrinsic width so every row's background
+     extends across the full scrollable area — without this, the row
+     stops at the original viewport edge and the .select / .hover /
+     .issue tints look truncated when the user scrolls right. */
+  min-width: max-content;
 }
 .hex .atom {
   display: grid;
@@ -753,8 +760,25 @@ body {
 .hex .b-tag  { color: oklch(0.45 0.13 295); font-weight: 500; }
 .hex .b-len  { color: oklch(0.55 0.13 35); }
 .hex .b-content { color: var(--ink); }
-.hex .b-content.trie { background: var(--hl-a3); border-radius: 2px; padding: 0 2px; }
+/* Pairtrie content used to inherit the lime --hl-a3 tint, which read
+   as a 'green = ok' signal even on broken rigs. Switched to a soft
+   lavender that matches the kiwanoed view's pairtrie left-rule colour
+   (oklch hue 295) so the visual cue is 'this is a trie' without
+   colliding with the checker's green. */
+.hex .b-content.trie { background: oklch(0.93 0.05 295); border-radius: 2px; padding: 0 2px; }
 .hex .empty { color: var(--ink-3); padding: 12px; }
+
+/* Focused-twist panel (Workshop column). Reuses the kiwanoed atom
+   card styling — the inner .hex.kiwanoed gives every nested atom
+   the same shape-tinted left rule and field layout as the full
+   hex pane. Capped height so a fat body doesn't push the rig-check
+   panel off-screen; scrolls inside if it overflows. */
+.focus-panel {
+  max-height: 260px;
+  overflow: auto;
+  padding: 4px 0;
+  background: var(--panel);
+}
 
 /* ---------- kiwanoed hex view ---------- */
 /* Shape-aware multi-line atom blocks. Atom = small panel: a header line

@@ -488,9 +488,62 @@ document.addEventListener('workshop:hover', e => paint('hover', e.detail.hashes)
 document.addEventListener('workshop:select', e => {
   _last_select = e.detail.hashes || []
   paint('select', _last_select)
+  render_focus(_last_select)
 })
 
-document.addEventListener('workshop:rendered', e => render_hex(e.detail))
+document.addEventListener('workshop:rendered', e => {
+  render_hex(e.detail)
+  // Repaint the focus panel against the new env, since rendered
+  // env changes invalidate the previously-cached _names. The current
+  // selection (if any) gets re-rendered against the new atoms.
+  render_focus(_last_select)
+})
+
+// Render a clone of the kiwanoed atom card for the first selected
+// hash that resolves to an atom in the current env. Also follows the
+// twist's body slot so the user sees both the twist atom and its
+// referenced body together. Hidden when nothing is selected or when
+// the selection doesn't match any atom in this rig.
+function render_focus(hashes) {
+  let section = document.getElementById('focus-section')
+  let panel = document.getElementById('focus-panel')
+  let label = document.getElementById('focus-label')
+  if (!section || !panel || !_last_env) return
+  let names = compute_names(_last_env)
+  // Pick the first hash that matches an atom; prefer twists when
+  // multiple hashes are present.
+  let target_atom = null
+  if (hashes) {
+    let by_hash = new Map(_last_env.atoms.map(a => [a.hash, a]))
+    for (let h of hashes) {
+      let a = by_hash.get(h)
+      if (a?.shape === TWIST) { target_atom = a; break }
+    }
+    if (!target_atom) {
+      for (let h of hashes) {
+        let a = by_hash.get(h)
+        if (a) { target_atom = a; break }
+      }
+    }
+  }
+  if (!target_atom) {
+    section.hidden = true
+    panel.innerHTML = ''
+    label.textContent = ''
+    return
+  }
+  // For a twist, also render its body atom alongside.
+  let parts = [render_atom_kiwanoed(_last_env, target_atom, names)]
+  if (target_atom.shape === TWIST) {
+    let body_h = pluck_slot(_last_env.buff, target_atom.bin.cfirst)
+    let by_hash = new Map(_last_env.atoms.map(a => [a.hash, a]))
+    let body_atom = by_hash.get(body_h)
+    if (body_atom) parts.push(render_atom_kiwanoed(_last_env, body_atom, names))
+  }
+  panel.innerHTML = parts.join('')
+  label.textContent = names.get(target_atom.hash) || ''
+  section.hidden = false
+}
 
 // ---- View toggle ----
 // Wired to the .hex-toggle buttons in the panel header. Persists the choice
