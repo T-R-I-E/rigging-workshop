@@ -57,7 +57,7 @@
   explicit `.rig-check.ok` carries the green styling. The in-progress
   CHECK state no longer reads as green.
 - **clj / bb checkers point at the CloudFront HTTPS endpoint**
-  (`d3myckc3w6ekfv.cloudfront.net/rigcheck-clj` and `…/rigcheck-bb`,
+  (`d2ttoitg64tuy9.cloudfront.net/rigcheck-clj` and `…/rigcheck-bb`,
   fronting the deployed ALB).
   Localhost URLs commented next to them as the offline-dev fallback.
 - **Compile fix**: `expand_hitches` no longer emits `{lead: null}` as a

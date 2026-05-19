@@ -180,8 +180,8 @@ const RIGS = [
   'todatests/rigging/valid_kiwano_f5.toda',
 ]
 
-const CLJ_URL = 'https://d3myckc3w6ekfv.cloudfront.net/rigcheck-clj'
-const BB_URL  = 'https://d3myckc3w6ekfv.cloudfront.net/rigcheck-bb'
+const CLJ_URL = 'https://d2ttoitg64tuy9.cloudfront.net/rigcheck-clj'
+const BB_URL  = 'https://d2ttoitg64tuy9.cloudfront.net/rigcheck-bb'
 const CHECKER_TIMEOUT_MS = 10000
 
 // ----------------------------------------------------------------------------

@@ -450,6 +450,7 @@ function notify_rendered(env) {
             window.workshop.corkline_source = 'auto'
         }
     }
+    apply_cork_dom()
     // Restore prior click-selection by hash; falls back to env.focus when
     // none of the previously-selected hashes are in this render.
     let still = _selected_hashes.filter(h => el(h))
@@ -553,6 +554,7 @@ if(vp) {
             if (e.shiftKey) {
                 window.workshop.corkline = e.target.id
                 window.workshop.corkline_source = 'user'
+                apply_cork_dom()
                 // Re-run rig-check on the current focus against the new cork.
                 let focus = _selected_hashes[0] || env.focus?.hash
                 if (focus) show_abject_info(focus)
@@ -611,6 +613,18 @@ function expand_segment(seg) {
     if(focus) el(focus)?.classList.add('focus')
     scroll_to(vx, vy)
     select_node(seg.first.hash)
+}
+
+// Apply the .cork CSS class to whichever twist circle matches the
+// current window.workshop.corkline. Called after a render, after a
+// shift-click override, and any other time the cork hash changes. The
+// class is independent of .select / .highlight / .focus so the user
+// can see all four states at once.
+function apply_cork_dom() {
+    if (!vp) return
+    vp.querySelectorAll('.cork').forEach(c => c.classList.remove('cork'))
+    let cork = window.workshop?.corkline
+    if (cork) el(cork)?.classList.add('cork')
 }
 
 // Apply .select to the given hashes (clearing any previous selection).
@@ -785,13 +799,13 @@ const CHECKERS = [
         id: 'clj',
         label: 'clj · toda-rig-checker',
         // async run(ctx) { return server_check(ctx, 'http://localhost:7878/rigcheck') },
-        async run(ctx) { return server_check(ctx, 'https://d3myckc3w6ekfv.cloudfront.net/rigcheck-clj') },
+        async run(ctx) { return server_check(ctx, 'https://d2ttoitg64tuy9.cloudfront.net/rigcheck-clj') },
     },
     {
         id: 'bb',
         label: 'clj · toda-bb',
         // async run(ctx) { return server_check(ctx, 'http://localhost:7879/rigcheck-bb') },
-        async run(ctx) { return server_check(ctx, 'https://d3myckc3w6ekfv.cloudfront.net/rigcheck-bb') },
+        async run(ctx) { return server_check(ctx, 'https://d2ttoitg64tuy9.cloudfront.net/rigcheck-bb') },
     },
     {
         id: 'rust',
