@@ -271,6 +271,10 @@ body {
    hex pane). Hover is transient (warm-amber tint). */
 .editor-host .cm-line.cm-hl-select { background: var(--accent-soft); box-shadow: inset 2px 0 0 var(--accent); }
 .editor-host .cm-line.cm-hl-hover  { background: oklch(0.95 0.05 75); }
+/* rust check failure: red wash + accent bar; layers under select so a
+   user click can still highlight on top in green. */
+.editor-host .cm-line.cm-hl-issue  { background: color-mix(in oklab, #ff3b30 14%, transparent);
+                                     box-shadow: inset 2px 0 0 #ff3b30; }
 
 /* ---------- viz ---------- */
 .viz-wrap {
@@ -338,6 +342,12 @@ body {
 }
 .viz-wrap .cork      { r: 12; stroke-width: 5; stroke: #4ea8ff;
                        filter: drop-shadow(0 0 8px #4ea8ff); }
+.viz-wrap .issue     { r: 13; stroke-width: 5; stroke: #ff3b30;
+                       filter: drop-shadow(0 0 9px #ff3b30); }
+.viz-wrap path.issue {
+  stroke-width: 4; stroke: #ff3b30;
+  filter: drop-shadow(0 0 6px #ff3b30) drop-shadow(0 0 3px #ff3b30);
+}
 .viz-wrap.compact .focus     { r: 7; stroke-width: 2.5;
                                filter: drop-shadow(0 0 3px #ff17c9); }
 .viz-wrap.compact .select    { r: 7.5; stroke-width: 3;
@@ -346,6 +356,8 @@ body {
                                filter: drop-shadow(0 0 4px gold); }
 .viz-wrap.compact .cork      { r: 7.5; stroke-width: 2.5;
                                filter: drop-shadow(0 0 4px #4ea8ff); }
+.viz-wrap.compact .issue     { r: 8; stroke-width: 2.5;
+                               filter: drop-shadow(0 0 4px #ff3b30); }
 .viz-wrap.dense .focus       { r: 8; stroke-width: 3;
                                filter: drop-shadow(0 0 4px #ff17c9); }
 .viz-wrap.dense .select      { r: 8.5; stroke-width: 3.5;
@@ -354,6 +366,8 @@ body {
                                filter: drop-shadow(0 0 5px gold); }
 .viz-wrap.dense .cork        { r: 8.5; stroke-width: 3;
                                filter: drop-shadow(0 0 5px #4ea8ff); }
+.viz-wrap.dense .issue       { r: 9; stroke-width: 3;
+                               filter: drop-shadow(0 0 5px #ff3b30); }
 
 /* ---------- left-bottom (rig check + examples) ---------- */
 .stack {

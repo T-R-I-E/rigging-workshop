@@ -640,6 +640,45 @@ function apply_cork_dom() {
     if (cork) el(cork)?.classList.add('cork')
 }
 
+// Paint the issue layer (red) on every twist + connecting edge named
+// by rust's structured failure tree. Tooltips on the circles carry the
+// structype + detail so the user can hover to read what the checker
+// objected to. Listener fires on every rust check (state-changing or
+// not) so stale issue paint clears with a green/empty payload.
+let _issue_hashes = new Set()
+document.addEventListener('workshop:issue', e => {
+    if (!vp) return
+    vp.querySelectorAll('.issue').forEach(n => {
+        n.classList.remove('issue')
+        n.removeAttribute('data-issue-tooltip')
+    })
+    let issues = e.detail?.issues || []
+    _issue_hashes = new Set(issues.map(i => i.hash))
+    // Group multi-issue annotations onto the same twist so the tooltip
+    // can show every structype that flagged it.
+    let tooltips = new Map()
+    for (let i of issues) {
+        let prior = tooltips.get(i.hash) || []
+        prior.push(`${i.structype} [${i.colour}] ${i.issue || ''} ${i.detail || ''}`.trim())
+        tooltips.set(i.hash, prior)
+    }
+    for (let [hash, lines] of tooltips) {
+        let circle = el(hash)
+        if (circle) {
+            circle.classList.add('issue')
+            circle.setAttribute('data-issue-tooltip', lines.join('\n'))
+        }
+    }
+    // Paint edges touching any implicated twist — same pattern as the
+    // hover-edge highlight but in red.
+    if (_issue_hashes.size) {
+        vp.querySelectorAll('path[data-from], path[data-to]').forEach(p => {
+            if (_issue_hashes.has(p.getAttribute('data-from')) ||
+                _issue_hashes.has(p.getAttribute('data-to'))) p.classList.add('issue')
+        })
+    }
+})
+
 // Apply .select to the given hashes (clearing any previous selection).
 // Pure DOM update — does NOT broadcast a select event. show_abject_info
 // runs against the first hash so the rig-check panel reflects the click.
@@ -891,11 +930,47 @@ async function rust_check(ctx) {
         // (the CLI default) and reports "rig supports up to X but focus is Y"
         // whenever the user clicks anything other than the file's tail twist.
         let { state, detail } = JSON.parse(mod.check_rig(bytes, ctx.corklineHex, ctx.twistHex))
+        // Broadcast structured issues from the rust tree so viz / editor
+        // can paint red highlights on the implicated twists. Dispatched
+        // here (and not in the panel renderer) so the broadcast lands
+        // even when the panel's 'rebuild-same' path short-circuits the
+        // render. Always emits an event — green/empty payload clears
+        // any stale issue paint from a previous check.
+        let issues = state === 'ok' ? [] : extract_rust_issues(detail)
+        document.dispatchEvent(new CustomEvent('workshop:issue', {
+            detail: { issues, focus: ctx.twistHex },
+        }))
         return { state, detail }
     } catch (e) {
         // wasm threw or produced malformed JSON — broke, not bad.
         return { state: 'broke', detail: e.message || String(e) }
     }
+}
+
+// Walk rust's structured tree, collecting every non-green leaf with a
+// reference twist. The top-level 'rig' node always carries the umbrella
+// colour; we skip it unless it's also a leaf (no children) so the
+// implicated set focuses on the specific structypes the checker called
+// out (lead / hoist / topline-key / succession / corkline / …).
+function extract_rust_issues(detail_str) {
+    if (typeof detail_str !== 'string') return []
+    let tree
+    try { tree = JSON.parse(detail_str) } catch { return [] }
+    let issues = []
+    function walk(node, ancestors) {
+        if (!node || typeof node !== 'object') return
+        let { structype, colour, reference, issue, detail, children } = node
+        let kids = children && Object.values(children)
+        let is_leaf = !kids || kids.length === 0
+        // Skip the umbrella 'rig' node unless leaf (no diagnostic children).
+        let skip = structype === 'rig' && !is_leaf
+        if (!skip && colour && colour !== 'green' && reference) {
+            issues.push({ hash: reference, structype, issue, detail, colour })
+        }
+        if (kids) for (let k of kids) walk(k, [...ancestors, structype])
+    }
+    walk(tree, [])
+    return issues
 }
 
 function escape_text(s) {

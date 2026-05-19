@@ -62,8 +62,10 @@ function decoration_field(set_effect, css_class) {
 
 const set_hover  = StateEffect.define()  // payload: Set<lineNumber>
 const set_select = StateEffect.define()  // payload: Set<lineNumber>
+const set_issue  = StateEffect.define()  // payload: Set<lineNumber>
 const hover_field  = decoration_field(set_hover,  'cm-hl-hover')
 const select_field = decoration_field(set_select, 'cm-hl-select')
+const issue_field  = decoration_field(set_issue,  'cm-hl-issue')
 
 const cursor_broadcast = EditorView.updateListener.of(update => {
   if (update.docChanged) schedule_build()
@@ -97,6 +99,7 @@ const view = new EditorView({
     json(),
     hover_field,
     select_field,
+    issue_field,
     cursor_broadcast,
   ],
 })
@@ -134,6 +137,20 @@ document.addEventListener('workshop:select', e => {
   if (e.detail.source === 'editor') return
   let target = new Set(e.detail.hashes || [])
   view.dispatch({ effects: set_select.of(lines_for(target)) })
+})
+
+// Highlight TRDL lines whose entity emits any twist the rust checker
+// flagged. Same lines_for() lookup the hover/select machinery already
+// uses — issue is just a separate decoration layer so it can coexist
+// with click-selection and hover. Cache the last payload so build()
+// can re-apply after line_hashes lands; rust fires its issue event
+// during the initial render (synchronous), which happens ~300ms
+// before the debounced auto-build populates line_hashes.
+let _last_issue_hashes = new Set()
+document.addEventListener('workshop:issue', e => {
+  let issues = e.detail?.issues || []
+  _last_issue_hashes = new Set(issues.map(i => i.hash))
+  view.dispatch({ effects: set_issue.of(lines_for(_last_issue_hashes)) })
 })
 
 // Hover dispatch: mousemove over the editor → broadcast that line's hashes.
@@ -230,6 +247,15 @@ async function build() {
   if (my !== build_seq) return                  // stale: a newer build is queued
   last_built_bytes = bytes
   line_hashes = lineHashes
+  // line_hashes is what lines_for() consults to translate twist hashes
+  // back to editor line numbers. If a workshop:issue event came in
+  // before the build finished (rust fires its event during the synch
+  // viz render, ~300ms ahead of this debounced compile), the lines_for
+  // lookup found nothing and the editor stayed unpainted. Now that
+  // line_hashes is current, re-apply.
+  if (_last_issue_hashes.size) {
+    view.dispatch({ effects: set_issue.of(lines_for(_last_issue_hashes)) })
+  }
   // .toda load lifecycle: load_bytes ran decompile and stashed the resulting
   // TRDL text on initial_toda_load.decompile_text. If the editor still shows
   // exactly that text, the user hasn't edited — the build that fired here is
