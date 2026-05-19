@@ -364,19 +364,22 @@ function render_svg(env) {
         let fx = e[0].cx, fy = e[0].cy, tx = e[1].cx, ty = e[1].cy
         if(!(fx && fy && tx && ty)) return 0
         let dashed = e[0].cx < e[1].cx ? 'dashed' : ''
+        // data-from / data-to let the hover handler light up edges
+        // connected to the currently-highlighted twist(s).
+        let endpoints = `data-from="${e[0].hash}" data-to="${e[1].hash}"`
         if(e[2] === 'teth')
-            edgestr += `<path d="M ${fx} ${fy} Q ${(fx+tx+tx)/3} ${(ty+fy)/2} ${tx} ${ty}" class="${e[2]} ${dashed}"/>`
+            edgestr += `<path d="M ${fx} ${fy} Q ${(fx+tx+tx)/3} ${(ty+fy)/2} ${tx} ${ty}" class="${e[2]} ${dashed}" ${endpoints}/>`
         else if(e[2] === 'lead' || e[2] === 'meet')
-            edgestr += `<path d="M ${fx} ${fy} Q ${(fx+fx+tx)/3} ${(ty+fy)/2} ${tx} ${ty}" class="${e[2]} ${dashed}"/>`
+            edgestr += `<path d="M ${fx} ${fy} Q ${(fx+fx+tx)/3} ${(ty+fy)/2} ${tx} ${ty}" class="${e[2]} ${dashed}" ${endpoints}/>`
         else
-            edgestr += `<path d="M ${fx} ${fy} ${tx} ${ty}" class="${e[2]} ${dashed}"/>`
+            edgestr += `<path d="M ${fx} ${fy} ${tx} ${ty}" class="${e[2]} ${dashed}" ${endpoints}/>`
     })
 
     env.segments?.forEach(seg => {
         if(!seg.collapsed) return
         let f = seg.first, l = seg.last
         if(!f.cx || !l.cx) return
-        edgestr += `<path d="M ${f.cx} ${f.cy} ${l.cx} ${l.cy}" class="prev"/>`
+        edgestr += `<path d="M ${f.cx} ${f.cy} ${l.cx} ${l.cy}" class="prev" data-from="${f.hash}" data-to="${l.hash}"/>`
         let mx = (f.cx + l.cx) / 2, my = f.cy
         svgs += `<circle cx="${mx}" cy="${my}" r="8" fill="#${f.colour}" id="${seg.id}" opacity="0.6" style="pointer-events:auto;cursor:pointer"/>`
         svgs += `<text x="${mx}" y="${my + 3}" text-anchor="middle" font-size="7" fill="#000" style="pointer-events:none">${seg.twists.length}</text>`
@@ -582,6 +585,16 @@ document.addEventListener('workshop:hover', e => {
     let hashes = e.detail.hashes || []
     vp.querySelectorAll('.highlight').forEach(c => c.classList.remove('highlight'))
     for (let h of hashes) el(h)?.classList.add('highlight')
+    // Also light up every edge that touches one of the hovered twists,
+    // so the structural neighbourhood (prev / teth / hitch role) of the
+    // selection pops together with the dot itself.
+    if (hashes.length) {
+        let set = new Set(hashes)
+        vp.querySelectorAll('path[data-from], path[data-to]').forEach(p => {
+            if (set.has(p.getAttribute('data-from')) ||
+                set.has(p.getAttribute('data-to'))) p.classList.add('highlight')
+        })
+    }
 })
 
 document.addEventListener('workshop:select', e => {

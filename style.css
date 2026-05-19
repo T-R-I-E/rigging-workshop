@@ -329,6 +329,13 @@ body {
                        filter: drop-shadow(0 0 9px rgb(0,210,80)); }
 .viz-wrap .highlight { r: 12; stroke-width: 5; stroke: gold;
                        filter: drop-shadow(0 0 9px gold); }
+/* Edge highlight overlays the per-type colour from the SVG path's
+   class (.prev / .teth / .lead / …). Keep the path's own stroke and
+   just thicken + glow it so the original edge type still reads. */
+.viz-wrap path.highlight {
+  stroke-width: 4;
+  filter: drop-shadow(0 0 6px gold) drop-shadow(0 0 3px gold);
+}
 .viz-wrap .cork      { r: 12; stroke-width: 5; stroke: #4ea8ff;
                        filter: drop-shadow(0 0 8px #4ea8ff); }
 .viz-wrap.compact .focus     { r: 7; stroke-width: 2.5;
