@@ -11,6 +11,17 @@
 - Sats trie pluck in `twist_list`; usage map (twist↔body↔reqs↔rigs↔shld↔carg↔sats)
   drives hex-row hover/select to highlight every twist that uses an atom.
 
+## Done — this session
+- **Rig-checker plurality**: workshop now runs **three** rig-checkers in
+  parallel, each rendering its own row in the Rig check panel:
+    1. `js · todajs` — `HalfHitchInterpreter` (svgiewer base + half-hitch
+       relaxations), in browser.
+    2. `clj · toda-rig-checker` — POSTs to `/rigcheck-clj` on the main server
+       (`clj -M:server`, port 7878).
+    3. `clj · toda-bb` — POSTs to `/rigcheck-bb` on the sidecar
+       (`clj -M:server-bb`, port 7879). Sidecar exists because toda-bb's
+       `toda.shielding` namespace collides with toda-core's; loading both
+       in one JVM silently rebinds the vars and breaks both interpreters.
 ## Done — earlier sessions (rig-checker plurality, viz, persistence, hex)
 - **Rig-checker plurality**: workshop runs **four** rig-checkers in
   parallel (js · todajs, clj · toda-rig-checker, clj · toda-bb,
