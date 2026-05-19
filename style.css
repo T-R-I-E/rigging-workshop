@@ -723,12 +723,33 @@ body {
 }
 .hex .atom.select { background: var(--accent-soft); box-shadow: inset 2px 0 0 var(--accent); }
 .hex .atom.hover  { background: oklch(0.95 0.05 75); }
+.hex .b-hash-cell {
+  display: inline-flex; gap: 4px; align-items: baseline;
+  min-width: 0;
+}
 .hex .b-hash {
   color: var(--teal);
   cursor: pointer;
   text-decoration: underline dotted;
   text-underline-offset: 2px;
 }
+/* Copy-icon button used in both raw and kiwanoed views. Dimmed by
+   default so it doesn't compete with the hash text; brightens on hover
+   and flashes green for ~900ms after a successful clipboard write. */
+.hex .copy-icon, .hex.kiwanoed .copy-icon {
+  background: transparent;
+  border: none;
+  padding: 0 2px;
+  margin: 0;
+  font-family: inherit;
+  font-size: 1em;
+  line-height: 1;
+  color: var(--ink-3);
+  cursor: pointer;
+  opacity: 0.5;
+}
+.hex .copy-icon:hover { opacity: 1; color: var(--accent); }
+.hex .copy-icon.copied { opacity: 1; color: var(--ok); }
 .hex .b-tag  { color: oklch(0.45 0.13 295); font-weight: 500; }
 .hex .b-len  { color: oklch(0.55 0.13 35); }
 .hex .b-content { color: var(--ink); }

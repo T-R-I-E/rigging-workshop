@@ -249,14 +249,25 @@ function content_hex(buf, atom) {
   return space_hex(head) + ' …'
 }
 
+function copy_btn(full_hash) {
+  // Inline unicode glyph for the copy icon; a hex-pane-level click
+  // handler reads data-copy and writes it to the clipboard. The button
+  // is keyboard-focusable so it doesn't slip out of the keyboard nav
+  // path inside the otherwise mostly-static dump.
+  return `<button class="copy-icon" type="button" data-copy="${full_hash}"` +
+         ` title="Copy ${full_hash}" aria-label="Copy full hash">⎘</button>`
+}
+
 function render_atom_raw(buf, atom) {
   let shape_label = SHAPE_NAMES[atom.shape] ?? atom.shape.toString(16)
   let length      = atom.bin.length
   let hash_short  = truncate_hash(atom.hash)
   let content     = content_hex(buf, atom)
   let trie_class  = atom.shape === PAIRTRIE ? ' trie' : ''
+  // Wrap the hash + copy icon in one cell so the 4-column .atom grid
+  // doesn't see a stray 5th child.
   return `<div class="atom" data-hash="${atom.hash}">
-    <span class="b-hash" title="${atom.hash}">${hash_short}</span>
+    <span class="b-hash-cell"><span class="b-hash" title="${atom.hash}">${hash_short}</span>${copy_btn(atom.hash)}</span>
     <span class="b-tag">${shape_label}</span>
     <span class="b-len">${length}</span>
     <span class="b-content${trie_class}">${content}</span>
@@ -308,7 +319,7 @@ function render_slot_row(field, slot, names, extra_cls = '') {
   }
   let field_html = field ? `<span class="kx-fieldname">${field}</span>` : ''
   let name_html  = comment(annotate_slot(slot, names))
-  return `<div class="kx-row kx-field ${extra_cls}">${field_html}<span class="kx-value">${fmt_hash(slot)}</span>${name_html}</div>`
+  return `<div class="kx-row kx-field ${extra_cls}">${field_html}<span class="kx-value">${fmt_hash(slot)}</span>${copy_btn(slot)}${name_html}</div>`
 }
 
 function render_body_fields(env, atom, names) {
@@ -377,7 +388,7 @@ function render_atom_kiwanoed(env, atom, names) {
   let name      = names.get(atom.hash)
   let header    = `<div class="kx-row kx-header">` +
                   `<span class="kx-hash" title="${atom.hash}">${fmt_hash(atom.hash)}</span>` +
-                  `${comment(name)}</div>`
+                  `${copy_btn(atom.hash)}${comment(name)}</div>`
   let body_len  = (atom.bin.last - atom.bin.cfirst + 1)
   let len_hex   = body_len.toString(16).padStart(8, '0').match(/.{4}/g).join(' ')
   let shape_hex = atom.shape.toString(16).padStart(2, '0')
@@ -435,6 +446,27 @@ host?.addEventListener('mouseleave', () => {
 })
 
 host?.addEventListener('click', e => {
+  // Copy-icon clicks fire before the select-on-atom click — pull the
+  // hash off data-copy, write to clipboard, flash a brief 'copied!'
+  // state on the button, and stop propagation so the atom doesn't
+  // also re-select.
+  let copy = e.target.closest('.copy-icon')
+  if (copy) {
+    let hash = copy.dataset.copy
+    if (hash) {
+      navigator.clipboard?.writeText(hash).then(() => {
+        copy.classList.add('copied')
+        let prior = copy.textContent
+        copy.textContent = '✓'
+        setTimeout(() => {
+          copy.classList.remove('copied')
+          copy.textContent = prior
+        }, 900)
+      }).catch(() => {})
+    }
+    e.stopPropagation()
+    return
+  }
   let row = e.target.closest('.atom')
   if (!row) return
   document.dispatchEvent(new CustomEvent('workshop:select', {
