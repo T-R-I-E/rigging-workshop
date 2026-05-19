@@ -707,39 +707,38 @@ const CHECKERS = [
                 await interp.verifyHitchLine(ctx.twistHash)
                 return { state: 'ok', detail: 'verified' }
             } catch (e) {
-                // Spec §9.1.3 (p.30): MISSING / UNKNOWN issues are yellow,
-                // INVALID / MISMATCH issues are red. svgiewer/src names a
-                // few INVALID-class invariant violations with a "Missing"
-                // prefix even though all relevant atoms are present and a
-                // structural rule was broken. We classify those as red here
-                // until the JS hierarchy is cleaned up — see
-                // js-rig-checker-surgical-changes.md.
-                //
-                //   MissingHoistError  — no hoist exists for this lead (e.g.
-                //                        hh_tether_null: NULL teth → not fast)
-                //   MissingPostEntry   — post twist exists but its rigs lack
-                //                        the canonical entry for the lead
-                //   MissingSuccessor   — line ends before reaching stop
-                //
-                // Everything else with a "Missing" prefix (MissingError,
-                // MissingHashPacketError, MissingPrevError, MissingPrevious)
-                // is a genuine atom-not-in-bundle situation → yellow.
-                // MissingPrevious stays yellow only because the wrapper in
-                // interpret.js:prev() currently swallows the inner type;
-                // see surgical-changes.md §2 for the upstream fix.
                 let name = e?.name || e?.constructor?.name || ''
-                const JS_INVALID_AS_MISSING = new Set([
-                    'MissingHoistError',
-                    'MissingPostEntry',
-                    'MissingSuccessor',
-                ])
-                if (JS_INVALID_AS_MISSING.has(name)) {
-                    return { state: 'bad', detail: e?.message || String(e) }
+                let msg  = e?.message || String(e)
+                let ref  = ctx.twistHex
+                // Build structured trace so the rig-check panel can show
+                // meaningful structype + issue + detail, matching the
+                // canonical .json sidecar shape emitted by the rust checker.
+                let trace = null
+                if (name === 'MissingHoistError') {
+                    trace = trace_leaf('lead',       'red', 'MISMATCH', msg, ref)
+                } else if (name === 'MissingSuccessor') {
+                    trace = trace_leaf('corkline',   'red', 'INVALID',  msg, ref)
+                } else if (name === 'MissingPostEntry') {
+                    trace = trace_leaf('post-key',   'red', 'MISMATCH', msg, ref)
+                } else if (name === 'LooseTwistError') {
+                    trace = trace_leaf('half-hitch', 'red', 'INVALID',  msg, ref)
+                } else if (name === 'ReqSatError') {
+                    trace = trace_leaf('rig',        'red', 'INVALID',  msg, ref)
+                // yellow / MISSING bucket: genuine atom-not-in-bundle.
+                // MissingHashPacketError and MissingPrevError live in
+                // twist.js (extend NamedError, not MissingError) so they
+                // aren't caught by the MissingError check below.
+                } else if (name === 'MissingHashPacketError' || name === 'MissingPrevError') {
+                    trace = trace_leaf('rig',    'yellow', 'MISSING', msg, ref)
+                } else if (name === 'MissingError' || name === 'MissingPrevious') {
+                    trace = trace_leaf('rig',    'yellow', 'MISSING', msg, ref)
+                } else {
+                    throw e   // genuinely unexpected → surface as FAIL
                 }
-                if (/^Missing/.test(name)) {
-                    return { state: 'warn', detail: e?.message || String(e) }
-                }
-                throw e
+                // Spec §9.1.3 (p.30): MISSING / UNKNOWN → yellow,
+                // INVALID / MISMATCH → red.
+                let state = trace?.colour === 'red' ? 'bad' : 'warn'
+                return { state, detail: msg, trace }
             }
         },
     },
@@ -784,8 +783,14 @@ async function server_check(ctx, base) {
         // Spec-wise this is in the yellow / unknown bucket per §9.1.3,
         // but we visually distinguish it from a real yellow so the user
         // can see "checker failed to process" cases separately.
-        return { state: 'broke',
-                 detail: `HTTP ${res.status}: ${(await res.text()).slice(0,120)}` }
+        let detail = `HTTP ${res.status}`
+        try {
+            let err = await res.json()
+            detail = err.type && err.message
+                ? `${err.type}: ${err.message}`.slice(0, 120)
+                : JSON.stringify(err).slice(0, 120)
+        } catch (_) { /* body isn't JSON — fall through to status-only */ }
+        return { state: 'broke', detail }
     }
     let { colour } = await res.json()
     return {
@@ -820,13 +825,17 @@ async function rust_check(ctx) {
     if (error) return { state: 'broke', detail: `wasm load failed: ${error.message || error}` }
     try {
         let bytes = ctx.bytes instanceof Uint8Array ? ctx.bytes : new Uint8Array(ctx.bytes)
-        // Pass ctx.twistHex as the focus so the rust checker pivots around
-        // the user-selected twist, matching the js / clj / bb checkers.
-        // Without this it falls back to parse_lat's last-twist heuristic
-        // (the CLI default) and reports "rig supports up to X but focus is Y"
-        // whenever the user clicks anything other than the file's tail twist.
-        let { state, detail } = JSON.parse(mod.check_rig(bytes, ctx.corklineHex, ctx.twistHex))
-        return { state, detail }
+        let raw = mod.check_rig(bytes, ctx.corklineHex, ctx.twistHex)
+        let trace = JSON.parse(raw)
+        // Extract state from the root colour; default to ok.
+        let state = trace.colour === 'green'  ? 'ok'
+                  : trace.colour === 'yellow' ? 'warn'
+                  : 'bad'
+        // Provide a concise flattened summary so results_differ stays
+        // deterministic and the detail field remains human-readable
+        // when traces aren't rendered (e.g. in bench reports).
+        let detail = flatten_trace_detail(trace)
+        return { state, detail, trace }
     } catch (e) {
         // wasm threw or produced malformed JSON — broke, not bad.
         return { state: 'broke', detail: e.message || String(e) }
@@ -837,20 +846,74 @@ function escape_text(s) {
     return String(s).replace(/[<&]/g, c => c === '<' ? '&lt;' : '&amp;')
 }
 
-function render_check_row(c, state, badge, detail) {
+// ── structured error trace ───────────────────────────────────────────
+
+const TRACE_COLOURS = { green: 'ok', yellow: 'warn', red: 'bad' }
+
+function trace_leaf(structype, colour, issue, detail, reference) {
+    return { structype, colour, issue, detail, reference }
+}
+
+function walk_issues(trace) {
+    if (!trace) return []
+    if (!trace.children) {
+        return trace.issue ? [{ structype: trace.structype, issue: trace.issue, detail: trace.detail }] : []
+    }
+    let issues = []
+    for (let key of Object.keys(trace.children)) {
+        issues.push(...walk_issues(trace.children[key]))
+    }
+    return issues
+}
+
+function flatten_trace_detail(trace) {
+    let issues = walk_issues(trace)
+    if (issues.length === 0) return trace.colour || 'ok'
+    return issues.map(i => `${i.structype}: ${i.issue} — ${i.detail}`).join('; ')
+}
+
+function render_trace(trace) {
+    if (!trace) return ''
+    let cls = TRACE_COLOURS[trace.colour] ? `trace-${TRACE_COLOURS[trace.colour]}` : ''
+    let parts = []
+    if (trace.structype) {
+        parts.push(`<span class="trace-st ${cls}">${escape_text(trace.structype)}</span>`)
+    }
+    if (trace.issue) {
+        parts.push(`<span class="trace-issue ${cls}">${escape_text(trace.issue)}</span>`)
+    }
+    if (trace.detail) {
+        parts.push(`<span class="trace-detail">${escape_text(trace.detail)}</span>`)
+    }
+    if (trace.reference && trace.structype !== 'rig') {
+        parts.push(`<span class="trace-ref">${escape_text(trace.reference.slice(0, 12))}…</span>`)
+    }
+    let head = `<div class="trace-node">${parts.join(' ')}</div>`
+    if (!trace.children) return head
+    let kids = Object.keys(trace.children).map(k =>
+        `<div class="trace-child"><span class="trace-key">${escape_text(k)}</span>${render_trace(trace.children[k])}</div>`
+    ).join('')
+    return `<div class="trace-tree ${cls}">${head}<div class="trace-children">${kids}</div></div>`
+}
+
+// ── check rows ────────────────────────────────────────────────────────
+
+function render_check_row(c, state, badge, detail, trace) {
+    let body = trace ? render_trace(trace)
+             : `<span class="rc-source">${c.label}</span> ${escape_text(detail)}`
     return `<div class="rig-check ${state}" data-checker="${c.id}">` +
            `<span class="badge">${badge}</span>` +
-           `<div><span class="rc-source">${c.label}</span> ${escape_text(detail)}</div>` +
+           `<div>${body}</div>` +
            `</div>`
 }
 
-function update_check_row(checker_id, state, badge, detail) {
+function update_check_row(checker_id, state, badge, detail, trace) {
     let host = el('rigcheck')
     if (!host) return
     let row = host.querySelector(`[data-checker="${checker_id}"]`)
     let c   = CHECKERS.find(x => x.id === checker_id)
     if (!row || !c) return
-    row.outerHTML = render_check_row(c, state, badge, detail)
+    row.outerHTML = render_check_row(c, state, badge, detail, trace)
 }
 
 function bytes_equal(a, b) {
@@ -1028,8 +1091,8 @@ function show_abject_info(id) {
         Promise.all(CHECKERS.map(async c => {
             let t0 = performance.now()
             try {
-                let { state, detail } = await c.run(ctx)
-                return { c, state, detail, dt: performance.now() - t0 }
+                let { state, detail, trace } = await c.run(ctx)
+                return { c, state, detail, dt: performance.now() - t0, trace }
             } catch (e) {
                 console.error(`[${c.label}]`, e)
                 return {
@@ -1039,12 +1102,12 @@ function show_abject_info(id) {
                 }
             }
         })).then(results => {
-            for (let { c, state, detail, dt } of results) {
+            for (let { c, state, detail, dt, trace } of results) {
                 let init_res = init.results.get(c.id)
                 if (!results_differ(init_res, { state, detail })) continue
                 rc.insertAdjacentHTML('beforeend',
                     render_check_row(c, state, badge_for(state),
-                                     `${detail} · ${dt.toFixed(0)}ms`)
+                                     `${detail} · ${dt.toFixed(0)}ms`, trace)
                         .replace('class="rig-check',
                                  'data-section="diff" class="rig-check'))
             }
@@ -1060,12 +1123,12 @@ function show_abject_info(id) {
     for (let c of CHECKERS) {
         let t0 = performance.now()
         c.run(ctx)
-            .then(({state, detail}) => {
+            .then(({state, detail, trace}) => {
                 let dt = (performance.now() - t0).toFixed(0)
-                update_check_row(c.id, state, badge_for(state), `${detail} · ${dt}ms`)
+                update_check_row(c.id, state, badge_for(state), `${detail} · ${dt}ms`, trace)
                 // Snapshot the initial pass so future rebuilds can compare.
                 if (pass === 'initial') {
-                    window.workshop.initial_toda_load.results.set(c.id, {state, detail})
+                    window.workshop.initial_toda_load.results.set(c.id, {state, detail, trace})
                 }
             })
             .catch(e => {

@@ -58,8 +58,18 @@
   (.sendResponseHeaders ex 204 -1)
   (.close (.getResponseBody ex)))
 
-(defn- send-error! [^HttpExchange ex status msg]
-  (send-response! ex status "text/plain; charset=utf-8" (str msg)))
+(defn- send-error! [^HttpExchange ex status reason]
+  (let [payload (if (instance? Throwable reason)
+                  (let [t ^Throwable reason
+                        ed (ex-data t)]
+                    (json/write-str (cond-> {:error true
+                                             :type (.getName (.getClass t))
+                                             :message (.getMessage t)}
+                                      ed (assoc :data ed))))
+                  (json/write-str {:error true
+                                   :type "error"
+                                   :message (str reason)}))]
+    (send-response! ex status "application/json; charset=utf-8" payload)))
 
 (defn- ref->kw
   "Match trdl/ref->keyword: 'a[3]' → :a_3, 'mytwist' → :mytwist."
@@ -104,7 +114,7 @@
       (send-response! ex 200 "application/json; charset=utf-8" payload))
     (catch Throwable t
       (.printStackTrace t)
-      (send-error! ex 400 (.getMessage t)))))
+      (send-error! ex 400 t))))
 
 (defn- handle-decompile [^HttpExchange ex]
   (let [^File tmp (File/createTempFile "rw-" ".toda")]
@@ -116,7 +126,7 @@
         (send-response! ex 200 "text/plain; charset=utf-8" jsonl))
       (catch Throwable t
         (.printStackTrace t)
-        (send-error! ex 400 (.getMessage t)))
+        (send-error! ex 400 t))
       (finally
         (.delete tmp)))))
 
@@ -147,7 +157,7 @@
       (send-response! ex 200 "application/json; charset=utf-8" payload))
     (catch Throwable t
       (.printStackTrace t)
-      (send-error! ex 400 (.getMessage t)))))
+      (send-error! ex 400 t))))
 
 (defn- handle-health [^HttpExchange ex]
   (send-response! ex 200 "text/plain" "ok"))
@@ -160,7 +170,7 @@
           dump     (with-out-str (clojure.pprint/pprint spec))]
       (send-response! ex 200 "text/plain; charset=utf-8" dump))
     (catch Throwable t
-      (send-error! ex 400 (.getMessage t)))))
+      (send-error! ex 400 t))))
 
 (defn- make-handler [f]
   (reify HttpHandler

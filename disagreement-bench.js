@@ -220,7 +220,16 @@ async function server_check(ctx, base) {
       body: ctx.bytes,
     })
   } catch { return { v: 'broke', detail: 'server offline' } }
-  if (!res.ok) return { v: 'broke', detail: `HTTP ${res.status}` }
+  if (!res.ok) {
+    let detail = `HTTP ${res.status}`
+    try {
+      let err = await res.json()
+      detail = err.type && err.message
+        ? `${err.type}: ${err.message}`.slice(0, 120)
+        : JSON.stringify(err).slice(0, 120)
+    } catch (_) { /* body isn't JSON — fall through to status-only */ }
+    return { v: 'broke', detail }
+  }
   let { colour } = await res.json()
   return {
     v: colour === 'green' ? 'ok' : colour === 'yellow' ? 'warn' : 'bad',

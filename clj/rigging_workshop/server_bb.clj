@@ -47,8 +47,18 @@
   (.sendResponseHeaders ex 204 -1)
   (.close (.getResponseBody ex)))
 
-(defn- send-error! [^HttpExchange ex status msg]
-  (send-response! ex status "text/plain; charset=utf-8" (str msg)))
+(defn- send-error! [^HttpExchange ex status reason]
+  (let [payload (if (instance? Throwable reason)
+                  (let [t ^Throwable reason
+                        ed (ex-data t)]
+                    (json/write-str (cond-> {:error true
+                                             :type (.getName (.getClass t))
+                                             :message (.getMessage t)}
+                                      ed (assoc :data ed))))
+                  (json/write-str {:error true
+                                   :type "error"
+                                   :message (str reason)}))]
+    (send-response! ex status "application/json; charset=utf-8" payload)))
 
 (defn- parse-query [^String q]
   (when (and q (not (str/blank? q)))
@@ -78,7 +88,7 @@
       (send-response! ex 200 "application/json; charset=utf-8" payload))
     (catch Throwable t
       (.printStackTrace t)
-      (send-error! ex 400 (.getMessage t)))))
+      (send-error! ex 400 t))))
 
 (defn- handle-health [^HttpExchange ex]
   (send-response! ex 200 "text/plain" "ok"))

@@ -572,6 +572,75 @@ body {
 }
 .rig-check.broke .badge { background: #d77f2a; color: var(--ink); border-color: var(--ink); letter-spacing: 0.5px; }
 
+/* ── structured error trace tree ─────────────────────────────────────── */
+.trace-tree {
+  display: flex; flex-direction: column; gap: 2px;
+}
+.trace-node {
+  display: flex; align-items: baseline; gap: 4px; flex-wrap: wrap;
+}
+.trace-children {
+  display: flex; flex-direction: column; gap: 1px;
+  padding-left: 12px;
+  border-left: 1.5px solid var(--line-2);
+}
+.trace-child {
+  display: flex; align-items: baseline; gap: 4px; flex-wrap: wrap;
+}
+.trace-key {
+  font-size: 10px;
+  color: var(--ink-3);
+  font-weight: 500;
+}
+.trace-st {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 0 4px;
+  border-radius: 3px;
+  background: var(--panel-2);
+  color: var(--ink-3);
+  border: 1px solid var(--line-2);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.trace-issue {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 0 4px;
+  border-radius: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border: 1px solid transparent;
+}
+.trace-detail {
+  color: var(--ink-2);
+  line-height: 1.35;
+}
+.trace-ref {
+  font-size: 10px;
+  color: var(--ink-3);
+  font-family: var(--mono);
+}
+/* colour overrides for red / yellow nodes */
+.trace-bad .trace-st,
+.trace-bad .trace-issue {
+  background: color-mix(in oklab, var(--bad) 18%, var(--panel));
+  color: color-mix(in oklab, var(--bad) 70%, var(--ink));
+  border-color: color-mix(in oklab, var(--bad) 30%, var(--line-2));
+}
+.trace-warn .trace-st,
+.trace-warn .trace-issue {
+  background: color-mix(in oklab, var(--warn) 18%, var(--panel));
+  color: color-mix(in oklab, var(--warn) 70%, var(--ink));
+  border-color: color-mix(in oklab, var(--warn) 30%, var(--line-2));
+}
+.trace-ok .trace-st,
+.trace-ok .trace-issue {
+  background: color-mix(in oklab, var(--ok) 18%, var(--panel));
+  color: color-mix(in oklab, var(--ok) 70%, var(--ink));
+  border-color: color-mix(in oklab, var(--ok) 30%, var(--line-2));
+}
+
 /* Per-checker status pills shown in the collapsed rig-check h4 (one
    pill per checker so all four states are visible at a glance). */
 .section-checkers {
