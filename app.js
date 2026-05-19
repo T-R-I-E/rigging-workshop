@@ -425,6 +425,31 @@ function write_stats(env) {
 
 function notify_rendered(env) {
     document.dispatchEvent(new CustomEvent('workshop:rendered', {detail: env}))
+    // Default the corkline to the top-leftmost twist for any rig that
+    // didn't come with a sidecar-declared corkline and hasn't been
+    // user-overridden by a shift-click. The line that lays out at the
+    // smallest y is the topmost in the viz; its first (leftmost) twist
+    // is the conventional corkline anchor.
+    //
+    // Compile's own corkline_h (from build() in editor.js) is NOT
+    // authoritative here — decompile can pick a non-canonical poptop
+    // for unusual rigs, and the user's mental model is the visual
+    // top-left, not whatever the recompile chose.
+    let src = window.workshop?.corkline_source
+    if (src !== 'sidecar' && src !== 'user') {
+        let twists = env.shapes?.[TWIST] || []
+        let cork = null, best_y = Infinity, best_x = Infinity
+        for (let t of twists) {
+            if (t.y == null || t.x == null) continue
+            if (t.y < best_y || (t.y === best_y && t.x < best_x)) {
+                best_y = t.y; best_x = t.x; cork = t.hash
+            }
+        }
+        if (cork) {
+            window.workshop.corkline = cork
+            window.workshop.corkline_source = 'auto'
+        }
+    }
     // Restore prior click-selection by hash; falls back to env.focus when
     // none of the previously-selected hashes are in this render.
     let still = _selected_hashes.filter(h => el(h))
@@ -520,6 +545,19 @@ if(vp) {
         if(e.target.tagName === 'circle') {
             let seg = env.segIndex?.[e.target.id]
             if(seg) return expand_segment(seg)
+            // Shift-click overrides the corkline. Plain click selects
+            // the twist as the focus (rig-check then runs against the
+            // current corkline). For upload/URL loads with no sidecar
+            // this is how you re-anchor the rig if the auto-defaulted
+            // top-leftmost twist isn't what you wanted.
+            if (e.shiftKey) {
+                window.workshop.corkline = e.target.id
+                window.workshop.corkline_source = 'user'
+                // Re-run rig-check on the current focus against the new cork.
+                let focus = _selected_hashes[0] || env.focus?.hash
+                if (focus) show_abject_info(focus)
+                return
+            }
             select_node(e.target.id)
         }
     })
@@ -882,7 +920,14 @@ function classify_pass(ctx) {
     let init = window.workshop?.initial_toda_load
     if (!init) return 'no-init'                         // .trdl / fresh editor / moved on
     if (bytes_equal(ctx.bytes, init.bytes)) {
-        return init.results.size === 0 ? 'initial' : 'rebuild-same'
+        if (init.results.size === 0)                   return 'initial'
+        // Same bytes but the focus changed (user clicked a different twist
+        // in the viz) — the cached per-checker results are for the old
+        // focus and need to be re-run for the new one. Cork override
+        // (shift-click) also lands here via a different corkline.
+        if (init.last_focus !== ctx.twistHex)          return 'initial'
+        if (init.last_cork  !== ctx.corklineHex)       return 'initial'
+        return 'rebuild-same'
     }
     return 'rebuild-diff'
 }
@@ -1053,6 +1098,17 @@ function show_abject_info(id) {
     }
 
     // pass === 'initial' or 'no-init': fresh full render.
+    // Stash the focus + corkline this pass used so classify_pass can
+    // distinguish a click-driven focus change from a same-bytes rebuild.
+    if (window.workshop?.initial_toda_load) {
+        window.workshop.initial_toda_load.last_focus = ctx.twistHex
+        window.workshop.initial_toda_load.last_cork  = ctx.corklineHex
+        // A new initial pass invalidates the cached per-checker results
+        // (they were for the previous focus/cork).
+        if (pass === 'initial') {
+            window.workshop.initial_toda_load.results.clear()
+        }
+    }
     rc.className = 'rig-check-list'
     rc.innerHTML = CHECKERS.map(c =>
         render_check_row(c, '', 'CHECK', 'verifying…')).join('')

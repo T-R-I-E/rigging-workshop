@@ -243,7 +243,14 @@ async function build() {
   if (init && init.decompile_text != null && get_doc() === init.decompile_text) {
     return
   }
-  if (corkline) window.workshop.corkline = corkline
+  // Don't overwrite a sidecar-supplied corkline with compile's idea —
+  // sidecar is the authoritative source. Auto-default (top-left twist,
+  // applied by app.js's notify_rendered) is also preserved across
+  // rebuilds, since the same TRDL keeps producing the same top-left.
+  if (corkline && window.workshop.corkline_source !== 'sidecar') {
+    window.workshop.corkline = corkline
+    window.workshop.corkline_source = 'compile'
+  }
   try {
     window.workshop.render(bytes)
   } catch (e) {
@@ -299,6 +306,11 @@ function deselect_rig() {
   render_rigs_list()
   clear_rig_meta()
   window.workshop.initial_toda_load = null
+  // Drop any sidecar-derived corkline from the previously-loaded rig.
+  // For upload/URL loads (no sidecar), app.js's notify_rendered will
+  // default it to the top-leftmost twist after the viz lays out.
+  window.workshop.corkline = null
+  window.workshop.corkline_source = null
 }
 
 async function load_file(file) {
@@ -647,7 +659,10 @@ async function load_rig_meta(rig_url, explicit_json_url) {
     // → recompile cycle finishes, and without this the rig-check panel
     // shows "No corkline available". For .trdl loads the auto-build also
     // sets workshop.corkline, but they should agree round-trip.
-    if (m.corkline) window.workshop.corkline = m.corkline
+    if (m.corkline) {
+      window.workshop.corkline = m.corkline
+      window.workshop.corkline_source = 'sidecar'
+    }
   } catch {
     section.hidden = true
   }
