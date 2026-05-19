@@ -746,13 +746,13 @@ const CHECKERS = [
         id: 'clj',
         label: 'clj · toda-rig-checker',
         // async run(ctx) { return server_check(ctx, 'http://localhost:7878/rigcheck') },
-        async run(ctx) { return server_check(ctx, 'https://d3myckc3w6ekfv.cloudfront.net/rigcheck-clj') },
+        async run(ctx) { return server_check(ctx, 'https://d2ttoitg64tuy9.cloudfront.net/rigcheck-clj') },
     },
     {
         id: 'bb',
         label: 'clj · toda-bb',
         // async run(ctx) { return server_check(ctx, 'http://localhost:7879/rigcheck-bb') },
-        async run(ctx) { return server_check(ctx, 'https://d3myckc3w6ekfv.cloudfront.net/rigcheck-bb') },
+        async run(ctx) { return server_check(ctx, 'https://d2ttoitg64tuy9.cloudfront.net/rigcheck-bb') },
     },
     {
         id: 'rust',

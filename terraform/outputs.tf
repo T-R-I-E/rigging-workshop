@@ -1,10 +1,10 @@
 output "cloudfront_url" {
-  description = "Public HTTPS URL. Hit this from browsers. /rigcheck-bb* -> bb, /rigcheck-clj* -> main, everything else -> main."
+  description = "Public HTTPS URL. Use this in app.js for clj/bb checkers."
   value       = "https://${aws_cloudfront_distribution.this.domain_name}"
 }
 
 output "alb_dns_name" {
-  description = "Internal-only: ALB DNS. Direct hits are blocked by SG (CloudFront-only)."
+  description = "ALB DNS. Direct hits blocked by SG (CloudFront-only)."
   value       = aws_lb.this.dns_name
 }
 
