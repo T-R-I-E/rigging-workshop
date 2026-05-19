@@ -342,9 +342,21 @@ body {
 }
 .viz-wrap .cork      { r: 12; stroke-width: 5; stroke: #4ea8ff;
                        filter: drop-shadow(0 0 8px #4ea8ff); }
-.viz-wrap .issue     { r: 13; stroke-width: 5; stroke: #ff3b30;
-                       filter: drop-shadow(0 0 9px #ff3b30); }
-.viz-wrap path.issue {
+/* Issue layer painted from rust's structured tree. Three severity
+   classes; circles always get one of the three when the twist is
+   mentioned by rust. Edges only paint at warn/bad and only on the
+   types the structype maps to (see ISSUE_EDGES_BY_STRUCTYPE). */
+.viz-wrap .issue-ok   { r: 11; stroke-width: 3; stroke: rgb(0,210,80);
+                        filter: drop-shadow(0 0 4px rgb(0,210,80)); }
+.viz-wrap .issue-warn { r: 12; stroke-width: 4; stroke: #ffae3c;
+                        filter: drop-shadow(0 0 6px #ffae3c); }
+.viz-wrap .issue-bad  { r: 13; stroke-width: 5; stroke: #ff3b30;
+                        filter: drop-shadow(0 0 9px #ff3b30); }
+.viz-wrap path.issue-warn {
+  stroke-width: 4; stroke: #ffae3c;
+  filter: drop-shadow(0 0 5px #ffae3c);
+}
+.viz-wrap path.issue-bad {
   stroke-width: 4; stroke: #ff3b30;
   filter: drop-shadow(0 0 6px #ff3b30) drop-shadow(0 0 3px #ff3b30);
 }
@@ -356,8 +368,12 @@ body {
                                filter: drop-shadow(0 0 4px gold); }
 .viz-wrap.compact .cork      { r: 7.5; stroke-width: 2.5;
                                filter: drop-shadow(0 0 4px #4ea8ff); }
-.viz-wrap.compact .issue     { r: 8; stroke-width: 2.5;
-                               filter: drop-shadow(0 0 4px #ff3b30); }
+.viz-wrap.compact .issue-ok   { r: 7; stroke-width: 2;
+                                filter: drop-shadow(0 0 2px rgb(0,210,80)); }
+.viz-wrap.compact .issue-warn { r: 7.5; stroke-width: 2;
+                                filter: drop-shadow(0 0 3px #ffae3c); }
+.viz-wrap.compact .issue-bad  { r: 8; stroke-width: 2.5;
+                                filter: drop-shadow(0 0 4px #ff3b30); }
 .viz-wrap.dense .focus       { r: 8; stroke-width: 3;
                                filter: drop-shadow(0 0 4px #ff17c9); }
 .viz-wrap.dense .select      { r: 8.5; stroke-width: 3.5;
@@ -366,7 +382,11 @@ body {
                                filter: drop-shadow(0 0 5px gold); }
 .viz-wrap.dense .cork        { r: 8.5; stroke-width: 3;
                                filter: drop-shadow(0 0 5px #4ea8ff); }
-.viz-wrap.dense .issue       { r: 9; stroke-width: 3;
+.viz-wrap.dense .issue-ok    { r: 8; stroke-width: 2.5;
+                               filter: drop-shadow(0 0 3px rgb(0,210,80)); }
+.viz-wrap.dense .issue-warn  { r: 8.5; stroke-width: 3;
+                               filter: drop-shadow(0 0 4px #ffae3c); }
+.viz-wrap.dense .issue-bad   { r: 9; stroke-width: 3;
                                filter: drop-shadow(0 0 5px #ff3b30); }
 
 /* ---------- left-bottom (rig check + examples) ---------- */
@@ -551,6 +571,25 @@ body {
   color: var(--ink-3);
   text-transform: uppercase;
   letter-spacing: 0.06em;
+}
+/* Pretty-printed JSON in a rig-check detail. Compact font, preserve
+   indentation, wrap long hashes so the panel stays its width. */
+.rc-json {
+  margin: 4px 0 0;
+  padding: 6px 8px;
+  background: var(--panel-2);
+  border-radius: 3px;
+  font-size: 10.5px;
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-height: 320px;
+  overflow: auto;
+}
+.rc-timing {
+  display: inline-block;
+  margin-top: 4px;
+  font-size: 10px;
+  color: var(--ink-3);
 }
 
 /* Rig-check row borrows the visualizer's chunky pill-badge for the

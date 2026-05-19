@@ -149,7 +149,12 @@ document.addEventListener('workshop:select', e => {
 let _last_issue_hashes = new Set()
 document.addEventListener('workshop:issue', e => {
   let issues = e.detail?.issues || []
-  _last_issue_hashes = new Set(issues.map(i => i.hash))
+  // Editor only highlights non-green failures — green leaves are
+  // structural confirmations rust gives along the way; surfacing
+  // them in the TRDL pane would be noise.
+  _last_issue_hashes = new Set(
+    issues.filter(i => i.colour !== 'green').map(i => i.hash)
+  )
   view.dispatch({ effects: set_issue.of(lines_for(_last_issue_hashes)) })
 })
 

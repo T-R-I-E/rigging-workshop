@@ -640,42 +640,63 @@ function apply_cork_dom() {
     if (cork) el(cork)?.classList.add('cork')
 }
 
-// Paint the issue layer (red) on every twist + connecting edge named
-// by rust's structured failure tree. Tooltips on the circles carry the
-// structype + detail so the user can hover to read what the checker
-// objected to. Listener fires on every rust check (state-changing or
-// not) so stale issue paint clears with a green/empty payload.
-let _issue_hashes = new Set()
+// Paint a per-colour issue layer on every twist named in rust's
+// structured tree, including the green ones — they show the rig's
+// healthy structure alongside the broken bits. Edges only paint for
+// non-green twists, and only the edge types the structype maps to
+// (e.g. a 'lead' failure paints the lead's teth/lead/meet edges
+// rather than every edge touching the lead twist). Tooltips on each
+// circle aggregate every structype reference for that hash.
+//
+// Listener fires on every rust check; an empty payload clears stale
+// paint from a previous fixture.
 document.addEventListener('workshop:issue', e => {
     if (!vp) return
-    vp.querySelectorAll('.issue').forEach(n => {
-        n.classList.remove('issue')
+    // Clear all four classes on both circles and edges.
+    vp.querySelectorAll('.issue-bad, .issue-warn, .issue-ok').forEach(n => {
+        n.classList.remove('issue-bad', 'issue-warn', 'issue-ok')
         n.removeAttribute('data-issue-tooltip')
     })
     let issues = e.detail?.issues || []
-    _issue_hashes = new Set(issues.map(i => i.hash))
-    // Group multi-issue annotations onto the same twist so the tooltip
-    // can show every structype that flagged it.
-    let tooltips = new Map()
+    if (!issues.length) return
+    // Per-hash: collapse multiple structype references into one tooltip
+    // and one colour class (worst wins: bad > warn > ok).
+    let by_hash = new Map()
     for (let i of issues) {
-        let prior = tooltips.get(i.hash) || []
-        prior.push(`${i.structype} [${i.colour}] ${i.issue || ''} ${i.detail || ''}`.trim())
-        tooltips.set(i.hash, prior)
+        let entry = by_hash.get(i.hash) || { worst: 'ok', lines: [], structypes: [] }
+        let rank = { ok: 0, warn: 1, bad: 2 }
+        let mycol = i.colour === 'red'   ? 'bad'
+                  : i.colour === 'yellow' ? 'warn'
+                  : 'ok'
+        if (rank[mycol] > rank[entry.worst]) entry.worst = mycol
+        entry.lines.push(`${i.structype} [${i.colour}] ${i.issue || ''} ${i.detail || ''}`.trim())
+        entry.structypes.push({ structype: i.structype, colour: i.colour })
+        by_hash.set(i.hash, entry)
     }
-    for (let [hash, lines] of tooltips) {
+    for (let [hash, entry] of by_hash) {
         let circle = el(hash)
-        if (circle) {
-            circle.classList.add('issue')
-            circle.setAttribute('data-issue-tooltip', lines.join('\n'))
-        }
+        if (!circle) continue
+        circle.classList.add('issue-' + entry.worst)
+        circle.setAttribute('data-issue-tooltip', entry.lines.join('\n'))
     }
-    // Paint edges touching any implicated twist — same pattern as the
-    // hover-edge highlight but in red.
-    if (_issue_hashes.size) {
-        vp.querySelectorAll('path[data-from], path[data-to]').forEach(p => {
-            if (_issue_hashes.has(p.getAttribute('data-from')) ||
-                _issue_hashes.has(p.getAttribute('data-to'))) p.classList.add('issue')
-        })
+    // Edges: only paint the ones whose TYPE matches the structype's
+    // role at the implicated twist. Two passes by severity so a 'bad'
+    // edge wins over an overlapping 'warn'.
+    for (let severity of ['warn', 'bad']) {
+        for (let i of issues) {
+            let sev = i.colour === 'red'    ? 'bad'
+                    : i.colour === 'yellow' ? 'warn'
+                    : null
+            if (sev !== severity) continue
+            let edge_types = ISSUE_EDGES_BY_STRUCTYPE[i.structype]
+            if (!edge_types || !edge_types.length) continue
+            for (let etype of edge_types) {
+                vp.querySelectorAll(`path.${etype}[data-from="${i.hash}"]`).forEach(p => {
+                    p.classList.remove('issue-warn', 'issue-bad')
+                    p.classList.add('issue-' + sev)
+                })
+            }
+        }
     }
 })
 
@@ -947,30 +968,51 @@ async function rust_check(ctx) {
     }
 }
 
-// Walk rust's structured tree, collecting every non-green leaf with a
-// reference twist. The top-level 'rig' node always carries the umbrella
-// colour; we skip it unless it's also a leaf (no children) so the
-// implicated set focuses on the specific structypes the checker called
-// out (lead / hoist / topline-key / succession / corkline / …).
+// Walk rust's structured tree, collecting every node with a reference
+// twist — including green ones. Each entry carries the structype so
+// the viz can paint edges specifically involved in the failure rather
+// than every edge touching the implicated twist. The 'rig' umbrella
+// is skipped when it has children (the colour comes from one of them).
 function extract_rust_issues(detail_str) {
     if (typeof detail_str !== 'string') return []
     let tree
     try { tree = JSON.parse(detail_str) } catch { return [] }
     let issues = []
-    function walk(node, ancestors) {
+    function walk(node) {
         if (!node || typeof node !== 'object') return
         let { structype, colour, reference, issue, detail, children } = node
         let kids = children && Object.values(children)
         let is_leaf = !kids || kids.length === 0
-        // Skip the umbrella 'rig' node unless leaf (no diagnostic children).
         let skip = structype === 'rig' && !is_leaf
-        if (!skip && colour && colour !== 'green' && reference) {
+        if (!skip && colour && reference) {
             issues.push({ hash: reference, structype, issue, detail, colour })
         }
-        if (kids) for (let k of kids) walk(k, [...ancestors, structype])
+        if (kids) for (let k of kids) walk(k)
     }
-    walk(tree, [])
+    walk(tree)
     return issues
+}
+
+// Map a structype to the edge types in the viz that participate in
+// that role. Used to paint just the edges actually implicated by a
+// failure (rather than every edge touching the implicated twist).
+// Container structypes (rig / half-hitch / hitch / lash / splice)
+// have no edges of their own — the leaves under them carry the
+// specifics.
+const ISSUE_EDGES_BY_STRUCTYPE = {
+    'lead':         ['teth', 'lead', 'meet'],
+    'meet':         ['meet', 'teth', 'prev'],
+    'post':         ['post', 'prev'],
+    'hoist':        ['meet', 'prev', 'post'],
+    'fastener':     ['teth', 'lead'],
+    'corkline':     ['prev', 'teth'],
+    'succession':   ['prev'],
+    'topline-key':  [],
+    'rig':          [],
+    'half-hitch':   [],
+    'hitch':        [],
+    'lash':         [],
+    'splice':       [],
 }
 
 function escape_text(s) {
@@ -978,10 +1020,41 @@ function escape_text(s) {
 }
 
 function render_check_row(c, state, badge, detail) {
+    // Pretty-print structured JSON details (rust returns its
+    // structype/colour/reference tree as a JSON string). Falls back to
+    // plain escaped text when detail isn't parseable JSON or isn't an
+    // object/array. Call sites append a trailing " · Nms" timing
+    // suffix; strip it before parsing so JSON.parse doesn't choke.
+    let body = format_check_detail(detail)
     return `<div class="rig-check ${state}" data-checker="${c.id}">` +
            `<span class="badge">${badge}</span>` +
-           `<div><span class="rc-source">${c.label}</span> ${escape_text(detail)}</div>` +
+           `<div><span class="rc-source">${c.label}</span> ${body}</div>` +
            `</div>`
+}
+
+function format_check_detail(detail) {
+    if (typeof detail !== 'string') return escape_text(String(detail ?? ''))
+    // Split off the trailing timing suffix " · 12ms" that call sites
+    // append. The JSON sits before it; render the JSON pretty and the
+    // timing as plain text trailing the <pre>.
+    let timing = ''
+    let m = detail.match(/\s*·\s*\d+ms\s*$/)
+    let body = detail
+    if (m) {
+        timing = m[0].trim()
+        body = detail.slice(0, m.index)
+    }
+    let trimmed = body.trim()
+    if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+        try {
+            let parsed = JSON.parse(trimmed)
+            if (parsed && typeof parsed === 'object') {
+                let pretty = `<pre class="rc-json">${escape_text(JSON.stringify(parsed, null, 2))}</pre>`
+                return timing ? `${pretty}<span class="rc-timing">${escape_text(timing)}</span>` : pretty
+            }
+        } catch {}
+    }
+    return escape_text(detail)
 }
 
 function update_check_row(checker_id, state, badge, detail) {
