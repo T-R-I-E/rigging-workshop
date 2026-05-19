@@ -430,6 +430,7 @@ async function run_all() {
 
   _results = []
   let perfect = 0, partial = 0, noneAgree = 0, errs = 0
+  let perChecker = { js: 0, clj: 0, bb: 0, rust: 0 }
   for (let i = 0; i < targets.length; i++) {
     progress.textContent = `${i + 1}/${targets.length} · ${targets[i].replace(/^.*\//, '')}`
     let r = await run_one(targets[i])
@@ -439,6 +440,11 @@ async function run_all() {
     else if (r.canonicalAgreementCount === 4) perfect++
     else if (r.canonicalAgreementCount === 0) noneAgree++
     else partial++
+    if (r.colours && r.canonical) {
+      for (let k of ['js','clj','bb','rust']) {
+        if (r.colours[k] !== r.canonical) perChecker[k]++
+      }
+    }
   }
   progress.textContent = ''
   summary.hidden = false
@@ -447,7 +453,10 @@ async function run_all() {
     `<strong>${partial}</strong> partial · ` +
     `<strong>${noneAgree}</strong> none-agree-canonical · ` +
     `<strong>${errs}</strong> error · ` +
-    `${targets.length} total`
+    `${targets.length} total<br>` +
+    `disagrees vs canonical: ` +
+    ['js','clj','bb','rust'].map(k =>
+      `${k}=<strong>${perChecker[k]}</strong>`).join(' · ')
   download.disabled = _results.length === 0
 }
 
