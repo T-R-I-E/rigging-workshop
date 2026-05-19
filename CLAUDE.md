@@ -4,6 +4,12 @@ Browser tool for authoring TODA rigs in TRDL (a JSONL format) and visualising
 the resulting `.toda` bytes. Editor is the source of truth. Compile / decompile
 run entirely in the browser via the modules under `toda/`.
 
+**Scope:** single test rigs (≤ ~500 twists). Abjects with delegation chains,
+sub-rigs, or external poptops are detected on load and bailed out with a
+banner in the rig-check panel — they need full multi-rig validation that
+the workshop doesn't implement. See [abject-workshop.md](abject-workshop.md)
+for the preliminary spec for the sibling tool that would handle those.
+
 ## Status
 See [TODO.md](TODO.md) for current plan, tasks, and deferred items.
 
@@ -20,7 +26,12 @@ See [TODO.md](TODO.md) for current plan, tasks, and deferred items.
   - `ed25519.js` — keypair / sign / req-sat pairtrie helpers (raw 32-byte keys)
   - `trdl.js` — JSONL parser, classifier, trdl→spec, emit
   - `compile.js` — build pipeline (TRDL → bytes)
-  - `decompile.js` — bytes → TRDL entities (unshielded path only in v1)
+  - `decompile.js` — bytes → TRDL entities (unshielded path only in v1).
+    Exports `parse_atoms` for reuse by `bytes_struct.js`.
+  - `bytes_struct.js` — atom-level structural comparison of two .toda byte
+    streams (v1: per-shape atom counts). Used to assess decompile→recompile
+    round-trip fidelity when byte-equality isn't possible (random shields
+    / sigs / pubkeys).
 - `tests.html`, `tests.js` — byte-equality test harness vs the Clojure server.
 - `src/`, `rels.js` — symlinks into `../svgiewer/`. Don't edit; they're shared.
 - `rigs/` — symlink into `../todaclj/toda-twist-maker/rigs/`. Workshop's
@@ -29,11 +40,28 @@ See [TODO.md](TODO.md) for current plan, tasks, and deferred items.
   `.trdl` / `.json` test rigs, organised by subdir.
 - `todatests/` — symlink into `../todatests/`. ~60 paired `.toda` / `.json`
   rigging tests; `.toda` loads route through decompile.
+- `toda/rustoda-wasm/` — `wasm-pack build --target web --release` output
+  of `../rustoda` (the Rust rig-checker). Bundle is `rigcheck.js` (glue)
+  + `rigcheck_bg.wasm` (~223 KB). Rebuild after changes to `../rustoda`
+  with:
+  ```
+  cd ../rustoda && wasm-pack build --target web --release \
+      --out-dir ../riggingworkshop/toda/rustoda-wasm && \
+      trash ../riggingworkshop/toda/rustoda-wasm/.gitignore
+  ```
+  The trailing `trash` is needed because wasm-pack writes a `*` gitignore
+  into the out-dir to treat it as a build artifact; we want the bundle
+  committed instead. Wired into `app.js` as the 4th `CHECKERS` entry
+  (`id: 'rust'`); loaded lazily, falls back to `warn` if the bundle is
+  missing or fails to instantiate.
 - `deps.edn`, `clj/rigging_workshop/server.clj`,
   `clj/rigging_workshop/server_bb.clj` — two sidecar Clojure servers.
-  Optional: workshop runs entirely in the browser. Servers exist only
-  for `tests.html` byte-equality checks and the dual / triple rig-check
-  display in the rig-check panel.
+  Optional: the workshop's clj/bb rig-checkers now point at the
+  CloudFront distribution (`d3myckc3w6ekfv.cloudfront.net/rigcheck-clj`
+  and `…/rigcheck-bb`, HTTPS-fronted over the deployed ALB),
+  so the local servers are only needed for `tests.html` byte-equality
+  parity checks. Localhost URLs are kept commented next to the live
+  ones in `app.js` as an offline-dev fallback.
 
 ## Running
 1. Static server serving `~/Dev` (already running per dev setup).
@@ -97,14 +125,6 @@ clj -M:server-bb
   saying "both failing the same way"). Means a JS-only or server-only
   failure currently masquerades as a skip. Tighten the harness to require
   both sides to error symmetrically before skipping; otherwise FAIL.
-- **Add the Rust toda rig-checker via WASM** as a fourth checker. Would
-  give us four independent implementations comparing notes per rig (JS
-  todajs / Clojure toda-rig-checker / Clojure toda-bb / Rust). Pure
-  in-browser via `wasm-bindgen`, no extra server process. Pattern: drop
-  the .wasm bundle in `toda/`, register a fourth entry in `CHECKERS` in
-  `app.js` that calls into it. The registry is already shape-correct
-  (`async run(ctx) → {state, detail}`); each existing checker is one
-  entry, so this slots in cleanly.
 ## Git policy (overrides global)
 You manage git directly in this project. The global "manual git" rule does
 NOT apply here. `git push` remains denied at the permission layer; the user

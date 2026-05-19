@@ -1,0 +1,9 @@
+{"rig":"Valid lash and splice"}
+{"line":"poptop","twists":4,"shielded":false,"reqsat":"null"}
+{"line":"a","twists":5,"shielded":true,"reqsat":"null"}
+{"line":"b","twists":5,"shielded":true,"reqsat":"null"}
+{"line":"abject","twists":3,"shielded":true,"reqsat":"null"}
+{"hitch":"A1","lead":"a[0]","meet":"a[4]","fastener":"poptop[0]","hoist":"poptop[2]"}
+{"hitch":"B1","lead":"b[0]","meet":"b[4]","fastener":"poptop[0]","hoist":"poptop[1]"}
+{"hitch":"Pb1","lead":"abject[0]","meet":"abject[1]","fastener":"a[1]","hoist":"a[3]"}
+{"hitch":"Pb2","lead":"abject[1]","meet":"abject[2]","fastener":"b[1]","hoist":"b[3]"}

@@ -1,0 +1,8 @@
+{
+  "moniker": "tests/toda-rig-checker/half-hitch-lead-mismatch.trdl",
+  "colour": "red",
+  "source": "tests/toda-rig-checker/half-hitch-lead-mismatch.trdl",
+  "heuristic": true,
+  "corkline": "4147699aee17b44e582d22f73047345fefd9b00ee298611f2d1d2e11cfcf19d1e8",
+  "compiled_by": "rigging-workshop toda/compile.js (2026-05-18)"
+}

@@ -49,10 +49,15 @@ export async function body({prev, tether, shield, req, rig, cargo}) {
 
 // signFn(body_hash_hex) returns either a Lat (sat pairtrie) or a hex string
 // (defaults to null_hash). twist returns a Lat focused on the new twist atom.
-export async function twist({prev, tether, shield, req, rig, cargo, signFn}) {
+// sat_override (Lat | hex string) takes precedence over signFn — used by
+// the workshop's decompile to preserve original sats atoms verbatim.
+export async function twist({prev, tether, shield, req, rig, cargo, signFn, sat_override}) {
   let body_lat   = await body({prev, tether, shield, req, rig, cargo})
   let body_focus = get_hash(body_lat)
-  let sat        = signFn ? await signFn(body_focus) : NULL_HASH
+  let sat
+  if      (sat_override != null) sat = sat_override
+  else if (signFn)               sat = await signFn(body_focus)
+  else                           sat = NULL_HASH
   let sat_hex    = get_hash(sat) ?? NULL_HASH
   let content    = byte_concat(hash_to_bytes(body_focus), hash_to_bytes(sat_hex))
   let focus_lat  = await from_packet(SHAPE.twist, content)

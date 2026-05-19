@@ -35,7 +35,8 @@ function classify_entity(m) {
   else if ('hitch' in m) return { ...m, entity_type: 'hitch', entity_id: m.hitch }
   else if ('twist' in m) return { ...m, entity_type: 'twist', entity_id: m.twist }
   else if ('id'    in m) return { ...m, entity_type: 'twist', entity_id: m.id    }
-  else throw new Error('Unknown TRDL entity (no rig/line/hitch/twist/id key)')
+  else if ('atom'  in m) return { ...m, entity_type: 'atom',  entity_id: m.atom  }
+  else throw new Error('Unknown TRDL entity (no rig/line/hitch/twist/id/atom key)')
 }
 
 // "a[3]" → "a_3", "mytwist" → "mytwist". Returns null on null/undefined input.
@@ -106,7 +107,11 @@ function expand_hitches(hitch_entities, lines_map) {
     // same — the keys are never the raw lead hash.
     let hoist_rig = { [`s:${lead}`]: meet, [`ss:${lead}`]: `s:${meet}` }
 
-    let post_rig = post_kw ? { [lead]: hoist } : null
+    // A post-rig entry only makes sense when there's a hoist to point at;
+    // decompiled TRDL for "unit rig" .toda files emits hitches with only
+    // lead+meet (no fastener/hoist), and a {lead: null} entry crashed
+    // parse_rig_ref downstream.
+    let post_rig = (post_kw && hoist) ? { [lead]: hoist } : null
 
     set_in('tethers', lead, fastener)
     if (!all_leads.has(meet)) set_in('tethers', meet, fastener)
@@ -128,9 +133,106 @@ function collect_twist_overrides(twist_entities) {
     let o  = {}
     if ('prev'  in e) o.prev_id    = ref_to_kw(e.prev)
     if ('teth'  in e) o.tether     = ref_to_kw(e.teth)
-    if ('shld'  in e) o.shield     = e.shld
-    if ('cargo' in e) o.cargo      = e.cargo
-    if ('rigs'  in e) o.extra_rigs = e.rigs
+    // reqs override (body.reqs slot). Four forms mirror shld/rigs/cargo:
+    //   "reqs": "null"                            → explicit NULL slot
+    //   "reqs": { "raw": "<hex>", "shape":… }    → verbatim atom
+    //   "reqs": { "hash": "<hex>" }               → literal hash, no atom
+    // Designed-bad reqsat fixtures: cork_reqsat_fail,
+    // lash_succession_reqsat_fail. Without this, the workshop
+    // auto-generates ed25519 req tries and the body.reqs slot diverges.
+    if ('reqs'  in e) {
+      if (e.reqs === 'null') {
+        o.reqs_null = true
+      } else if (e.reqs && typeof e.reqs === 'object') {
+        if ('raw' in e.reqs) {
+          o.reqs_raw   = e.reqs.raw
+          o.reqs_shape = e.reqs.shape || 'pairtrie'
+        } else if ('hash' in e.reqs) {
+          o.reqs_hash = e.reqs.hash
+        }
+      }
+    }
+    // sats override (twist.sats slot — separate from body). Same forms.
+    // sats lives on the twist atom itself, not the body, so it threads
+    // through factory.twist via sat_override (added alongside this).
+    if ('sats'  in e) {
+      if (e.sats === 'null') {
+        o.sats_null = true
+      } else if (e.sats && typeof e.sats === 'object') {
+        if ('raw' in e.sats) {
+          o.sats_raw   = e.sats.raw
+          o.sats_shape = e.sats.shape || 'pairtrie'
+        } else if ('hash' in e.sats) {
+          o.sats_hash = e.sats.hash
+        }
+      }
+    }
+    if ('shld'  in e) {
+      // Four forms:
+      //   "shld": "null"                           → explicit NULL slot
+      //   "shld": { "raw": "<hex>", "shape":… }   → verbatim non-arb atom
+      //   "shld": { "hash": "<hex>" }              → literal hash, no atom
+      //                                              (out-of-bundle shield)
+      //   "shld": "<arb-bytes-hex>"                → arb form (legacy)
+      // raw / hash forms preserve designed-bad shield references:
+      //   raw  → lead_shield_non_arb (body.shld points at a non-arb atom)
+      //   hash → missing_shield (body.shld hash not present in bundle)
+      if (e.shld && typeof e.shld === 'object') {
+        if ('raw' in e.shld) {
+          o.shield_raw   = e.shld.raw
+          o.shield_shape = e.shld.shape || 'arb'
+        } else if ('hash' in e.shld) {
+          o.shield_hash = e.shld.hash
+        }
+      } else {
+        o.shield = e.shld
+      }
+    }
+    if ('cargo' in e) {
+      // Three forms (matching rigs):
+      //   "cargo": "null"                          → explicit NULL slot
+      //   "cargo": { "raw": "<hex>", "shape":… }   → verbatim atom bytes
+      //   "cargo": "<other string>"                → legacy: arb:, hash hex, or utf-8
+      // raw form preserves designed-bad cargo atoms (e.g. pairtries
+      // containing twist refs in multi-hoist fixtures); needed because
+      // a plain literal-hash cargo override sets the body slot right
+      // but doesn't include the atom in the bundle, losing the
+      // cargo→target edge in the shape extractor.
+      if (e.cargo && typeof e.cargo === 'object' && 'raw' in e.cargo) {
+        o.cargo_raw   = e.cargo.raw
+        o.cargo_shape = e.cargo.shape || 'pairtrie'
+      } else {
+        o.cargo = e.cargo
+      }
+    }
+    if ('rigs'  in e) {
+      // Four forms of the rigs override (mirrors shld):
+      //   "rigs": "null"                         → explicit NULL slot
+      //   "rigs": { "raw": "<hex>", "shape":… }  → verbatim atom content
+      //   "rigs": { "hash": "<hex>" }            → literal hash, no atom
+      //                                            (out-of-bundle rigs)
+      //   "rigs": { ...pair-entries }            → legacy: extra pairs
+      //                                            merged with hitch-derived
+      // raw / hash forms take precedence over hitch-derived rigtrie:
+      //   raw  → designed-bad pairs that canonical reconstruction can't
+      //          produce (hh_wrong_hoist_values etc.)
+      //   hash → rigs hash refers to an atom absent from the bundle
+      //          (missing_rigging, cork_missing_rigging)
+      if (e.rigs === 'null') {
+        o.rigs_null = true
+      } else if (e.rigs && typeof e.rigs === 'object') {
+        if ('raw' in e.rigs) {
+          o.rigs_raw   = e.rigs.raw
+          o.rigs_shape = e.rigs.shape || 'pairtrie'
+        } else if ('hash' in e.rigs) {
+          o.rigs_hash = e.rigs.hash
+        } else {
+          o.extra_rigs = e.rigs
+        }
+      } else {
+        o.extra_rigs = e.rigs
+      }
+    }
     out.set(kw, o)
   }
   return out
@@ -186,18 +288,77 @@ export function trdl_to_spec(entities) {
       let is_abject_first = (line_name === abject_name && i === 0)
       let is_other_first  = (line_name !== poptop_name &&
                              line_name !== abject_name && i === 0)
+      // Decompile emits explicit `cargo` overrides — 'null' for
+      // line-firsts whose original body.carg was NULL, 'arb:<hex>' /
+      // literal hash for non-null. Presence of the key (rather than
+      // truthiness of the value) means "decompile told us what was
+      // really there, don't fall back to the cargo-<linename> heuristic".
+      let hasCargoOverride    = 'cargo' in override
+      let hasCargoRawOverride = 'cargo_raw' in override
 
       let spec = { id, line: line_name }
       if (reqsat_kw)            spec.reqsat        = reqsat_kw
       if (override.prev_id)     spec.prev_id       = override.prev_id
       if (tether_kw)            spec.tether        = tether_kw
-      if (Object.keys(rig_entries).length) spec.rig = rig_entries
-      if (override.shield)      spec.shield        = override.shield
-      else if (shield_hex)      spec.shield        = shield_hex
+      // rigs override precedence: explicit raw > explicit null >
+      // hitch-derived (rig_entries). Raw bytes go straight into a
+      // pairtrie (or other-shape) atom that we hand to compile via
+      // spec.rigs_raw; compile.js writes its hash into body.rigs.
+      if (override.rigs_raw) {
+        spec.rigs_raw   = override.rigs_raw
+        spec.rigs_shape = override.rigs_shape || 'pairtrie'
+      } else if (override.rigs_hash) {
+        spec.rigs_hash = override.rigs_hash
+      } else if (override.rigs_null) {
+        spec.rigs_null = true
+      } else if (Object.keys(rig_entries).length) {
+        spec.rig = rig_entries
+      }
+      // reqs / sats overrides: propagate raw / hash / null to spec.
+      // The presence of any reqs/sats override implies the workshop's
+      // ed25519 auto-generation should NOT fire for this twist.
+      if (override.reqs_raw) {
+        spec.reqs_raw   = override.reqs_raw
+        spec.reqs_shape = override.reqs_shape || 'pairtrie'
+      } else if (override.reqs_hash) {
+        spec.reqs_hash = override.reqs_hash
+      } else if (override.reqs_null) {
+        spec.reqs_null = true
+      }
+      if (override.sats_raw) {
+        spec.sats_raw   = override.sats_raw
+        spec.sats_shape = override.sats_shape || 'pairtrie'
+      } else if (override.sats_hash) {
+        spec.sats_hash = override.sats_hash
+      } else if (override.sats_null) {
+        spec.sats_null = true
+      }
+      // Decompile emits shld: 'null' explicitly to mean "no shield" even
+      // for fast twists on shielded lines. Distinguish from no-override.
+      // shld raw form (override.shield_raw) wins over both null and arb;
+      // used for designed-bad shield-shape fixtures.
+      let hasShieldOverride     = 'shield' in override
+      let hasShieldRawOverride  = 'shield_raw' in override
+      let hasShieldHashOverride = 'shield_hash' in override
+      if (hasShieldRawOverride) {
+        spec.shield_raw   = override.shield_raw
+        spec.shield_shape = override.shield_shape || 'arb'
+      } else if (hasShieldHashOverride) {
+        spec.shield_hash = override.shield_hash
+      } else if (hasShieldOverride && override.shield && override.shield !== 'null') {
+        spec.shield = override.shield
+      } else if (!hasShieldOverride && !hasShieldHashOverride && shield_hex) {
+        spec.shield = shield_hex
+      }
       if (shield_src)           spec.shield_source = shield_src
       if (is_abject_first)      spec.poptop        = poptop_first
-      else if (is_other_first)  spec.cargo         = `cargo-${line_name}`
-      if (override.cargo)       spec.cargo         = override.cargo
+      else if (is_other_first && !hasCargoOverride && !hasCargoRawOverride)
+                                spec.cargo         = `cargo-${line_name}`
+      if (hasCargoOverride)     spec.cargo         = override.cargo
+      if (hasCargoRawOverride) {
+        spec.cargo_raw   = override.cargo_raw
+        spec.cargo_shape = override.cargo_shape || 'pairtrie'
+      }
       return spec
     })
     edn_lines.set(line_name, specs)
@@ -207,12 +368,45 @@ export function trdl_to_spec(entities) {
     .map(ln => lines_map.get(ln)?.ids.at(-1))
     .filter(Boolean)
 
+  // If the rig declares a focus, ensure that twist's lat is merged
+  // LAST so its twist atom is the last atom of the recompile bundle.
+  // Reorder merge: remove focus_id if present, append it at the end.
+  // If focus_id isn't already in last_ids (e.g., focus is a mid-line
+  // twist, not a line's last), append it anyway so its lat is built
+  // and merged.
+  let focus_id_kw = rig_entity?.focus ? ref_to_kw(rig_entity.focus) : null
+  if (focus_id_kw) {
+    last_ids = last_ids.filter(id => id !== focus_id_kw)
+    last_ids.push(focus_id_kw)
+  }
+
+  // Raw atom entities: {"atom":"<hash>", "shape":"arb", "raw":"<hex>"}
+  // get registered as standalone atoms in the output bundle, regardless
+  // of whether any twist spec references them. Designed-bad rigs whose
+  // body slots point at non-twist atoms (the cork_prev_invalid_*
+  // family: arb in a twist.prev slot) need this — the literal-hex
+  // override gets the body bytes right but the arb atom itself isn't
+  // pulled in by the lat-merging path.
+  let atoms = entities
+    .filter(e => e.entity_type === 'atom')
+    .map(e => ({ hash: e.atom, shape: e.shape || 'arb', raw: e.raw }))
+
   return {
     lines:  edn_lines,
+    atoms,
     output: {
+      focus: focus_id_kw,
       merge:    last_ids,
       exclude:  [],
-      corkline: lines_map.get(poptop_name)?.ids[0] ?? null,
+      // Resolve the corkline ID to the named poptop line when present;
+      // fall back to the first real line in lines_map otherwise. Without
+      // this, single-line rigs (or anything whose corkline isn't called
+      // "poptop") returned corkline:null, so `workshop.corkline` after
+      // recompile stayed pinned to the .json sidecar's canonical hash,
+      // which doesn't appear in the recompiled bytes — and every checker
+      // got handed a corkline twist that wasn't in the file.
+      corkline: (lines_map.get(poptop_name) ?? [...lines_map.values()][0])
+                ?.ids[0] ?? null,
     },
   }
 }

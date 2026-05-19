@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Rigging Workshop — Disagreement Bench</title>
+<link rel="stylesheet" href="style.css">
+
+<script type="importmap">
+{
+  "imports": {
+    "@noble/ed25519": "https://esm.sh/@noble/ed25519@2"
+  }
+}
+</script>
+
+<style>
+  body { padding: 16px; font-family: var(--mono); font-size: 12px;
+         background: var(--bg); color: var(--ink); overflow: auto; }
+  h1 { font-size: 16px; margin: 0 0 4px; }
+  .meta { color: var(--ink-3); margin-bottom: 12px; }
+  .controls { margin: 12px 0; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .controls input[type=text] { padding: 4px 8px; font: inherit; min-width: 280px;
+                               background: var(--panel); border: 1px solid var(--line);
+                               border-radius: 3px; color: var(--ink); }
+  table { border-collapse: collapse; min-width: 1080px; }
+  th { font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em;
+       color: var(--ink-3); border-bottom: 1px solid var(--line); }
+  td, th { padding: 4px 10px; text-align: left; vertical-align: top; }
+  tr:hover td { background: color-mix(in oklab, var(--ink) 4%, var(--bg)); }
+  td.note { white-space: pre-wrap; font-family: var(--mono); font-size: 11px;
+            color: var(--ink-3); max-width: 380px; }
+  td.path { max-width: 280px; overflow: hidden; text-overflow: ellipsis; }
+  .v-ok    { color: #4d8a2a; font-weight: 600; }
+  .v-warn  { color: #b48634; font-weight: 600; }
+  .v-broke { color: #a85a1a; font-weight: 700; letter-spacing: 0.02em;
+             background: color-mix(in oklab, #d77f2a 18%, transparent);
+             padding: 0 4px; border-radius: 2px; }
+  .v-bad   { color: var(--bad-strong, #c45a4d); font-weight: 600; }
+  .v-skip  { color: var(--ink-3); }
+  .v-green  { color: #4d8a2a; font-weight: 600; }
+  .v-yellow { color: #b48634; font-weight: 600; }
+  .v-red    { color: var(--bad-strong, #c45a4d); font-weight: 600; }
+  /* highlight cells that disagree with the canonical colour */
+  td.cell.disagrees { background: color-mix(in oklab, #d77f2a 12%, transparent); }
+  .verdict.perfect    { color: #4d8a2a; font-weight: 700; }
+  .verdict.partial    { color: #b48634; font-weight: 700; }
+  .verdict.imperfect  { color: var(--bad-strong, #c45a4d); font-weight: 700; }
+  .verdict.error      { color: var(--bad-strong, #c45a4d); font-style: italic; }
+  .summary { margin: 12px 0; padding: 8px 10px; border: 1px solid var(--line);
+             border-radius: 4px; background: var(--panel); }
+</style>
+</head>
+<body>
+
+<h1>Rig-checker disagreement bench</h1>
+<div class="meta">For every rig in the workshop's sidebar (.trdl compiled in-browser,
+   .toda loaded as-is): run all four rig-checkers on the original bytes and compare
+   against the canonical declared colour from the .json sidecar (or the heuristic
+   in editor.js RIGS for the workshop's pre-test rigs/* set). Highlights cells that
+   disagree with canonical.</div>
+
+<div class="controls">
+  <button class="btn primary" id="run">Run all</button>
+  <input type="text" id="filter" placeholder="filter rigs (substring)" />
+  <button class="btn" id="download" disabled>Download JSON</button>
+  <span id="progress" class="meta"></span>
+</div>
+
+<div id="summary" class="summary" hidden></div>
+
+<table id="results">
+  <thead><tr>
+    <th>rig</th>
+    <th>canonical</th>
+    <th>js</th><th>clj</th><th>bb</th><th>rust</th>
+    <th>verdict</th>
+    <th>note</th>
+  </tr></thead>
+  <tbody></tbody>
+</table>
+
+<script type="module" src="disagreement-bench.js"></script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+{"rig":"Splice on mutual tether"}
+{"line":"poptop","twists":2,"shielded":false,"reqsat":"null"}
+{"line":"a","twists":4,"shielded":false,"reqsat":"null"}
+{"line":"abject","twists":2,"shielded":false,"reqsat":"null"}
+{"hitch":"A1","lead":"a[1]","meet":"a[2]","fastener":"abject[0]","hoist":"abject[1]","post":"none"}
+{"hitch":"Pb1","lead":"abject[0]","meet":"abject[1]","fastener":"a[0]","hoist":"a[3]"}

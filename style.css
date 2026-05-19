@@ -1,31 +1,50 @@
 /* ---------- tokens ---------- */
+/* Workshop, restyled with the T.R.I.E. Visualizer's warm-paper palette
+   and type system. Gentle — same panel grid, same line weights, same
+   functional behaviours. Only tokens, brand and a few accents changed. */
 :root {
-  --bg:        #f6f5f2;          /* warm paper */
-  --panel:     #ffffff;
-  --panel-2:   #fbfaf7;
-  --ink:       #1a1a1a;
-  --ink-2:     #4a4a48;
-  --ink-3:     #8a8a85;
-  --line:      #e6e3dc;
-  --line-2:    #d8d4cb;
-  --accent:    oklch(0.55 0.10 200);   /* muted teal */
-  --accent-soft: oklch(0.96 0.02 200);
-  --warn:      oklch(0.62 0.13 50);    /* amber */
-  --bad:       oklch(0.55 0.16 25);    /* red-orange */
-  --ok:        oklch(0.58 0.10 150);   /* green */
+  /* paper + ink: warmer than the old neutral set, pulled straight from
+     the visualizer so the two surfaces feel like one product. */
+  --bg:        #f3efe6;          /* paper */
+  --panel:     #faf7ef;          /* slightly lifted off paper */
+  --panel-2:   #ebe6da;          /* paper-2 / header strip */
+  --ink:       #15110b;          /* warm near-black */
+  --ink-2:     #45402f;
+  --ink-3:     #8a8579;
+  --line:      #d8d2c2;
+  --line-2:    #c4bda9;
 
-  --hl-a3:     oklch(0.92 0.07 150);   /* A3 highlight (greenish) */
-  --hl-tri:    oklch(0.86 0.10 25);    /* triangle highlight (coral) */
+  /* accents: visualizer hues, expressed as both literal and oklch (for
+     mixing). Magenta = errors/focus, teal = info/select, amber = warn,
+     lime = ok. The literals match the visualizer's --magenta/--teal/
+     --amber/--lime exactly. */
+  --magenta:   #D6175A;
+  --amber:     #E89C18;
+  --teal:      #1B5F8C;
+  --lime:      #3FA85B;
+
+  --accent:      var(--teal);
+  --accent-soft: oklch(0.94 0.03 240);
+  --warn:        var(--amber);
+  --bad:         var(--magenta);
+  --ok:          var(--lime);
+
+  --hl-a3:     oklch(0.92 0.07 130);   /* hex highlight (lime tint) */
+  --hl-tri:    oklch(0.86 0.10 25);
 
   --shadow-1:  0 1px 0 rgba(0,0,0,0.02), 0 1px 2px rgba(20,20,15,0.04);
   --radius:    6px;
   --radius-sm: 4px;
 
-  --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  --sans: 'Inter', system-ui, -apple-system, Helvetica, Arial, sans-serif;
+  /* Type: serif display kept narrow (brand wordmark + panel titles
+     only). Sans stays as the body font for legibility in a working
+     tool. Mono is unchanged — JetBrains Mono carries most of the UI. */
+  --display: 'Source Serif 4', 'GT Sectra', 'Tiempos Headline', Georgia, serif;
+  --sans:    'Inter Tight', 'Inter', system-ui, -apple-system, Helvetica, Arial, sans-serif;
+  --mono:    'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
   --row-h: 28px;
-  --nav-h: 44px;
+  --nav-h: 48px;
 }
 
 * { box-sizing: border-box; }
@@ -52,34 +71,52 @@ body {
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: 0 14px;
+  padding: 0 16px;
   background: var(--panel);
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--line-2);
 }
 .brand {
-  display: flex; align-items: center; gap: 8px;
-  font-weight: 600; letter-spacing: -0.01em;
+  display: flex; align-items: center; gap: 10px;
   color: var(--ink);
-  padding-right: 6px;
+  padding-right: 8px;
   text-decoration: none;
+  border-right: 1px solid var(--line);
+  height: 100%;
+  padding-right: 16px;
+  margin-right: 4px;
 }
 .brand-mark {
-  width: 18px; height: 18px;
+  width: 26px; height: 16px;
   display: block;
+  color: var(--ink);
+}
+.brand-mark .tri-shadow { fill: rgba(0,0,0,0.08); }
+.brand .wordmark {
+  font-family: var(--display);
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  line-height: 1;
 }
 .brand small {
   font-family: var(--mono);
   color: var(--ink-3);
   font-weight: 400;
-  font-size: 11px;
+  font-size: 9.5px;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
   margin-left: 2px;
+  padding-left: 10px;
+  border-left: 1px solid var(--line-2);
+  line-height: 1.15;
+  white-space: nowrap;
 }
 
 .nav-group {
   display: flex; align-items: center; gap: 6px;
   padding: 0 8px;
   border-left: 1px solid var(--line);
-  height: 24px;
+  height: 26px;
 }
 .nav-group:first-of-type { border-left: 0; padding-left: 0; }
 
@@ -91,29 +128,31 @@ body {
   font-family: var(--mono);
   font-size: 12px;
   color: var(--ink);
-  background: var(--panel-2);
-  min-width: 220px;
+  background: #fff;
+  min-width: 240px;
   outline: none;
 }
 .input::placeholder { color: var(--ink-3); }
-.input:focus { border-color: var(--accent); background: #fff; }
+.input:focus { border-color: var(--accent); }
 
 .btn {
   height: 26px;
   padding: 0 10px;
   border: 1px solid var(--line-2);
-  background: var(--panel-2);
+  background: #fff;
   color: var(--ink);
   font-family: var(--sans);
   font-size: 12px;
   border-radius: var(--radius-sm);
   cursor: pointer;
   display: inline-flex; align-items: center; gap: 6px;
+  white-space: nowrap;       /* don't let multi-word labels wrap into 2 lines */
+  flex: none;
 }
-.btn:hover { background: #fff; border-color: var(--ink-3); }
+.btn:hover { background: var(--panel-2); border-color: var(--ink-3); }
 .btn.primary {
   background: var(--ink);
-  color: #fff;
+  color: var(--bg);
   border-color: var(--ink);
 }
 .btn.primary:hover { background: #000; }
@@ -142,7 +181,7 @@ body {
   grid-template-columns: 1fr 1fr;
   grid-template-rows: 1fr 1fr;
   gap: 1px;
-  background: var(--line);
+  background: var(--line-2);
   height: 100%;
   min-height: 0;
 }
@@ -156,23 +195,28 @@ body {
 .panel-head {
   height: var(--row-h);
   display: flex; align-items: center;
-  padding: 0 10px;
+  padding: 0 12px;
   border-bottom: 1px solid var(--line);
   background: var(--panel-2);
   gap: 10px;
 }
+.panel-head > * { white-space: nowrap; }     /* keep title + meta on one line */
 .panel-title {
   font-family: var(--mono);
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0.04em;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 1.4px;
   text-transform: uppercase;
-  color: var(--ink-2);
+  color: var(--ink);
+  flex: none;
 }
 .panel-meta {
   font-family: var(--mono);
   font-size: 11px;
   color: var(--ink-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
 .panel-tools {
   margin-left: auto;
@@ -193,16 +237,19 @@ body {
 .panel-body {
   overflow: auto;
   min-height: 0;
+  background: var(--panel);
 }
 
 /* ---------- editor (CodeMirror mount) ---------- */
 .editor-host {
   height: 100%;
   font-family: var(--mono);
+  background: #fff;
 }
 .editor-host .cm-editor {
   height: 100%;
   font-size: 12.5px;
+  background: #fff;
 }
 .editor-host .cm-scroller {
   font-family: var(--mono);
@@ -215,26 +262,25 @@ body {
 }
 .editor-host .cm-content { padding: 8px 0; }
 /* Click-select is persistent (teal-tinted, with an accent bar to match the
-   hex pane). Hover is transient (warm-yellow tint). Hover renders on top so
-   the user sees what's under the cursor, but the select never gets erased. */
+   hex pane). Hover is transient (warm-amber tint). */
 .editor-host .cm-line.cm-hl-select { background: var(--accent-soft); box-shadow: inset 2px 0 0 var(--accent); }
-.editor-host .cm-line.cm-hl-hover  { background: oklch(0.95 0.05 80); }
+.editor-host .cm-line.cm-hl-hover  { background: oklch(0.95 0.05 75); }
 
 /* ---------- viz ---------- */
 .viz-wrap {
   position: relative;
   height: 100%;
   background:
-    radial-gradient(circle at 1px 1px, #e9e6df 1px, transparent 1px) 0 0 / 16px 16px,
-    var(--panel);
+    radial-gradient(circle at 1px 1px, #d8d2c2 1px, transparent 1px) 0 0 / 16px 16px,
+    #fff;
 }
 .viz-wrap svg { width: 100%; height: 100%; display: block; }
 
 .viz-legend {
   position: absolute;
   left: 10px; bottom: 10px;
-  background: rgba(255,255,255,0.92);
-  border: 1px solid var(--line);
+  background: rgba(255,253,247,0.95);
+  border: 1px solid var(--line-2);
   border-radius: var(--radius-sm);
   padding: 6px 8px;
   font-family: var(--mono);
@@ -253,13 +299,15 @@ body {
   position: absolute;
   right: 10px; top: 10px;
   display: flex; gap: 2px;
-  background: rgba(255,255,255,0.92);
-  border: 1px solid var(--line);
+  background: rgba(255,253,247,0.95);
+  border: 1px solid var(--line-2);
   border-radius: var(--radius-sm);
   padding: 2px;
 }
 
-/* svgiewer edge / node colours, scoped to our viz */
+/* svgiewer edge / node colours — kept as-is. These map to data
+   semantics (prev/teth/lead/meet/post/cargo) and the user reads the
+   graph by colour, so retuning would break recognition. */
 .viz-wrap path { fill: none; pointer-events: none; }
 .viz-wrap circle { stroke: var(--ink); stroke-width: 1; }
 .viz-wrap .prev   { stroke: #999; stroke-linecap: butt; }
@@ -269,26 +317,18 @@ body {
 .viz-wrap .post   { stroke: rgb(255,174,60); stroke-linecap: butt; }
 .viz-wrap .cargo  { stroke: rgb(255,0,0); stroke-linecap: butt; }
 .viz-wrap .dashed { stroke-dasharray: 3; }
-/* Highlight ordering: select before highlight so hover (highlight) wins
-   when both classes are on the same circle — matches the editor's "select
-   is base, hover overlays" rule. Each state pumps r and stroke-width and
-   adds a soft drop-shadow halo so the ring is visible at a glance.
-   Sizes scale with twist count: render_svg() toggles `.compact` (<30
-   twists, glow looks oversized) and `.dense` (≥200, neighbours overlap). */
 .viz-wrap .focus     { r: 11; stroke-width: 5; stroke: #ff17c9;
                        filter: drop-shadow(0 0 6px #ff17c9); }
 .viz-wrap .select    { r: 12; stroke-width: 6; stroke: rgb(0,210,80);
                        filter: drop-shadow(0 0 9px rgb(0,210,80)); }
 .viz-wrap .highlight { r: 12; stroke-width: 5; stroke: gold;
                        filter: drop-shadow(0 0 9px gold); }
-
 .viz-wrap.compact .focus     { r: 7; stroke-width: 2.5;
                                filter: drop-shadow(0 0 3px #ff17c9); }
 .viz-wrap.compact .select    { r: 7.5; stroke-width: 3;
                                filter: drop-shadow(0 0 4px rgb(0,210,80)); }
 .viz-wrap.compact .highlight { r: 7.5; stroke-width: 2.5;
                                filter: drop-shadow(0 0 4px gold); }
-
 .viz-wrap.dense .focus       { r: 8; stroke-width: 3;
                                filter: drop-shadow(0 0 4px #ff17c9); }
 .viz-wrap.dense .select      { r: 8.5; stroke-width: 3.5;
@@ -297,10 +337,6 @@ body {
                                filter: drop-shadow(0 0 5px gold); }
 
 /* ---------- left-bottom (rig check + examples) ---------- */
-/* Flex so the optional rig-meta section shows up cleanly when present —
-   `auto 1fr` grid only allocates two row tracks, so a third section ended
-   up overlapping. With flex, content-sized rows shrink to fit and the
-   rigs list grabs the remaining vertical space. */
 .stack {
   display: flex;
   flex-direction: column;
@@ -308,7 +344,11 @@ body {
   min-height: 0;
 }
 .stack > .section { flex: 0 0 auto; }
-.stack > .rigs-section { flex: 1 1 auto; min-height: 0; }
+/* Floor the examples list so a tall rig-check column doesn't squash it
+   to zero. The panel-body is `overflow: auto`, so if total content
+   exceeds the available height the panel scrolls — that's fine,
+   scrolling a bit to reach the examples beats them disappearing. */
+.stack > .rigs-section { flex: 1 1 auto; min-height: 240px; }
 .section {
   padding: 10px 12px;
   border-bottom: 1px solid var(--line);
@@ -319,15 +359,11 @@ body {
   margin: 0 0 8px 0;
   font-family: var(--mono);
   font-size: 10.5px;
-  font-weight: 500;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--ink-3);
+  letter-spacing: 0.08em;
+  color: var(--ink-2);
 }
-/* Collapsible sections (rig-meta, rig-check). Click the H4 to toggle.
-   When .section.collapsed is set, anything below the H4 is hidden so
-   the panel reclaims the vertical space — important when the rig-check
-   list grows to several rows + a divergence section. */
 .section h4.collapsible {
   display: flex;
   align-items: center;
@@ -335,15 +371,15 @@ body {
   cursor: pointer;
   user-select: none;
 }
-.section h4.collapsible:hover { color: var(--ink-2); }
+.section h4.collapsible:hover { color: var(--ink); }
 .section h4.collapsible .chevron {
-  font-family: var(--sans);   /* mono fonts often miss the unicode triangle */
+  font-family: var(--sans);
   font-size: 14px;
   color: var(--ink-2);
-  text-transform: none;       /* H4 sets uppercase, undo for the glyph */
+  text-transform: none;
   transition: transform 0.15s;
   display: inline-block;
-  width: 14px;                /* fixed width keeps the title flush across rotation */
+  width: 14px;
   text-align: center;
   flex: none;
 }
@@ -356,6 +392,37 @@ body {
 .section.collapsed > *:not(h4) {
   display: none !important;
 }
+/* Status pill in a collapsible h4 — stays visible when the section is
+   collapsed so the user can see fail/warn/pass (rig-check) or the
+   green/yellow/red colour (rig-meta) without expanding. */
+.section-status {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 1px 6px;
+  border-radius: 8px;
+  border: 1px solid var(--line-2);
+  background: var(--panel-2);
+  color: var(--ink-3);
+  white-space: nowrap;
+  flex: none;
+}
+.section-status:empty { display: none; }
+.section-status.ok,
+.section-status.green  { background: color-mix(in oklab, var(--ok)   25%, var(--panel-2));
+                         color: var(--ink);
+                         border-color: color-mix(in oklab, var(--ok)   45%, var(--line-2)); }
+.section-status.warn,
+.section-status.yellow { background: color-mix(in oklab, var(--warn) 25%, var(--panel-2));
+                         color: var(--ink);
+                         border-color: color-mix(in oklab, var(--warn) 45%, var(--line-2)); }
+.section-status.bad,
+.section-status.red    { background: color-mix(in oklab, var(--bad)  25%, var(--panel-2));
+                         color: var(--ink);
+                         border-color: color-mix(in oklab, var(--bad)  45%, var(--line-2)); }
 .rigs-section {
   display: flex;
   flex-direction: column;
@@ -365,14 +432,14 @@ body {
   overflow-y: auto;
   flex: 1;
   min-height: 0;
-  margin: 0 -4px;                               /* let hover row span fully */
+  margin: 0 -4px;
 }
 .rig-group {
   font-family: var(--mono);
   font-size: 10px;
   color: var(--ink-3);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   padding: 8px 12px 2px 8px;
 }
 .rig-group:first-child { padding-top: 0; }
@@ -402,17 +469,16 @@ body {
 .rig-dot.yellow { background: var(--warn); }
 .rig-dot.red    { background: var(--bad); }
 
-/* Canonical descriptor for the loaded rig (when a sibling tests/.json
-   exists). Rendered as a thin row of pills below a small filename header. */
+/* Canonical descriptor for the loaded rig. */
 .rig-meta-filename {
   margin: 0 0 6px 0;
   font-family: var(--mono);
   font-size: 11px;
   font-weight: 500;
-  letter-spacing: 0;
-  text-transform: none;
-  color: var(--ink-2);
-  word-break: break-all;
+  letter-spacing: 0 !important;        /* beat .section h4's uppercase tracking */
+  text-transform: none !important;
+  color: var(--ink);
+  overflow-wrap: anywhere;
 }
 .rig-meta {
   display: flex; flex-wrap: wrap; gap: 4px 10px;
@@ -433,16 +499,10 @@ body {
 .rig-meta .rm-colour.yellow::before { background: var(--warn); }
 .rig-meta .rm-colour.red::before    { background: var(--bad); }
 
-/* Multi-checker layout: each registered checker (svgiewer JS, canonical
-   Clojure via /rigcheck, future toda-bb) renders its own .rig-check row
-   inside this container. set_rigcheck() collapses to a single row when a
-   workshop-level error (compile / load) occurs. */
+/* Multi-checker layout. */
 .rig-check-list {
   display: flex; flex-direction: column; gap: 6px;
 }
-/* Rendered when a .toda load's decompile→recompile produced different
-   bytes than the original. Sits between the initial-pass rows and any
-   per-checker rows that disagree with the baseline. */
 .rig-diff-note {
   font-family: var(--mono);
   font-size: 10.5px;
@@ -457,14 +517,18 @@ body {
   font-size: 10px;
   color: var(--ink-3);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
 }
 
+/* Rig-check row borrows the visualizer's chunky pill-badge for the
+   status indicator (PASS/CHECK/FAIL), but keeps the soft tinted card
+   background so it doesn't shout in a tool you use all day. Neutral
+   by default — the in-progress CHECK state shouldn't look green. */
 .rig-check {
-  display: flex; align-items: flex-start; gap: 8px;
+  display: flex; align-items: flex-start; gap: 10px;
   padding: 8px 10px;
-  background: color-mix(in oklab, var(--ok) 8%, var(--panel));
-  border: 1px solid color-mix(in oklab, var(--ok) 25%, var(--line));
+  background: var(--panel);
+  border: 1px solid var(--line-2);
   border-radius: var(--radius-sm);
   font-family: var(--mono);
   font-size: 11.5px;
@@ -472,24 +536,102 @@ body {
 }
 .rig-check .badge {
   flex: none;
-  background: var(--ok);
-  color: #fff;
-  font-weight: 600;
-  padding: 1px 6px;
+  background: var(--panel-2);
+  color: var(--ink-2);
+  font-weight: 800;
+  padding: 2px 7px;
+  border: 1.5px solid var(--ink-3);
   border-radius: 2px;
   font-size: 10px;
-  letter-spacing: 0.04em;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  font-family: var(--sans);
 }
+.rig-check.ok {
+  background: color-mix(in oklab, var(--ok) 10%, var(--panel));
+  border-color: color-mix(in oklab, var(--ok) 35%, var(--line-2));
+}
+.rig-check.ok .badge { background: var(--ok); color: var(--ink); border-color: var(--ink); }
 .rig-check.warn {
-  background: color-mix(in oklab, var(--warn) 10%, var(--panel));
-  border-color: color-mix(in oklab, var(--warn) 30%, var(--line));
+  background: color-mix(in oklab, var(--warn) 12%, var(--panel));
+  border-color: color-mix(in oklab, var(--warn) 40%, var(--line-2));
 }
-.rig-check.warn .badge { background: var(--warn); }
+.rig-check.warn .badge { background: var(--warn); color: var(--ink); border-color: var(--ink); }
 .rig-check.bad {
   background: color-mix(in oklab, var(--bad) 10%, var(--panel));
-  border-color: color-mix(in oklab, var(--bad) 30%, var(--line));
+  border-color: color-mix(in oklab, var(--bad) 35%, var(--line-2));
 }
-.rig-check.bad .badge { background: var(--bad); }
+.rig-check.bad .badge { background: var(--bad); color: #fff; border-color: var(--ink); }
+/* "broke" = checker couldn't evaluate the request (HTTP non-2xx, wasm
+   exception, timeout). Spec puts it in the yellow / unknown bucket per
+   §9.1.3 but we visually distinguish it from a real yellow so users see
+   "checker failed to process" separately from "checker says yellow". */
+.rig-check.broke {
+  background: color-mix(in oklab, #d77f2a 14%, var(--panel));
+  border-color: color-mix(in oklab, #d77f2a 40%, var(--line-2));
+}
+.rig-check.broke .badge { background: #d77f2a; color: var(--ink); border-color: var(--ink); letter-spacing: 0.5px; }
+
+/* Per-checker status pills shown in the collapsed rig-check h4 (one
+   pill per checker so all four states are visible at a glance). */
+.section-checkers {
+  margin-left: auto;
+  display: flex;
+  gap: 3px;
+  flex: none;
+}
+.check-pill {
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  padding: 1px 5px;
+  border-radius: 6px;
+  border: 1px solid var(--line-2);
+  background: var(--panel-2);
+  color: var(--ink-3);
+  letter-spacing: 0.04em;
+  min-width: 16px;
+  text-align: center;
+  white-space: nowrap;
+}
+.check-pill.ok   { background: color-mix(in oklab, var(--ok)   25%, var(--panel-2));
+                   color: var(--ink);
+                   border-color: color-mix(in oklab, var(--ok)   45%, var(--line-2)); }
+.check-pill.warn { background: color-mix(in oklab, var(--warn) 25%, var(--panel-2));
+                   color: var(--ink);
+                   border-color: color-mix(in oklab, var(--warn) 45%, var(--line-2)); }
+.check-pill.bad  { background: color-mix(in oklab, var(--bad)  25%, var(--panel-2));
+                   color: var(--ink);
+                   border-color: color-mix(in oklab, var(--bad)  45%, var(--line-2)); }
+
+/* ---------- hex view toggle (panel header) ---------- */
+.hex-toggle {
+  margin-left: auto;
+  display: inline-flex;
+  font-family: var(--mono);
+}
+.hex-toggle button {
+  border: 1px solid var(--line-2);
+  background: var(--panel);
+  color: var(--ink-3);
+  padding: 1px 7px;
+  cursor: pointer;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  line-height: 1.4;
+}
+.hex-toggle button:hover { color: var(--ink); }
+.hex-toggle button.active {
+  background: var(--ink);
+  color: var(--bg);
+  border-color: var(--ink);
+}
+.hex-toggle button:first-child { border-radius: 2px 0 0 2px; }
+.hex-toggle button:last-child  { border-radius: 0 2px 2px 0; border-left-width: 0; }
+.hex-toggle button.active + button { border-left-width: 1px; }
 
 /* ---------- hex viewer ---------- */
 .hex {
@@ -497,6 +639,8 @@ body {
   font-size: 12px;
   line-height: 1.6;
   padding: 8px 12px;
+  background: #fff;
+  height: 100%;
 }
 .hex .atom {
   display: grid;
@@ -506,18 +650,91 @@ body {
   white-space: pre;
 }
 .hex .atom.select { background: var(--accent-soft); box-shadow: inset 2px 0 0 var(--accent); }
-.hex .atom.hover  { background: oklch(0.95 0.05 80); }
+.hex .atom.hover  { background: oklch(0.95 0.05 75); }
 .hex .b-hash {
-  color: oklch(0.50 0.10 200);
+  color: var(--teal);
   cursor: pointer;
   text-decoration: underline dotted;
   text-underline-offset: 2px;
 }
-.hex .b-tag  { color: oklch(0.45 0.13 270); font-weight: 500; }
-.hex .b-len  { color: oklch(0.55 0.13 30); }
+.hex .b-tag  { color: oklch(0.45 0.13 295); font-weight: 500; }
+.hex .b-len  { color: oklch(0.55 0.13 35); }
 .hex .b-content { color: var(--ink); }
 .hex .b-content.trie { background: var(--hl-a3); border-radius: 2px; padding: 0 2px; }
 .hex .empty { color: var(--ink-3); padding: 12px; }
+
+/* ---------- kiwanoed hex view ---------- */
+/* Shape-aware multi-line atom blocks. Atom = small panel: a header line
+   (algo + hash + name annotation), a shape line (shape + content size),
+   then per-shape content. Visual grouping comes from the atom panel's
+   own background + a thin left rule instead of blank-line separators. */
+.hex.kiwanoed {
+  font-size: 11.5px;
+  line-height: 1.55;
+  padding: 8px 8px;
+}
+.hex.kiwanoed .kx-atom {
+  /* Reset .atom's display:grid (used by the raw view) so rows stack
+     vertically; reset its grid-template too in case any cascade lingers. */
+  display: block;
+  grid-template-columns: none;
+  margin: 0 0 6px 0;
+  padding: 4px 6px 4px 8px;
+  background: color-mix(in oklab, var(--bg) 50%, #fff);
+  border-left: 2px solid var(--line);
+  border-radius: 2px;
+  cursor: default;
+  white-space: normal;
+}
+.hex.kiwanoed .kx-atom:hover  { background: oklch(0.95 0.05 75); }
+.hex.kiwanoed .kx-atom.hover  { background: oklch(0.95 0.05 75); }
+.hex.kiwanoed .kx-atom.select {
+  background: var(--accent-soft);
+  border-left-color: var(--accent);
+}
+/* Tint the left rule by shape so the eye can tell pairtrie / twist / body
+   / arb apart at a glance without the colour fighting the .select state. */
+.hex.kiwanoed .kx-atom[data-shape="48"] { border-left-color: oklch(0.65 0.10 200); }
+.hex.kiwanoed .kx-atom[data-shape="49"] { border-left-color: oklch(0.65 0.10 130); }
+.hex.kiwanoed .kx-atom[data-shape="60"] { border-left-color: oklch(0.65 0.10 75);  }
+.hex.kiwanoed .kx-atom[data-shape="63"] { border-left-color: oklch(0.65 0.10 295); }
+.hex.kiwanoed .kx-atom.select[data-shape] { border-left-color: var(--accent); }
+
+.hex.kiwanoed .kx-row {
+  display: flex; gap: 12px; align-items: baseline; white-space: pre;
+}
+.hex.kiwanoed .kx-header .kx-hash {
+  color: var(--teal);
+  cursor: pointer;
+  text-decoration: underline dotted;
+  text-underline-offset: 2px;
+  font-weight: 500;
+}
+.hex.kiwanoed .kx-shape {
+  color: oklch(0.45 0.13 295);
+  padding-left: 16px;
+}
+/* Body / twist named-field rows: field name in a fixed-width column so the
+   values line up vertically across the six body slots (prev/teth/shld/…). */
+.hex.kiwanoed .kx-field .kx-fieldname {
+  display: inline-block;
+  width: 4ch;
+  color: var(--ink-2);
+  font-weight: 500;
+}
+.hex.kiwanoed .kx-field .kx-value { color: var(--ink); }
+.hex.kiwanoed .kx-field .kx-null  { color: var(--ink-3); }
+/* Pairtrie pairs: key row + value row, value indented one space-equivalent
+   beyond the key (matches the reference). Both indent in from the shape
+   line. */
+.hex.kiwanoed .kx-pair { padding-left: 24px; }
+.hex.kiwanoed .kx-pair .kx-key { color: var(--ink); }
+.hex.kiwanoed .kx-pair .kx-val { color: var(--ink); padding-left: 1ch; }
+/* Hashes-list entries (single hash per row, no key/value pairing). */
+.hex.kiwanoed .kx-listitem { padding-left: 24px; color: var(--ink); }
+/* Arb raw bytes — indented under the shape line, no annotation column. */
+.hex.kiwanoed .kx-data { padding-left: 24px; color: var(--ink); }
+.hex.kiwanoed .kx-comment { color: var(--ink-3); }
 
 /* ---------- icons (inline svg helper) ---------- */
 .ic {

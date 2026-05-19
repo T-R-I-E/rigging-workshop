@@ -1,7 +1,7 @@
 // Build pipeline. spec → twists map → output bytes. Mirrors twist-maker.core.
 
 import { byte_concat, sha256, bytes_to_hex, hex_to_bytes } from './bytes.js'
-import { lat_focus, lat_to_bytes, NULL_HASH, get_hash } from './lat.js'
+import { lat_focus, lat_to_bytes, NULL_HASH, get_hash, from_packet, SHAPE } from './lat.js'
 import { arb, pairtrie, body, twist as build_twist } from './factory.js'
 import { keypair as ed_keypair, req_pairtrie, sign_fn } from './ed25519.js'
 
@@ -142,22 +142,84 @@ async function build_twists(lines) {
 
   for (let spec of sorted) {
     let { id, prev_id, tether, cargo, shield, rig, shield_source,
-          poptop, reqsat, line } = spec
+          poptop, reqsat, line, rigs_raw, rigs_shape, rigs_null,
+          rigs_hash, cargo_raw, cargo_shape, shield_raw, shield_shape,
+          shield_hash, reqs_raw, reqs_shape, reqs_hash, reqs_null,
+          sats_raw, sats_shape, sats_hash, sats_null } = spec
 
     let prev_lat
     if (prev_id == null || prev_id === 'null') prev_lat = null
     else if (prev_id === 'dangling') {
+      // Legacy marker. Pre-rig-perfect decompile emitted 'dangling' and
+      // expected compile to synthesize a random arb. Still supported for
+      // hand-authored TRDL, but lossy: each compile produces different
+      // bytes for the prev and every downstream body hash cascades.
       let { random_bytes } = await import('./bytes.js')
       prev_lat = await arb(random_bytes(32))
     }
-    else prev_lat = twists.get(prev_id) || null
+    else if (twists.has(prev_id)) prev_lat = twists.get(prev_id)
+    else if (/^(41|22)[0-9a-f]{64}$|^00$|^ff$/i.test(prev_id)) {
+      // Literal hash hex (sha-256 with 0x41 prefix, symbol with 0x22, or
+      // NULL/UNIT singletons). Decompile emits this for line-genesis whose
+      // body.prev points outside the file — compile writes the hex into
+      // the body slot directly, without synthesizing an arb atom. Result:
+      // recompile body matches the original's body hash slot-for-slot, and
+      // the canonical checkers see "prev → not in file" exactly as they
+      // did against the original bytes. get_hash() in lat.js returns a
+      // string input unchanged, so passing the hex through as `prev` works
+      // without any further plumbing.
+      prev_lat = prev_id
+    }
+    else prev_lat = null
 
-    let tether_lat   = tether ? twists.get(tether) || null : null
-    let shield_lat   = shield ? await arb(hex_to_bytes(shield)) : null
+    // tether resolves to: a known twist's lat (normal case from
+     // hitch-derived tethers), or a literal hash hex (decompile preserves
+     // the teth of fasteners / hoists whose original points to a twist
+     // outside the file). Literal hex goes into the body slot verbatim
+     // without synthesizing an atom, matching the prev handling above.
+    let tether_lat
+    if (!tether)                                            tether_lat = null
+    else if (twists.has(tether))                            tether_lat = twists.get(tether)
+    else if (/^(41|22)[0-9a-f]{64}$/i.test(tether))         tether_lat = tether
+    else                                                    tether_lat = null
+    // shield: precedence raw > hash > arb-bytes > null. Used for
+    // designed-bad shield shapes (raw: lead_shield_non_arb) and for
+    // shields whose target atom isn't in the bundle (hash:
+    // missing_shield — body slot holds the hex, no atom synthesized).
+    let shield_lat
+    if (shield_raw) {
+      let shape_byte = SHAPE[shield_shape] ?? SHAPE.arb
+      shield_lat = await from_packet(shape_byte, hex_to_bytes(shield_raw))
+    } else if (shield_hash) {
+      shield_lat = shield_hash  // pass-through hex; factory writes verbatim
+    } else if (shield) {
+      shield_lat = await arb(hex_to_bytes(shield))
+    } else {
+      shield_lat = null
+    }
     let poptop_lat   = poptop ? twists.get(poptop) || null : null
+    // Cargo encodings (from decompile, see toda/decompile.js):
+    //   'null'        → explicitly no cargo (body.carg = NULL)
+    //   'arb:<hex>'   → rebuild the arb atom with those bytes
+    //   '<66-char hex>' → literal hash; write into body slot without
+    //                     synthesizing a corresponding atom
+    //   anything else → legacy hand-authored TRDL: hash the UTF-8 string
     let cargo_val
     if (poptop && poptop_lat) {
       cargo_val = await pairtrie([[SYM_POPTOP, poptop_lat]])
+    } else if (cargo_raw) {
+      // Verbatim atom bytes — used for designed-bad cargo (e.g. a
+      // pairtrie containing twist refs in multi-hoist fixtures).
+      // Defaults to pairtrie shape; non-pairtrie shapes specified
+      // via spec.cargo_shape.
+      let shape_byte = SHAPE[cargo_shape] ?? SHAPE.pairtrie
+      cargo_val = await from_packet(shape_byte, hex_to_bytes(cargo_raw))
+    } else if (cargo === 'null' || cargo == null) {
+      cargo_val = null
+    } else if (typeof cargo === 'string' && cargo.startsWith('arb:')) {
+      cargo_val = await arb(hex_to_bytes(cargo.slice(4)))
+    } else if (typeof cargo === 'string' && /^(41|22)[0-9a-f]{64}$/i.test(cargo)) {
+      cargo_val = cargo
     } else if (cargo) {
       cargo_val = await str_to_hash(cargo)
     }
@@ -168,11 +230,52 @@ async function build_twists(lines) {
       if (src_spec?.shield) rig_shield = hex_to_bytes(src_spec.shield)
     }
 
-    let rig_lat = rig ? await build_rig_lat(twists, rig_shield, rig) : null
+    // rigs slot precedence: explicit raw bytes > explicit hash > explicit
+    // null > hitch-derived pairtrie.
+    //   raw  → designed-bad pairs (any shape) — from_packet builds the
+    //          atom, its hash goes in the body slot.
+    //   hash → out-of-bundle rigs reference (missing_rigging) — the hex
+    //          passes straight through to the body slot, no atom is
+    //          synthesized, checkers see "missing" as in orig.
+    //   null → explicit NULL slot.
+    let rig_lat
+    if (rigs_raw) {
+      let shape_byte = SHAPE[rigs_shape] ?? SHAPE.pairtrie
+      rig_lat = await from_packet(shape_byte, hex_to_bytes(rigs_raw))
+    } else if (rigs_hash) {
+      rig_lat = rigs_hash  // pass-through hex; factory writes verbatim
+    } else if (rigs_null) {
+      rig_lat = null
+    } else {
+      rig_lat = rig ? await build_rig_lat(twists, rig_shield, rig) : null
+    }
 
     let kp        = (reqsat === 'ed25519') ? line_keys.get(line) : null
     let req_lat   = kp ? await req_pairtrie(kp.pub) : null
     let signFn    = kp ? sign_fn(kp.secret) : null
+
+    // reqs override: raw > hash > null > ed25519-derived (above).
+    // Used for designed-bad reqsat fixtures whose body.reqs slot holds
+    // a specific pairtrie that won't be reproduced by ed25519 keygen.
+    if (reqs_raw) {
+      req_lat = await from_packet(SHAPE[reqs_shape] ?? SHAPE.pairtrie, hex_to_bytes(reqs_raw))
+    } else if (reqs_hash) {
+      req_lat = reqs_hash
+    } else if (reqs_null) {
+      req_lat = null
+    }
+
+    // sats override: raw > hash > null > signFn-derived. Lives on the
+    // twist atom (not body); threads through factory.twist via
+    // sat_override which wins over signFn when present.
+    let sat_override
+    if (sats_raw) {
+      sat_override = await from_packet(SHAPE[sats_shape] ?? SHAPE.pairtrie, hex_to_bytes(sats_raw))
+    } else if (sats_hash) {
+      sat_override = sats_hash
+    } else if (sats_null) {
+      sat_override = NULL_HASH
+    }
 
     let twist_lat = await build_twist({
       prev:   prev_lat,
@@ -182,6 +285,7 @@ async function build_twists(lines) {
       rig:    rig_lat,
       cargo:  cargo_val,
       signFn,
+      sat_override,
     })
 
     twists.set(id, twist_lat)
@@ -211,10 +315,44 @@ function assemble_output(twists, output) {
   return merged
 }
 
+// Build raw atom entities into a lat. Each entity creates one atom via
+// from_packet(shape, content) — its hash is determined by the bytes.
+// Caller merges this lat alongside the twist lats so the atoms end up
+// in the output bundle regardless of whether any twist's lat references
+// them. Used for designed-bad rigs whose body slots point at non-twist
+// atoms (cork_prev_invalid_*: arb in a twist's prev slot).
+async function build_atoms(atom_entries) {
+  let lat = new Map()
+  for (let { shape, raw } of atom_entries) {
+    let shape_byte = SHAPE[shape]
+    if (shape_byte == null) continue
+    let atom_lat = await from_packet(shape_byte, hex_to_bytes(raw))
+    for (let [k, v] of atom_lat) {
+      if (lat.has(k)) lat.delete(k)
+      lat.set(k, v)
+    }
+  }
+  return lat
+}
+
 // Public entry point. Returns { bytes, twists, corkline_h }.
 export async function build(spec) {
   let twists  = await build_twists(spec.lines)
   let out_lat = assemble_output(twists, spec.output)
+  // Atom entities are merged at the BEGINNING of the byte stream.
+  // Several rig-checkers treat the last atom in the bundle as the
+  // rig's focus (the topline-ish anchor); appending extras at the
+  // end would shift that off. Prepending preserves the final-atom-
+  // is-focus invariant while still ensuring the extras are present.
+  if (spec.atoms?.length) {
+    let extras = await build_atoms(spec.atoms)
+    let reordered = new Map()
+    for (let [k, v] of extras) reordered.set(k, v)
+    for (let [k, v] of out_lat) {
+      if (!reordered.has(k)) reordered.set(k, v)
+    }
+    out_lat = reordered
+  }
   let corkline_h = spec.output.corkline ? lat_focus(twists.get(spec.output.corkline)) : null
   return {
     bytes:   lat_to_bytes(out_lat),

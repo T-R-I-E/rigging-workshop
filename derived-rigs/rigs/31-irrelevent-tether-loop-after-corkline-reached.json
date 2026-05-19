@@ -1,0 +1,8 @@
+{
+  "moniker": "rigs/31-irrelevent-tether-loop-after-corkline-reached.trdl",
+  "colour": "green",
+  "source": "rigs/31-irrelevent-tether-loop-after-corkline-reached.trdl",
+  "heuristic": true,
+  "corkline": "4181152578955ce07f08c4406218158b8b2593bd80a71532a3b237849ba9ac7570",
+  "compiled_by": "rigging-workshop toda/compile.js (2026-05-18)"
+}

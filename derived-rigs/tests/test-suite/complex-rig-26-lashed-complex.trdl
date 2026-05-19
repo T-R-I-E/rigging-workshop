@@ -1,0 +1,19 @@
+{"rig":"Lashed rigs spliced for maximal time crossing complex"}
+{"line":"poptop","twists":7,"shielded":false,"reqsat":"null"}
+{"line":"g","twists":2,"shielded":true,"reqsat":"null"}
+{"line":"f","twists":3,"shielded":true,"reqsat":"null"}
+{"line":"e","twists":2,"shielded":true,"reqsat":"null"}
+{"line":"d","twists":5,"shielded":true,"reqsat":"null"}
+{"line":"c","twists":3,"shielded":true,"reqsat":"null"}
+{"line":"b","twists":2,"shielded":true,"reqsat":"null"}
+{"line":"abject","twists":5,"shielded":true,"reqsat":"null"}
+{"hitch":"Pb1","lead":"abject[0]","meet":"abject[2]","fastener":"b[0]","hoist":"b[1]"}
+{"hitch":"Pb2","lead":"abject[2]","meet":"abject[4]","fastener":"c[0]","hoist":"c[2]"}
+{"hitch":"D1","lead":"d[0]","meet":"d[1]","fastener":"e[0]","hoist":"e[1]"}
+{"hitch":"D2","lead":"d[1]","meet":"d[3]","fastener":"f[0]","hoist":"f[2]"}
+{"hitch":"D3","lead":"d[3]","meet":"d[4]","fastener":"g[0]","hoist":"g[1]"}
+{"hitch":"C1","lead":"c[0]","meet":"c[2]","fastener":"d[1]","hoist":"d[3]"}
+{"hitch":"B1","lead":"b[0]","meet":"b[1]","fastener":"d[1]","hoist":"d[4]"}
+{"hitch":"G1","lead":"g[0]","meet":"g[1]","fastener":"poptop[0]","hoist":"poptop[4]"}
+{"hitch":"F1","lead":"f[0]","meet":"f[2]","fastener":"poptop[1]","hoist":"poptop[5]"}
+{"hitch":"E1","lead":"e[0]","meet":"e[1]","fastener":"poptop[2]","hoist":"poptop[6]"}

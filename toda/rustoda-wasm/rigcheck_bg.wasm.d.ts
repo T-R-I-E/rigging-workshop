@@ -1,0 +1,1 @@
+../../../rustoda/wasm/rigcheck_bg.wasm.d.ts

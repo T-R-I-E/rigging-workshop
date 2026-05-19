@@ -1,0 +1,4 @@
+{"rig":"Twist isolation multi-line"}
+{"line":"poptop","twists":2,"shielded":false,"reqsat":"null"}
+{"line":"abject","twists":3,"shielded":true,"reqsat":"ed25519"}
+{"hitch":"Pb1","lead":"abject[1]","meet":"abject[2]","fastener":"poptop[0]","hoist":"poptop[1]","post":"none"}

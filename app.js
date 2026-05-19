@@ -16,6 +16,9 @@ import { Twist } from './src/core/twist.js'
 import { Hash } from './src/core/hash.js'
 import { rels } from './rels.js'
 import { SECP256r1 } from './src/client/secp256r1.js'
+import { Abject } from './src/abject/abject.js'
+import { DelegableActionable } from './src/abject/actionable.js'
+import { DQ } from './src/abject/quantity.js'  // registers DQ interpreter
 
 const TWIST = 0x48
 const BODY  = 0x49
@@ -156,7 +159,10 @@ function twist_list(env) {
 
 function have_successors(env) {
     env.shapes[TWIST]?.forEach(t => {
-        if(!t.prev) return 0
+        // Skip when prev isn't a real twist with a successor list — happens
+        // for "dangling" prevs in TRDL "missing" rigs, where the body's
+        // prev hash points to an arb placeholder instead of a twist atom.
+        if(!t.prev || !Array.isArray(t.prev.succ)) return 0
         t.prev.succ.push(t)
         if(t.prev.succ.length > 1)
             env.errors.push({twist: t, message: `Equivocation in "${t.prev.hash}"`})
@@ -694,33 +700,75 @@ const CHECKERS = [
         id: 'js',
         label: 'js · todajs',
         async run(ctx) {
-            let line   = Line.fromTwist(ctx.twist)
-            let interp = new HalfHitchInterpreter(line, ctx.corklineHash)
-            await interp.verifyTopline()
-            await interp.verifyHitchLine(ctx.twistHash)
-            return { state: 'ok', detail: 'verified' }
+            try {
+                let line   = Line.fromTwist(ctx.twist)
+                let interp = new HalfHitchInterpreter(line, ctx.corklineHash)
+                await interp.verifyTopline()
+                await interp.verifyHitchLine(ctx.twistHash)
+                return { state: 'ok', detail: 'verified' }
+            } catch (e) {
+                // Spec §9.1.3 (p.30): MISSING / UNKNOWN issues are yellow,
+                // INVALID / MISMATCH issues are red. svgiewer/src names a
+                // few INVALID-class invariant violations with a "Missing"
+                // prefix even though all relevant atoms are present and a
+                // structural rule was broken. We classify those as red here
+                // until the JS hierarchy is cleaned up — see
+                // js-rig-checker-surgical-changes.md.
+                //
+                //   MissingHoistError  — no hoist exists for this lead (e.g.
+                //                        hh_tether_null: NULL teth → not fast)
+                //   MissingPostEntry   — post twist exists but its rigs lack
+                //                        the canonical entry for the lead
+                //   MissingSuccessor   — line ends before reaching stop
+                //
+                // Everything else with a "Missing" prefix (MissingError,
+                // MissingHashPacketError, MissingPrevError, MissingPrevious)
+                // is a genuine atom-not-in-bundle situation → yellow.
+                // MissingPrevious stays yellow only because the wrapper in
+                // interpret.js:prev() currently swallows the inner type;
+                // see surgical-changes.md §2 for the upstream fix.
+                let name = e?.name || e?.constructor?.name || ''
+                const JS_INVALID_AS_MISSING = new Set([
+                    'MissingHoistError',
+                    'MissingPostEntry',
+                    'MissingSuccessor',
+                ])
+                if (JS_INVALID_AS_MISSING.has(name)) {
+                    return { state: 'bad', detail: e?.message || String(e) }
+                }
+                if (/^Missing/.test(name)) {
+                    return { state: 'warn', detail: e?.message || String(e) }
+                }
+                throw e
+            }
         },
     },
     {
         id: 'clj',
         label: 'clj · toda-rig-checker',
-        async run(ctx) { return server_check(ctx, 7878, '/rigcheck-clj') },
+        // async run(ctx) { return server_check(ctx, 'http://localhost:7878/rigcheck') },
+        async run(ctx) { return server_check(ctx, 'https://d3myckc3w6ekfv.cloudfront.net/rigcheck-clj') },
     },
     {
         id: 'bb',
         label: 'clj · toda-bb',
-        async run(ctx) { return server_check(ctx, 7879, '/rigcheck-bb') },
+        // async run(ctx) { return server_check(ctx, 'http://localhost:7879/rigcheck-bb') },
+        async run(ctx) { return server_check(ctx, 'https://d3myckc3w6ekfv.cloudfront.net/rigcheck-bb') },
+    },
+    {
+        id: 'rust',
+        label: 'rust · rustoda',
+        async run(ctx) { return rust_check(ctx) },
     },
 ]
 
 // Shared server-checker driver. The two server endpoints take the same
 // shape (.toda bytes body + cork=&twist= query params, returning
-// {colour: green|yellow|red}) but live on different ports because they
+// {colour: green|yellow|red}) but live behind different paths because they
 // run in separate JVMs (toda-bb's namespaces conflict with toda-core's,
 // so they can't share a process).
-async function server_check(ctx, port, path) {
-    let url = `http://localhost:${port}${path}` +
-              `?cork=${ctx.corklineHex}&twist=${ctx.twistHex}`
+async function server_check(ctx, base) {
+    let url = `${base}?cork=${ctx.corklineHex}&twist=${ctx.twistHex}`
     let res
     try {
         res = await fetch(url, {
@@ -729,10 +777,14 @@ async function server_check(ctx, port, path) {
             body: ctx.bytes,
         })
     } catch {
-        return { state: 'warn', detail: 'server offline' }
+        return { state: 'broke', detail: 'server offline' }
     }
     if (!res.ok) {
-        return { state: 'bad',
+        // Server didn't successfully evaluate the rig — broke, not bad.
+        // Spec-wise this is in the yellow / unknown bucket per §9.1.3,
+        // but we visually distinguish it from a real yellow so the user
+        // can see "checker failed to process" cases separately.
+        return { state: 'broke',
                  detail: `HTTP ${res.status}: ${(await res.text()).slice(0,120)}` }
     }
     let { colour } = await res.json()
@@ -741,6 +793,43 @@ async function server_check(ctx, port, path) {
              : colour === 'yellow' ? 'warn'
              : 'bad',
         detail: colour,
+    }
+}
+
+// Rust-backed checker. Runs rustoda's `check_rig` inside the page via
+// wasm-bindgen — no server, no extra process. Bundle lives at
+// toda/rustoda-wasm/ (output of `wasm-pack build --target web` over the
+// rustoda crate). Loaded lazily on first invocation so it doesn't slow
+// down initial paint. A failed load degrades to a `warn` row instead of
+// breaking the panel, mirroring server_check's offline handling.
+let _rustoda_load
+async function load_rustoda() {
+    if (!_rustoda_load) _rustoda_load = (async () => {
+        try {
+            let mod = await import('./toda/rustoda-wasm/rigcheck.js')
+            await mod.default()
+            return { mod }
+        } catch (e) {
+            return { error: e }
+        }
+    })()
+    return _rustoda_load
+}
+async function rust_check(ctx) {
+    let { mod, error } = await load_rustoda()
+    if (error) return { state: 'broke', detail: `wasm load failed: ${error.message || error}` }
+    try {
+        let bytes = ctx.bytes instanceof Uint8Array ? ctx.bytes : new Uint8Array(ctx.bytes)
+        // Pass ctx.twistHex as the focus so the rust checker pivots around
+        // the user-selected twist, matching the js / clj / bb checkers.
+        // Without this it falls back to parse_lat's last-twist heuristic
+        // (the CLI default) and reports "rig supports up to X but focus is Y"
+        // whenever the user clicks anything other than the file's tail twist.
+        let { state, detail } = JSON.parse(mod.check_rig(bytes, ctx.corklineHex, ctx.twistHex))
+        return { state, detail }
+    } catch (e) {
+        // wasm threw or produced malformed JSON — broke, not bad.
+        return { state: 'broke', detail: e.message || String(e) }
     }
 }
 
@@ -776,9 +865,10 @@ function results_differ(a, b) {
 }
 
 function badge_for(state) {
-    return state === 'ok'   ? 'OK'
-         : state === 'warn' ? 'WARN'
-         : state === 'bad'  ? 'FAIL'
+    return state === 'ok'    ? 'OK'
+         : state === 'warn'  ? 'WARN'
+         : state === 'bad'   ? 'FAIL'
+         : state === 'broke' ? 'BROKE'
          : '—'
 }
 
@@ -797,9 +887,82 @@ function classify_pass(ctx) {
     return 'rebuild-diff'
 }
 
+// Rigging Workshop is for single test rigs (TRDL authoring). Abjects and
+// large files need multi-rig validation (delegation chains, sub-rigs) which
+// belongs in abject-workshop — see abject-workshop.md. Detect and bail out
+// rather than running the single-rig checkers and reporting misleading
+// per-rig results.
+const WORKSHOP_TWIST_LIMIT = 500
+
+// Fail-fast check on raw .toda bytes. Used by editor.js load_bytes BEFORE
+// decompile / render run, so abjects and oversized files don't trigger any
+// of the expensive pipeline. Returns { twistCount, isAbject, bailReason }.
+// bailReason is non-null when the workshop cannot meaningfully handle the
+// file — caller should render the banner and stop.
+function check_workshop_supported(bytes) {
+    let twistCount = 0, isAbject = false
+    try {
+        let atoms = Atoms.fromBytes(bytes)
+        let focusTwist = atoms.focus ? new Twist(atoms, atoms.focus) : null
+        twistCount = Line.fromAtoms(atoms).twistList().length
+        isAbject = !!(focusTwist && Abject.fromTwist(focusTwist))
+    } catch (_e) {
+        // Malformed bytes — let the normal pipeline surface the error.
+    }
+    return { twistCount, isAbject, bailReason: bail_message(twistCount, isAbject) }
+}
+
+function bail_message(twistCount, isAbject) {
+    if (twistCount > WORKSHOP_TWIST_LIMIT) {
+        return {
+            label: 'FILE TOO BIG ERROR',
+            msg: `Rigging Workshop supports rigs ≤ ${WORKSHOP_TWIST_LIMIT} twists. ` +
+                 `This file has ${twistCount}. Use abject-workshop for larger files ` +
+                 `(see abject-workshop.md).`,
+        }
+    }
+    if (isAbject) {
+        return {
+            label: 'ABJECT ERROR',
+            msg: `This file looks like an abject. Rigging Workshop only checks ` +
+                 `single rigs and does not implement full abject checking ` +
+                 `(delegation chains, multi-rig walks). Use abject-workshop for ` +
+                 `abjects (see abject-workshop.md).`,
+        }
+    }
+    return null
+}
+
+// Defensive check for the show_abject_info path (TRDL author rebuilds; clicks
+// after a .toda load). Uses the cached check on initial_toda_load when present;
+// otherwise falls back to env.shapes for the count (TRDL-authored rigs aren't
+// abjects, so no abject check needed there).
+function workshop_bail_reason() {
+    let init = window.workshop?.initial_toda_load
+    if (init) {
+        if (init.workshop_check === undefined) {
+            init.workshop_check = check_workshop_supported(init.bytes)
+        }
+        return init.workshop_check.bailReason
+    }
+    let twistCount = env.shapes?.[TWIST]?.length || 0
+    return bail_message(twistCount, false)
+}
+
+function render_workshop_unsupported(rc, info) {
+    rc.className = 'rig-check warn'
+    rc.innerHTML = `<span class="badge">${escape_text(info.label)}</span>` +
+                   `<div>${escape_text(info.msg)}</div>`
+}
+
 function show_abject_info(id) {
     let rc = el('rigcheck')
     if (!rc) return
+    let bail = workshop_bail_reason()
+    if (bail) {
+        render_workshop_unsupported(rc, bail)
+        return
+    }
     let corkline = window.workshop?.corkline
     if (!corkline) {
         rc.className = 'rig-check-list'
@@ -837,43 +1000,55 @@ function show_abject_info(id) {
 
     // Recompile produced the same bytes the user loaded — the first-pass
     // results are still authoritative; clear any stale diff section from
-    // an earlier divergent rebuild and otherwise leave the rows alone.
+    // an earlier divergent rebuild plus any workshop-status banner left
+    // behind by a transient compile error, and otherwise leave the rows
+    // alone.
     if (pass === 'rebuild-same') {
-        rc.querySelectorAll('[data-section="diff"]').forEach(e => e.remove())
+        rc.querySelectorAll('[data-section="diff"], [data-section="workshop-status"]')
+            .forEach(e => e.remove())
         return
     }
 
     if (pass === 'rebuild-diff') {
         // Append a divergence note + per-checker rows that differ from the
         // initial pass. Don't touch the initial rows above. Replace any
-        // previously-rendered diff section so re-edits show fresh output.
+        // previously-rendered diff section so re-edits show fresh output,
+        // and drop any stale workshop-status banner now that we have new
+        // results to show.
         let init = window.workshop.initial_toda_load
-        rc.querySelectorAll('[data-section="diff"]').forEach(e => e.remove())
+        rc.querySelectorAll('[data-section="diff"], [data-section="workshop-status"]')
+            .forEach(e => e.remove())
         rc.insertAdjacentHTML('beforeend',
             `<div class="rig-diff-note" data-section="diff">` +
             `recompiled bytes differ from the loaded .toda — re-running checkers</div>`)
-        for (let c of CHECKERS) {
+        // Run all checkers in parallel, render the differing rows in
+        // CHECKERS registry order. Pre-Promise.all this appended rows in
+        // finish-time order, so the panel reshuffled across re-edits as
+        // some checkers warmed up faster than others.
+        Promise.all(CHECKERS.map(async c => {
             let t0 = performance.now()
-            c.run(ctx)
-                .then(({state, detail}) => {
-                    let init_res = init.results.get(c.id)
-                    if (!results_differ(init_res, {state, detail})) return
-                    let dt = (performance.now() - t0).toFixed(0)
-                    rc.insertAdjacentHTML('beforeend',
-                        render_check_row(c, state, badge_for(state),
-                                         `${detail} · ${dt}ms`)
-                            .replace('class="rig-check',
-                                     'data-section="diff" class="rig-check'))
-                })
-                .catch(e => {
-                    let msg = escape_text((e?.message || String(e)).slice(0, 120))
-                    rc.insertAdjacentHTML('beforeend',
-                        render_check_row(c, 'bad', 'FAIL', msg)
-                            .replace('class="rig-check',
-                                     'data-section="diff" class="rig-check'))
-                    console.error(`[${c.label}]`, e)
-                })
-        }
+            try {
+                let { state, detail } = await c.run(ctx)
+                return { c, state, detail, dt: performance.now() - t0 }
+            } catch (e) {
+                console.error(`[${c.label}]`, e)
+                return {
+                    c, state: 'bad',
+                    detail: (e?.message || String(e)).slice(0, 120),
+                    dt: performance.now() - t0,
+                }
+            }
+        })).then(results => {
+            for (let { c, state, detail, dt } of results) {
+                let init_res = init.results.get(c.id)
+                if (!results_differ(init_res, { state, detail })) continue
+                rc.insertAdjacentHTML('beforeend',
+                    render_check_row(c, state, badge_for(state),
+                                     `${detail} · ${dt.toFixed(0)}ms`)
+                        .replace('class="rig-check',
+                                 'data-section="diff" class="rig-check'))
+            }
+        })
         return
     }
 
@@ -894,8 +1069,9 @@ function show_abject_info(id) {
                 }
             })
             .catch(e => {
+                let dt  = (performance.now() - t0).toFixed(0)
                 let msg = escape_text((e?.message || String(e)).slice(0, 120))
-                update_check_row(c.id, 'bad', 'FAIL', msg)
+                update_check_row(c.id, 'bad', 'FAIL', `${msg} · ${dt}ms`)
                 if (pass === 'initial') {
                     window.workshop.initial_toda_load.results.set(c.id, {state: 'bad', detail: msg})
                 }
@@ -909,4 +1085,9 @@ function show_abject_info(id) {
 window.workshop = {
     render(buffer) { return showpipe(buffer) },
     select_node, highlight_node,
+    check_supported: check_workshop_supported,
+    render_unsupported(info) {
+        let rc = el('rigcheck')
+        if (rc) render_workshop_unsupported(rc, info)
+    },
 }

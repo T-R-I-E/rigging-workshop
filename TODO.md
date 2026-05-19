@@ -22,58 +22,98 @@
        (`clj -M:server-bb`, port 7879). Sidecar exists because toda-bb's
        `toda.shielding` namespace collides with toda-core's; loading both
        in one JVM silently rebinds the vars and breaks both interpreters.
+## Done — earlier sessions (rig-checker plurality, viz, persistence, hex)
+- **Rig-checker plurality**: workshop runs **four** rig-checkers in
+  parallel (js · todajs, clj · toda-rig-checker, clj · toda-bb,
+  rust · rustoda WASM), each rendering its own row in the Rig check panel.
 - **Spec-canonical hoist rig**: compile (JS + Clojure) always emits the
-  `{S(lead) → meet, S(S(lead)) → S(meet)}` quad. With NULL-shield leads
-  the shield function degenerates to plain hash; the entry shape stays
-  the same. Decompile updated to detect this form (cheap value-only scan
-  + cryptographic confirmation against the lead's shield).
-- **Dropped `UnshieldedInterpreter`** (the workaround for the compile bug
-  it papered over). Replaced with a focused `HalfHitchInterpreter` that
-  relaxes only `hitchPost` (no `MissingPostEntry` on missing post entries)
-  and `_verifyHitchLine` (drops the must-be-full-hitch check, null-guards
-  prev walk, swallows `MissingPrevError`, deduplicates via cycle guard so
-  rig 29's tether-loop doesn't freeze the page).
+  `{S(lead) → meet, S(S(lead)) → S(meet)}` quad. Decompile detects this
+  form via cheap value-only scan + cryptographic confirmation against
+  the lead's shield.
+- **`HalfHitchInterpreter`** replaces the dropped `UnshieldedInterpreter`:
+  relaxes `hitchPost` and `_verifyHitchLine` so half-hitches and
+  tether-loops don't freeze the page.
 - **Dual UI for click vs hover**: independent decoration tracks across
   viz / editor / hex; hover overlays select rather than replacing it.
-  Distinct colours per state. Editor hover dispatches alongside the
-  cursor-broadcast for select.
-- **Adaptive viz sizing**: `.viz-wrap.compact` (<30 twists) and
-  `.viz-wrap.dense` (≥200) adjust hover/select/focus glow so they don't
-  look comical on a 6-twist rig nor overlap neighbours on a 300-twist one.
-- **Persistence & UX**: SVG and hex selection survive rebuilds (lookup by
-  hash, falls back to focus when a hash is gone). Viz no longer auto-pans
-  on click. Rig-meta section above Rig check shows the canonical
-  `<filename>.json`'s moniker · colour · cork hash · issue.
-- **Decompile→recompile divergence note**: when a `.toda` is loaded and
-  the JS recompile of its decompiled TRDL produces different bytes from
-  the original, the Rig check panel keeps the initial-pass results, adds
-  a "recompiled bytes differ" note, and renders only the per-checker rows
-  that disagree with the baseline. Eliminates the kiwano "OK-flash →
-  FAIL" confusion.
-- **Collapsible sections**: rig-meta and Rig check H4s are clickable,
-  with chevron at the left.
-- **Corkline source**: `.toda` loads use the canonical corkline from the
-  sibling `.json`. `build()` no longer null-overwrites `workshop.corkline`.
-- **Test harness**: skips JS-error rigs client-side (rigs 19/20 circular
-  dep) so the browser console stays clean; logs `console.warn DIVERGE` on
-  byte mismatches with hex context.
+- **Adaptive viz sizing**: compact/dense glow scaling so 6-twist and
+  300-twist rigs both look right.
+- **Persistence**: SVG / hex selection survive rebuilds; viz no longer
+  auto-pans on click.
+- **Decompile→recompile divergence note** + rig-meta panel showing the
+  canonical `<filename>.json`'s moniker · colour · cork hash · issue.
+- **Collapsible sections** with chevron toggle.
+- **Kiwanoed hex view**: structural per-atom annotation with named slots
+  (prev/teth/shld/reqs/rigs/carg; body/sats), rig-position atom names,
+  pairtrie key/value labelling. Toggle between raw and kiwanoed.
 
-## Test status
-- `tests.html`: **29 pass · 0 fail · 3 skip** when both `dx-null-shield-fun`
-  is checked out in `../todaclj` and the main server is running. Skips:
-  rig 5 (non-deterministic random shield), rigs 19 & 20 (circular dep
-  in spec graph; both compilers reject symmetrically).
-- Workshop rig-check across 60+ examples: works for the canonical-shape
-  rigs. Known canonical-strict failures (informational, not workshop bugs):
-  rig 7 / 8 (corkline-self-tether walks back to non-lead twists),
-  rig 10 (cross-line `prev` rejected by `Line.fromTwist`),
-  `rigging-corkline-incomplete-early` (interp/structural).
+## Done — this session
+- **Status pill in collapsed h4** for both rig-meta (green/yellow/red)
+  and rig-check sections. Rig-check pill later split into one mini pill
+  per checker (js, clj, bb, rust) so all four states are visible at a
+  glance when collapsed.
+- **Arrow-key scroll scoped to the examples list**, not its ancestors —
+  navigating through rigs no longer jolts the surrounding panel.
+- **Neutral CHECK rows**: `.rig-check` default is panel-coloured;
+  explicit `.rig-check.ok` carries the green styling. The in-progress
+  CHECK state no longer reads as green.
+- **clj / bb checkers point at the CloudFront HTTPS endpoint**
+  (`d3myckc3w6ekfv.cloudfront.net/rigcheck-clj` and `…/rigcheck-bb`,
+  fronting the deployed ALB).
+  Localhost URLs commented next to them as the offline-dev fallback.
+- **Compile fix**: `expand_hitches` no longer emits `{lead: null}` as a
+  post-rig entry when the hitch has no hoist (the shape decompile emits
+  for `unit_rig.toda`-style files). One-line guard; 6 compile failures
+  in the example sweep dropped to 2 (only the documented circular-dep
+  rigs 19/20).
+- **Decompile fix**: `discover_lines` now treats `prev` pointing to a
+  hash outside the file (dangling) as line genesis, and emits a
+  `{id:'<line>[0]', prev:'dangling'}` override so recompile produces a
+  random arb prev. Fixes the two `.toda` files that decompiled to empty
+  TRDL and recompiled to 0 bytes.
+- **`toda/bytes_struct.js` (v1)**: atom-level structural comparison via
+  per-shape atom counts. `parse_atoms` is now exported from decompile.js.
+  Bucketing across the .toda corpus surfaces (a) shielded-default
+  inflation, (b) negative-test fixtures with intentional orphan bodies,
+  and (c) a small number of genuine lossy cases.
+
+## Test status (as of this session)
+- **Compile sweep across all 127 examples** (`.trdl` + `.toda → decompile
+  → recompile`): **125 pass · 2 fail (circular-dep rigs 19 / 20)**.
+- **Decompile → recompile round-trip** across the 60 `.toda` examples:
+  **60 / 60 succeed without exception, 0 produce empty bytes**.
+- **Structural equality** (atom-shape counts, v1): **1 / 60 pass**,
+  59 differ. Broken down:
+    - 38 — arb + pairtrie inflation (recompile adds shield arbs +
+      hoist-rig pairtries the original didn't have; likely a `shielded:
+      true` default issue).
+    - 17 — orphan bodies in the *original* (all `hh_*` / `hitch_*`
+      negative-test fixtures designed to model malformed rigs; the
+      decompiler correctly omits the orphans, so byte-mismatch is
+      structural-by-design).
+    - 4 — recompile genuinely loses twists (`cork_prev_invalid_*`,
+      `lashed_non_colinear`, `corkline_incomplete_late`).
+    - 0 — `twist_gain` cases (recompile never invents twists).
+- `tests.html` (byte-equality vs Clojure server): not run this session
+  (requires local Clojure server on port 7878). Last recorded state
+  before the ALB swap: 29 pass · 0 fail · 3 skip.
 
 ## Open / next
-- **Decompile lossiness**: the kiwano set's recompile produces different
-  bytes from the original, surfaced via the new diff note. Real fix is
-  making decompile lossless (capture more rig structure into TRDL).
-  Not blocking for now since the diff note shows the user where the gap is.
+- **Tighten `bytes_struct_equal`** beyond shape counts: digest each
+  atom recursively (ignoring random-content positions: shield arbs,
+  ed25519 sig arbs, pubkey arbs) so structural-equivalent shielded rigs
+  can compare equal. Likely path: walk both rigs from the corkline,
+  build (atom-shape, child-digest-list) tuples, compare those.
+- **Investigate the 4 twist-loss cases**: real decompile lossiness.
+  `cork_prev_invalid_green/red` look line-related; `lashed_non_colinear`
+  and `corkline_incomplete_late` may be different mechanisms.
+- **Decide how to handle the 17 orphan-body fixtures** in the structural
+  test: either exclude them (their byte stream isn't a valid rig) or
+  add a TRDL `{"orphan_body":"<hash>"}` entity so the decompile can
+  preserve them verbatim.
+- **38 `arb_and_pairtrie` inflation cases**: are these all explained by
+  `shielded:true` default on lines that the original wasn't shielding?
+  Worth confirming by comparing trdl-emit shielded flags against the
+  original's actual shield-arb presence.
 - **`tests.html` skipped rigs (per CLAUDE.md TODO)**: tighten the harness
   so a JS-only or server-only error reports as FAIL instead of silently
   matching the existing skip path. Also: rigs 19/20 could be marked as

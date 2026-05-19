@@ -1,0 +1,1 @@
+../../../rustoda/wasm/rigcheck.js

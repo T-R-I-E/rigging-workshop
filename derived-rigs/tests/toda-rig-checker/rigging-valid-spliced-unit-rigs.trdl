@@ -1,0 +1,7 @@
+{"rig":"Valid spliced unit rigs"}
+{"line":"poptop","twists":6,"shielded":false,"reqsat":"null"}
+{"line":"abject","twists":5,"shielded":true,"reqsat":"null"}
+{"hitch":"Pb1","lead":"abject[0]","meet":"abject[1]","fastener":"poptop[0]","hoist":"poptop[2]"}
+{"hitch":"Pb2","lead":"abject[1]","meet":"abject[2]","fastener":"poptop[1]","hoist":"poptop[3]"}
+{"hitch":"Pb3","lead":"abject[2]","meet":"abject[3]","fastener":"poptop[2]","hoist":"poptop[4]"}
+{"hitch":"Pb4","lead":"abject[3]","meet":"abject[4]","fastener":"poptop[3]","hoist":"poptop[5]"}

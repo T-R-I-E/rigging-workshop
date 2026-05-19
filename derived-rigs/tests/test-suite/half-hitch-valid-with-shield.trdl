@@ -1,0 +1,4 @@
+{"rig":"Half-hitch valid with shield"}
+{"line":"poptop","twists":4,"shielded":false,"reqsat":"null"}
+{"line":"abject","twists":5,"shielded":true,"reqsat":"null"}
+{"hitch":"Pb1","lead":"abject[1]","meet":"abject[4]","fastener":"poptop[1]","hoist":"poptop[3]","post":"none"}

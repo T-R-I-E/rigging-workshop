@@ -1,0 +1,6 @@
+{"rig":"Bottom corkline shorter than top leadline both sides"}
+{"line":"poptop","twists":2,"shielded":false,"reqsat":"null"}
+{"line":"a","twists":4,"shielded":false,"reqsat":"null"}
+{"line":"abject","twists":2,"shielded":false,"reqsat":"null"}
+{"hitch":"Pb1","lead":"abject[0]","meet":"abject[1]","fastener":"a[1]","hoist":"a[2]"}
+{"hitch":"A1","lead":"a[0]","meet":"a[3]","fastener":"poptop[0]","hoist":"poptop[1]"}

@@ -1,0 +1,8 @@
+{"rig":"Lash non-colinear"}
+{"line":"poptop","twists":3,"shielded":false,"reqsat":"null"}
+{"line":"a","twists":5,"shielded":true,"reqsat":"null"}
+{"line":"b","twists":3,"shielded":true,"reqsat":"null"}
+{"line":"abject","twists":2,"shielded":true,"reqsat":"null"}
+{"hitch":"A1","lead":"a[0]","meet":"a[4]","fastener":"poptop[0]","hoist":"poptop[2]"}
+{"hitch":"Pb1","lead":"abject[0]","meet":"abject[1]","fastener":"b[0]","hoist":"b[2]"}
+{"twist":"b[0]","prev":"a[1]"}
