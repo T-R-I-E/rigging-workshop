@@ -13,8 +13,8 @@
  :aliases
  {;; Main server on :7878 — compile/decompile + canonical toda-rig-checker.
   :server
-  {:extra-deps {toda/twist-maker       {:local/root "../todaclj/toda-twist-maker"}
-                todaq/toda-rig-checker {:local/root "../todaclj/toda-rig-checker"}}
+  {:extra-deps {toda/twist-maker       {:local/root "../toda-clj/toda-twist-maker"}
+                todaq/toda-rig-checker {:local/root "../toda-clj/toda-rig-checker"}}
    :main-opts  ["-m" "rigging-workshop.server"]}
 
   ;; Sidecar server on :7879 — toda-bb only. Run alongside :server.
