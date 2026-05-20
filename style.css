@@ -763,12 +763,9 @@ body {
 .hex .b-tag  { color: oklch(0.45 0.13 295); font-weight: 500; }
 .hex .b-len  { color: oklch(0.55 0.13 35); }
 .hex .b-content { color: var(--ink); }
-/* Pairtrie content used to inherit the lime --hl-a3 tint, which read
-   as a 'green = ok' signal even on broken rigs. Switched to a soft
-   lavender that matches the kiwanoed view's pairtrie left-rule colour
-   (oklch hue 295) so the visual cue is 'this is a trie' without
-   colliding with the checker's green. */
-.hex .b-content.trie { background: oklch(0.93 0.05 295); border-radius: 2px; padding: 0 2px; }
+/* Pairtrie rows used to carry a coloured background. The kiwanoed
+   view already telegraphs the shape via its left-rule tint, and in
+   raw view a per-shape background just adds noise. Render flat. */
 .hex .empty { color: var(--ink-3); padding: 12px; }
 
 

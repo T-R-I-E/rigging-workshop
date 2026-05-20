@@ -440,9 +440,10 @@ function notify_rendered(env) {
     document.dispatchEvent(new CustomEvent('workshop:rendered', {detail: env}))
     // Default the corkline to the top-leftmost twist for any rig that
     // didn't come with a sidecar-declared corkline and hasn't been
-    // user-overridden by a shift-click. The line that lays out at the
-    // smallest y is the topmost in the viz; its first (leftmost) twist
-    // is the conventional corkline anchor.
+    // user-overridden by a shift-click. decorate_twists assigns
+    // cy = 400 - t.first.y * 30, so LARGER t.y → higher on screen;
+    // the topmost line has the maximum y, and within it the leftmost
+    // twist has the minimum x.
     //
     // Compile's own corkline_h (from build() in editor.js) is NOT
     // authoritative here — decompile can pick a non-canonical poptop
@@ -451,10 +452,10 @@ function notify_rendered(env) {
     let src = window.workshop?.corkline_source
     if (src !== 'sidecar' && src !== 'user') {
         let twists = env.shapes?.[TWIST] || []
-        let cork = null, best_y = Infinity, best_x = Infinity
+        let cork = null, best_y = -Infinity, best_x = Infinity
         for (let t of twists) {
             if (t.y == null || t.x == null) continue
-            if (t.y < best_y || (t.y === best_y && t.x < best_x)) {
+            if (t.y > best_y || (t.y === best_y && t.x < best_x)) {
                 best_y = t.y; best_x = t.x; cork = t.hash
             }
         }
@@ -476,9 +477,14 @@ function notify_rendered(env) {
     // twist if still present in the rebuild, otherwise fall back to
     // the bundle's tail twist (env.focus). focus_node paints the
     // .focus ring, updates window.workshop.focus_hash, and triggers
-    // the first rig-check.
+    // the first rig-check. Also seed the selection to the same twist
+    // so the highlight hex view has a sensible fallback target
+    // before the user clicks or hovers anywhere.
     let prior = window.workshop?.focus_hash
     let initial_focus = (prior && el(prior)) ? prior : env.focus?.hash
+    if (initial_focus && !still.length) {
+        select_node(initial_focus)
+    }
     if (initial_focus) focus_node(initial_focus)
     return env
 }

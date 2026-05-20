@@ -43,6 +43,9 @@ const KNOWN_SYMBOLS = {
 // reloads — saves the user from re-flipping after every refresh.
 let _view = (typeof localStorage !== 'undefined'
              && localStorage.getItem('hex_view')) || 'raw'
+// Migration: the old 'focused' value (singular twist driven by
+// double-click) is now 'highlight' (driven by hover with fallbacks).
+if (_view === 'focused') _view = 'highlight'
 
 let _usage = new Map()
 let _last_select = []
@@ -412,17 +415,17 @@ function render_hex(env) {
   let host = document.getElementById('hex')
   if (!host) return
   build_usage(env)
-  // 'focused' shares the kiwanoed styling (multi-line atom cards),
-  // it just narrows the atom list down to the focused twist + its
-  // body atom. Keep the .kiwanoed class on the host for both.
-  let kiwano_like = _view === 'kiwanoed' || _view === 'focused'
+  // 'highlight' shares the kiwanoed styling (multi-line atom cards),
+  // narrowed to one twist + its body. Keep the .kiwanoed class on
+  // the host for both.
+  let kiwano_like = _view === 'kiwanoed' || _view === 'highlight'
   host.classList.toggle('kiwanoed', kiwano_like)
   if (!env.atoms?.length) {
     host.innerHTML = '<div class="empty">no atoms</div>'
     return
   }
-  if (_view === 'focused') {
-    render_focused_view(host, env)
+  if (_view === 'highlight') {
+    render_highlight_view(host, env)
   } else if (_view === 'kiwanoed') {
     let names = compute_names(env)
     host.innerHTML = env.atoms.map(a => render_atom_kiwanoed(env, a, names)).join('')
@@ -435,16 +438,23 @@ function render_hex(env) {
   paint('select', _last_select)
 }
 
-// Render the focused-twist atom card (plus its body atom) into the
-// hex host. Driven by window.workshop.focus_hash; falls back to the
-// previously-rendered select for compatibility if nothing's focused.
-function render_focused_view(host, env) {
-  let focus = window.workshop?.focus_hash
+// Render the highlight view: whatever twist is currently mouse-hovered
+// in any pane (viz / hex / editor). Falls back to the click-selected
+// twist if nothing's hovered, then to the focused twist. Re-renders
+// on workshop:hover, workshop:select, workshop:focus.
+let _last_hover = []
+function render_highlight_view(host, env) {
   let names = compute_names(env)
   let by_hash = new Map(env.atoms.map(a => [a.hash, a]))
-  let target = focus ? by_hash.get(focus) : null
+  let candidates = [..._last_hover, ..._last_select,
+                    window.workshop?.focus_hash].filter(Boolean)
+  let target = null
+  for (let h of candidates) {
+    let a = by_hash.get(h)
+    if (a) { target = a; break }
+  }
   if (!target) {
-    host.innerHTML = '<div class="empty">no focused twist</div>'
+    host.innerHTML = '<div class="empty">hover a twist</div>'
     return
   }
   let parts = [render_atom_kiwanoed(env, target, names)]
@@ -458,7 +468,19 @@ function render_focused_view(host, env) {
 
 const host = document.getElementById('hex')
 
+// While the user scrolls the panel-body, rows pass under a stationary
+// cursor and mouseover would otherwise keep firing — making the
+// .hover highlight chase the scroll, which reads as 'the highlighting
+// changes while I scroll'. Suppress hover dispatch for a short window
+// after every scroll event. Cleared after 200ms of idle so a real
+// mouse move resumes immediately.
+let _scrolling_until = 0
+function on_scroll() { _scrolling_until = Date.now() + 200 }
+host?.parentElement?.addEventListener('scroll', on_scroll, { passive: true })
+host?.addEventListener('scroll', on_scroll, { passive: true })
+
 host?.addEventListener('mouseover', e => {
+  if (Date.now() < _scrolling_until) return
   let row = e.target.closest('.atom')
   if (!row) return
   document.dispatchEvent(new CustomEvent('workshop:hover', {
@@ -511,10 +533,15 @@ function paint(klass, hashes) {
   }
 }
 
-document.addEventListener('workshop:hover', e => paint('hover', e.detail.hashes))
+document.addEventListener('workshop:hover', e => {
+  _last_hover = e.detail.hashes || []
+  paint('hover', _last_hover)
+  if (_view === 'highlight' && _last_env) render_hex(_last_env)
+})
 document.addEventListener('workshop:select', e => {
   _last_select = e.detail.hashes || []
   paint('select', _last_select)
+  if (_view === 'highlight' && _last_env) render_hex(_last_env)
 })
 
 document.addEventListener('workshop:rendered', e => render_hex(e.detail))
@@ -523,7 +550,9 @@ document.addEventListener('workshop:rendered', e => render_hex(e.detail))
 // Wired to the .hex-toggle buttons in the panel header. Persists the choice
 // to localStorage so the user doesn't have to re-pick after every reload.
 function set_view(v) {
-  if (v !== 'raw' && v !== 'kiwanoed' && v !== 'focused') return
+  // Migrate the old 'focused' localStorage value to the new name.
+  if (v === 'focused') v = 'highlight'
+  if (v !== 'raw' && v !== 'kiwanoed' && v !== 'highlight') return
   _view = v
   try { localStorage.setItem('hex_view', v) } catch {}
   document.querySelectorAll('.hex-toggle button').forEach(b =>
@@ -532,9 +561,9 @@ function set_view(v) {
 }
 
 // Re-render the hex pane whenever focus changes — only matters when
-// the focused view is active. The full hex is unaffected.
+// the highlight view is active (and only as the third fallback).
 document.addEventListener('workshop:focus', () => {
-  if (_view === 'focused' && _last_env) render_hex(_last_env)
+  if (_view === 'highlight' && _last_env) render_hex(_last_env)
 })
 
 document.querySelectorAll('.hex-toggle button').forEach(b => {
