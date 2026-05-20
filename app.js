@@ -608,6 +608,56 @@ if(vp) {
             detail: { hashes: [], source: 'viz' }
         }))
     })
+    // Arrow-key navigation when the viz is keyboard-focused (svg has
+    // tabindex="0"). left/right walk along the focused twist's line;
+    // up/down jump to the closest twist on the line above/below.
+    // Active only when #viz owns document.activeElement so the
+    // examples-list arrow nav keeps working when that pane is focused.
+    vp.addEventListener('keydown', e => {
+        if (!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)) return
+        let cur = env.index?.[window.workshop?.focus_hash || env.focus?.hash]
+        if (!cur) return
+        let next = nearest_twist(env, cur, e.key)
+        if (next) {
+            e.preventDefault()
+            focus_node(next.hash)
+        }
+    })
+}
+
+// Pick the next twist relative to `cur` for the given arrow direction.
+// Uses laid-out (t.x, t.cy) — cy is the rendered y in SVG coordinates,
+// so ArrowUp wants the smallest cy that's still less than cur.cy.
+// Same-line moves (left/right) require equal cy; cross-line moves
+// (up/down) minimise the x-distance to keep the cursor visually close.
+function nearest_twist(env, cur, key) {
+    let twists = (env.shapes?.[TWIST] || []).filter(t => {
+        if (t === cur || t.cx == null || t.cy == null) return false
+        let seg = t.segment
+        // Skip collapsed-segment interior twists — they have no circle.
+        return !(seg?.collapsed && t !== seg.first && t !== seg.last)
+    })
+    let same_line = twists.filter(t => t.cy === cur.cy)
+    if (key === 'ArrowLeft') {
+        return same_line.filter(t => t.cx < cur.cx)
+            .sort((a, b) => b.cx - a.cx)[0]
+    }
+    if (key === 'ArrowRight') {
+        return same_line.filter(t => t.cx > cur.cx)
+            .sort((a, b) => a.cx - b.cx)[0]
+    }
+    // Up = smaller cy (higher on screen); Down = larger cy.
+    let dir_cmp = key === 'ArrowUp' ? (a, b) => b.cy - a.cy   // closest from below
+                                    : (a, b) => a.cy - b.cy
+    let cross = twists.filter(t => key === 'ArrowUp' ? t.cy < cur.cy : t.cy > cur.cy)
+    if (!cross.length) return null
+    // Find the first line above/below, then within it pick the twist
+    // whose x is closest to cur.cx.
+    cross.sort(dir_cmp)
+    let target_cy = cross[0].cy
+    let candidates = cross.filter(t => t.cy === target_cy)
+    candidates.sort((a, b) => Math.abs(a.cx - cur.cx) - Math.abs(b.cx - cur.cx))
+    return candidates[0]
 }
 
 document.addEventListener('workshop:hover', e => {
