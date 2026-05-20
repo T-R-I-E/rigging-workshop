@@ -412,12 +412,18 @@ function render_hex(env) {
   let host = document.getElementById('hex')
   if (!host) return
   build_usage(env)
-  host.classList.toggle('kiwanoed', _view === 'kiwanoed')
+  // 'focused' shares the kiwanoed styling (multi-line atom cards),
+  // it just narrows the atom list down to the focused twist + its
+  // body atom. Keep the .kiwanoed class on the host for both.
+  let kiwano_like = _view === 'kiwanoed' || _view === 'focused'
+  host.classList.toggle('kiwanoed', kiwano_like)
   if (!env.atoms?.length) {
     host.innerHTML = '<div class="empty">no atoms</div>'
     return
   }
-  if (_view === 'kiwanoed') {
+  if (_view === 'focused') {
+    render_focused_view(host, env)
+  } else if (_view === 'kiwanoed') {
     let names = compute_names(env)
     host.innerHTML = env.atoms.map(a => render_atom_kiwanoed(env, a, names)).join('')
   } else {
@@ -427,6 +433,27 @@ function render_hex(env) {
   // are silently skipped by paint(), so this is safe even when a rebuild
   // changes the atom set.
   paint('select', _last_select)
+}
+
+// Render the focused-twist atom card (plus its body atom) into the
+// hex host. Driven by window.workshop.focus_hash; falls back to the
+// previously-rendered select for compatibility if nothing's focused.
+function render_focused_view(host, env) {
+  let focus = window.workshop?.focus_hash
+  let names = compute_names(env)
+  let by_hash = new Map(env.atoms.map(a => [a.hash, a]))
+  let target = focus ? by_hash.get(focus) : null
+  if (!target) {
+    host.innerHTML = '<div class="empty">no focused twist</div>'
+    return
+  }
+  let parts = [render_atom_kiwanoed(env, target, names)]
+  if (target.shape === TWIST) {
+    let body_h = pluck_slot(env.buff, target.bin.cfirst)
+    let body_atom = by_hash.get(body_h)
+    if (body_atom) parts.push(render_atom_kiwanoed(env, body_atom, names))
+  }
+  host.innerHTML = parts.join('')
 }
 
 const host = document.getElementById('hex')
@@ -488,74 +515,27 @@ document.addEventListener('workshop:hover', e => paint('hover', e.detail.hashes)
 document.addEventListener('workshop:select', e => {
   _last_select = e.detail.hashes || []
   paint('select', _last_select)
-  render_focus(_last_select)
 })
 
-document.addEventListener('workshop:rendered', e => {
-  render_hex(e.detail)
-  // Repaint the focus panel against the new env, since rendered
-  // env changes invalidate the previously-cached _names. The current
-  // selection (if any) gets re-rendered against the new atoms.
-  render_focus(_last_select)
-})
-
-// Render a clone of the kiwanoed atom card for the first selected
-// hash that resolves to an atom in the current env. Also follows the
-// twist's body slot so the user sees both the twist atom and its
-// referenced body together. Hidden when nothing is selected or when
-// the selection doesn't match any atom in this rig.
-function render_focus(hashes) {
-  let section = document.getElementById('focus-section')
-  let panel = document.getElementById('focus-panel')
-  let label = document.getElementById('focus-label')
-  if (!section || !panel || !_last_env) return
-  let names = compute_names(_last_env)
-  // Pick the first hash that matches an atom; prefer twists when
-  // multiple hashes are present.
-  let target_atom = null
-  if (hashes) {
-    let by_hash = new Map(_last_env.atoms.map(a => [a.hash, a]))
-    for (let h of hashes) {
-      let a = by_hash.get(h)
-      if (a?.shape === TWIST) { target_atom = a; break }
-    }
-    if (!target_atom) {
-      for (let h of hashes) {
-        let a = by_hash.get(h)
-        if (a) { target_atom = a; break }
-      }
-    }
-  }
-  if (!target_atom) {
-    section.hidden = true
-    panel.innerHTML = ''
-    label.textContent = ''
-    return
-  }
-  // For a twist, also render its body atom alongside.
-  let parts = [render_atom_kiwanoed(_last_env, target_atom, names)]
-  if (target_atom.shape === TWIST) {
-    let body_h = pluck_slot(_last_env.buff, target_atom.bin.cfirst)
-    let by_hash = new Map(_last_env.atoms.map(a => [a.hash, a]))
-    let body_atom = by_hash.get(body_h)
-    if (body_atom) parts.push(render_atom_kiwanoed(_last_env, body_atom, names))
-  }
-  panel.innerHTML = parts.join('')
-  label.textContent = names.get(target_atom.hash) || ''
-  section.hidden = false
-}
+document.addEventListener('workshop:rendered', e => render_hex(e.detail))
 
 // ---- View toggle ----
 // Wired to the .hex-toggle buttons in the panel header. Persists the choice
 // to localStorage so the user doesn't have to re-pick after every reload.
 function set_view(v) {
-  if (v !== 'raw' && v !== 'kiwanoed') return
+  if (v !== 'raw' && v !== 'kiwanoed' && v !== 'focused') return
   _view = v
   try { localStorage.setItem('hex_view', v) } catch {}
   document.querySelectorAll('.hex-toggle button').forEach(b =>
     b.classList.toggle('active', b.dataset.view === v))
   if (_last_env) render_hex(_last_env)
 }
+
+// Re-render the hex pane whenever focus changes — only matters when
+// the focused view is active. The full hex is unaffected.
+document.addEventListener('workshop:focus', () => {
+  if (_view === 'focused' && _last_env) render_hex(_last_env)
+})
 
 document.querySelectorAll('.hex-toggle button').forEach(b => {
   b.classList.toggle('active', b.dataset.view === _view)

@@ -94,8 +94,8 @@
     <section class="panel" aria-label="Visualization">
       <header class="panel-head">
         <span class="panel-title">Visualization</span>
-        <span class="panel-hint">shift-click sets corkline</span>
         <span id="viz-meta" class="panel-meta">—</span>
+        <span class="panel-hint">shift-click sets corkline · double-click sets focus</span>
       </header>
       <div class="panel-body">
         <div class="viz-wrap">
@@ -127,14 +127,6 @@
           </h4>
           <div id="rig-meta" class="rig-meta"></div>
         </div>
-        <div id="focus-section" class="section" hidden>
-          <h4 class="collapsible">
-            <span class="chevron">▾</span>
-            <span class="section-title">Focused twist</span>
-            <span id="focus-label" class="section-status"></span>
-          </h4>
-          <div id="focus-panel" class="focus-panel hex kiwanoed"></div>
-        </div>
         <div class="section" id="rig-check-section">
           <h4 class="collapsible">
             <span class="chevron">▾</span>
@@ -160,6 +152,7 @@
         <span id="meta" class="panel-meta">—</span>
         <div class="hex-toggle" role="group" aria-label="Hex view style">
           <button type="button" data-view="raw">raw</button>
+          <button type="button" data-view="focused">focused</button>
           <button type="button" data-view="kiwanoed">kiwanoed</button>
         </div>
       </header>

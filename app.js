@@ -355,6 +355,16 @@ function render_svg(env) {
         if(seg?.collapsed && t !== seg.first && t !== seg.last)
             return 0
         svgs += `<circle cx="${t.cx}" cy="${t.cy}" r="5" fill="#${t.colour}" id="${t.hash}" />`
+        // Equivocation marker: a twist with more than one successor on its
+        // prev chain has conflicting successors — annotate with a ⚠ glyph
+        // just above-and-right of the circle so the failure mode is
+        // visible in the viz without having to read the rig-check panel.
+        // (push_succ in get_in_line populates t.succ.)
+        if (Array.isArray(t.succ) && t.succ.length > 1) {
+            svgs += `<text class="viz-conflict" x="${t.cx + 7}" y="${t.cy - 5}" ` +
+                    `font-size="11" pointer-events="none">` +
+                    `<title>${t.succ.length} conflicting successors</title>⚠</text>`
+        }
         edges = edges.concat(t.outies.map(o => [t, o[0], o[1]]))
     })
     edges.sort((a,b) => order.indexOf(a[2]) - order.indexOf(b[2]))
@@ -454,15 +464,22 @@ function notify_rendered(env) {
         }
     }
     apply_cork_dom()
-    // Restore prior click-selection by hash; falls back to env.focus when
-    // none of the previously-selected hashes are in this render.
+    // Restore prior click-selection by hash (visual only — focus is a
+    // separate concept and arrives below).
     let still = _selected_hashes.filter(h => el(h))
     if (still.length) {
         apply_select_dom(still)
     } else {
         _selected_hashes = []
-        if (env.focus) show_abject_info(env.focus.hash)
     }
+    // Initial focus on this render: prefer the previously-focused
+    // twist if still present in the rebuild, otherwise fall back to
+    // the bundle's tail twist (env.focus). focus_node paints the
+    // .focus ring, updates window.workshop.focus_hash, and triggers
+    // the first rig-check.
+    let prior = window.workshop?.focus_hash
+    let initial_focus = (prior && el(prior)) ? prior : env.focus?.hash
+    if (initial_focus) focus_node(initial_focus)
     return env
 }
 
@@ -549,22 +566,29 @@ if(vp) {
         if(e.target.tagName === 'circle') {
             let seg = env.segIndex?.[e.target.id]
             if(seg) return expand_segment(seg)
-            // Shift-click overrides the corkline. Plain click selects
-            // the twist as the focus (rig-check then runs against the
-            // current corkline). For upload/URL loads with no sidecar
-            // this is how you re-anchor the rig if the auto-defaulted
-            // top-leftmost twist isn't what you wanted.
+            // Three click modes on a twist:
+            //   shift-click — set this twist as the corkline
+            //   dblclick    — set this twist as the focus (see dblclick
+            //                  listener below)
+            //   plain click — select (highlight + cross-pane select)
+            // Rig-check only runs against the focus; plain click no
+            // longer reruns the checkers.
             if (e.shiftKey) {
                 window.workshop.corkline = e.target.id
                 window.workshop.corkline_source = 'user'
                 apply_cork_dom()
-                // Re-run rig-check on the current focus against the new cork.
-                let focus = _selected_hashes[0] || env.focus?.hash
-                if (focus) show_abject_info(focus)
+                if (window.workshop.focus_hash) show_abject_info(window.workshop.focus_hash)
                 return
             }
             select_node(e.target.id)
         }
+    })
+    vp.addEventListener('dblclick', e => {
+        if(e.target.tagName !== 'circle') return
+        // Don't accept dblclick on the collapsed-segment dots; expand_segment
+        // will have already kicked from the first click.
+        if (env.segIndex?.[e.target.id]) return
+        focus_node(e.target.id)
     })
     vp.addEventListener('mousemove', e => {
         let hashes = e.target.tagName === 'circle' ? [e.target.id] : []
@@ -701,8 +725,9 @@ document.addEventListener('workshop:issue', e => {
 })
 
 // Apply .select to the given hashes (clearing any previous selection).
-// Pure DOM update — does NOT broadcast a select event. show_abject_info
-// runs against the first hash so the rig-check panel reflects the click.
+// Pure DOM update — does NOT run a rig-check. Focus + rig-check are
+// driven by focus_node (double-click), kept separate from selection
+// so a single click can't accidentally retarget the checker pipeline.
 function apply_select_dom(hashes) {
     _selected_hashes = [...hashes]
     _selected_set.forEach(d => d.classList.remove('select'))
@@ -714,7 +739,6 @@ function apply_select_dom(hashes) {
             _selected_set.add(dom)
         }
     }
-    if (hashes[0]) show_abject_info(hashes[0])
 }
 
 function select_node(id) {
@@ -727,6 +751,27 @@ function select_node(id) {
     document.dispatchEvent(new CustomEvent('workshop:select', {
         detail: { hashes: [id], source: 'viz' }
     }))
+}
+
+// Set THE focus — singular — to the named twist. Repaints the .focus
+// ring (clearing any prior), updates window.workshop.focus_hash so
+// other callers (the cork shift-click handler, the rust-check pipeline)
+// can find it, runs the rig-check against the new focus, and
+// broadcasts a workshop:focus event so other panes (the hex 'focused'
+// view) can sync.
+function focus_node(id) {
+    let t = env.index?.[id]
+    if (!t) return
+    let seg = t.segment
+    if (seg?.collapsed && t !== seg.first && t !== seg.last)
+        return expand_segment(seg)
+    if (!vp) return
+    vp.querySelectorAll('.focus').forEach(d => d.classList.remove('focus'))
+    el(id)?.classList.add('focus')
+    if (!window.workshop) window.workshop = {}
+    window.workshop.focus_hash = id
+    show_abject_info(id)
+    document.dispatchEvent(new CustomEvent('workshop:focus', { detail: { hash: id } }))
 }
 
 function highlight_node(id) {                // legacy single-node entry point

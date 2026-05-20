@@ -222,7 +222,7 @@ body {
   font-size: 11px;
   color: var(--ink-3);
   font-style: italic;
-  margin-left: 8px;
+  margin-left: auto;     /* push to the right side of the panel header */
 }
 .panel-tools {
   margin-left: auto;
@@ -342,6 +342,9 @@ body {
 }
 .viz-wrap .cork      { r: 12; stroke-width: 5; stroke: #4ea8ff;
                        filter: drop-shadow(0 0 8px #4ea8ff); }
+/* Equivocation warning glyph next to a twist that has more than one
+   successor (conflicting_successors style failures). */
+.viz-wrap .viz-conflict { fill: #ff3b30; font-weight: 700; user-select: none; }
 /* Issue layer painted from rust's structured tree. Three severity
    classes; circles always get one of the three when the twist is
    mentioned by rust. Edges only paint at warn/bad and only on the
@@ -768,17 +771,6 @@ body {
 .hex .b-content.trie { background: oklch(0.93 0.05 295); border-radius: 2px; padding: 0 2px; }
 .hex .empty { color: var(--ink-3); padding: 12px; }
 
-/* Focused-twist panel (Workshop column). Reuses the kiwanoed atom
-   card styling — the inner .hex.kiwanoed gives every nested atom
-   the same shape-tinted left rule and field layout as the full
-   hex pane. Capped height so a fat body doesn't push the rig-check
-   panel off-screen; scrolls inside if it overflows. */
-.focus-panel {
-  max-height: 260px;
-  overflow: auto;
-  padding: 4px 0;
-  background: var(--panel);
-}
 
 /* ---------- kiwanoed hex view ---------- */
 /* Shape-aware multi-line atom blocks. Atom = small panel: a header line
