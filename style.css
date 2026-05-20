@@ -343,10 +343,10 @@ body {
 .viz-wrap .twist-group .hit  { pointer-events: all; }
 .viz-wrap .twist-group.focus     .ring-focus     { stroke: #ff17c9;
                                                    filter: drop-shadow(0 0 4px #ff17c9); }
-/* Selection: a tight black outline on the dot itself. The .ring-select
-   layer is kept as a no-op for now so the concentric stack's geometry
-   doesn't shift; future status types can reuse that slot. */
-.viz-wrap .twist-group.select    .dot            { stroke: var(--ink);
+/* Selection: the outer of the two inner rings (.ring-select, r=9)
+   carries a black outline — the larger black band that used to be the
+   default ring on every twist. Keeps the dot itself stroke-less. */
+.viz-wrap .twist-group.select    .ring-select    { stroke: var(--ink);
                                                    stroke-width: 1.5; }
 .viz-wrap .twist-group.highlight .ring-highlight { stroke: gold;
                                                    filter: drop-shadow(0 0 5px gold); }
