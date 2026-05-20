@@ -193,8 +193,8 @@ const FIXTURES = [
   'todatests/rigging/valid_kiwano_f5.toda',
 ]
 
-const CLJ_URL = 'https://d2ttoitg64tuy9.cloudfront.net/rigcheck-clj'
-const BB_URL  = 'https://d2ttoitg64tuy9.cloudfront.net/rigcheck-bb'
+const CLJ_URL = 'https://rigchecker.todaq.net/rigcheck-clj'
+const BB_URL  = 'https://rigchecker.todaq.net/rigcheck-bb'
 
 // rustoda is invoked through a Web Worker (toda/rustoda-wasm/client.js)
 // so we can worker.terminate() any fixture that sends the wasm into a
