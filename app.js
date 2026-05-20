@@ -194,6 +194,12 @@ function body_building(env) {
     env.shapes[TWIST]?.forEach(t => {
         t.innies = t.innies.concat(t.succ.map(h => [h, "succ"]))
         t.outies = t.outies.concat([[t.body.prev, "prev"], [t.body.teth, "teth"]].filter(([a,b]) => a))
+        // Reverse-tether: from the fastener (the topline twist this
+        // tethered twist points up at), let consumers walk back down
+        // to this twist. Mirrors the succ-as-prev-reverse handling
+        // above. Arrow-key nav uses this to navigate from a corkline
+        // twist down to the leadlines that tether to it.
+        if (t.body.teth) t.body.teth.innies.push([t, "tethdown"])
 
         let twists = get_twists(t.body.cargooo)
         twists.forEach(t1 => {
