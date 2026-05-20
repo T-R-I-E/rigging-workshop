@@ -619,18 +619,22 @@ if(vp) {
         }))
     })
     // Arrow-key navigation when the viz is keyboard-focused (svg has
-    // tabindex="0"). left/right walk along the focused twist's line;
-    // up/down jump to the closest twist on the line above/below.
-    // Active only when #viz owns document.activeElement so the
-    // examples-list arrow nav keeps working when that pane is focused.
+    // tabindex="0"). Moves the .select state, not the focus — like
+    // click-arrowing through a list rather than retargeting the
+    // rig-check on every key press. Left/right walk along the
+    // selection's line; up/down follow edges. Active only when #viz
+    // owns document.activeElement so the examples-list arrow nav
+    // keeps working when that pane is focused.
     vp.addEventListener('keydown', e => {
         if (!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)) return
-        let cur = env.index?.[window.workshop?.focus_hash || env.focus?.hash]
+        let pivot_hash = _selected_hashes[0] || window.workshop?.focus_hash
+                                             || env.focus?.hash
+        let cur = env.index?.[pivot_hash]
         if (!cur) return
         let next = nearest_twist(env, cur, e.key)
         if (next) {
             e.preventDefault()
-            focus_node(next.hash)
+            select_node(next.hash)
         }
     })
 }

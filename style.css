@@ -319,7 +319,12 @@ body {
    semantics (prev/teth/lead/meet/post/cargo) and the user reads the
    graph by colour, so retuning would break recognition. */
 .viz-wrap path { fill: none; pointer-events: none; }
-.viz-wrap circle { stroke: var(--ink); stroke-width: 1; }
+/* Twist dots are stroke-less by default; the black outline is reserved
+   for the selected twist (see .twist-group.select .dot below). The
+   collapsed-segment marker is a bare <circle> outside any group and
+   keeps its faint outline so its boundary stays visible. */
+.viz-wrap circle { stroke: transparent; stroke-width: 1; }
+.viz-wrap > g > circle:not(.dot):not(.ring):not(.hit) { stroke: var(--ink); }
 .viz-wrap .prev   { stroke: #999; stroke-linecap: butt; }
 .viz-wrap .teth   { stroke: #f9f; stroke-linecap: butt; }
 .viz-wrap .lead   { stroke: rgb(61,255,51); stroke-linecap: butt; }
@@ -338,8 +343,11 @@ body {
 .viz-wrap .twist-group .hit  { pointer-events: all; }
 .viz-wrap .twist-group.focus     .ring-focus     { stroke: #ff17c9;
                                                    filter: drop-shadow(0 0 4px #ff17c9); }
-.viz-wrap .twist-group.select    .ring-select    { stroke: rgb(0,210,80);
-                                                   filter: drop-shadow(0 0 5px rgb(0,210,80)); }
+/* Selection: a tight black outline on the dot itself. The .ring-select
+   layer is kept as a no-op for now so the concentric stack's geometry
+   doesn't shift; future status types can reuse that slot. */
+.viz-wrap .twist-group.select    .dot            { stroke: var(--ink);
+                                                   stroke-width: 1.5; }
 .viz-wrap .twist-group.highlight .ring-highlight { stroke: gold;
                                                    filter: drop-shadow(0 0 5px gold); }
 .viz-wrap .twist-group.cork      .ring-cork      { stroke: #4ea8ff;
