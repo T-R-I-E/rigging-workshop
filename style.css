@@ -327,12 +327,23 @@ body {
 .viz-wrap .post   { stroke: rgb(255,174,60); stroke-linecap: butt; }
 .viz-wrap .cargo  { stroke: rgb(255,0,0); stroke-linecap: butt; }
 .viz-wrap .dashed { stroke-dasharray: 3; }
-.viz-wrap .focus     { r: 11; stroke-width: 5; stroke: #ff17c9;
-                       filter: drop-shadow(0 0 6px #ff17c9); }
-.viz-wrap .select    { r: 12; stroke-width: 6; stroke: rgb(0,210,80);
-                       filter: drop-shadow(0 0 9px rgb(0,210,80)); }
-.viz-wrap .highlight { r: 12; stroke-width: 5; stroke: gold;
-                       filter: drop-shadow(0 0 9px gold); }
+/* Concentric ring stack per twist. Each ring is a <circle fill="none">
+   inside the .twist-group; default stroke is transparent so the ring
+   is invisible until the group carries the matching status class.
+   Radii in render_svg ascend from inner (focus, r=7) → outer (issue,
+   r=17) so several statuses can stack visibly as concentric bands. */
+.viz-wrap .twist-group .ring { stroke: transparent; stroke-width: 2.5; fill: none; }
+.viz-wrap .twist-group .ring,
+.viz-wrap .twist-group .dot  { pointer-events: none; }
+.viz-wrap .twist-group .hit  { pointer-events: all; }
+.viz-wrap .twist-group.focus     .ring-focus     { stroke: #ff17c9;
+                                                   filter: drop-shadow(0 0 4px #ff17c9); }
+.viz-wrap .twist-group.select    .ring-select    { stroke: rgb(0,210,80);
+                                                   filter: drop-shadow(0 0 5px rgb(0,210,80)); }
+.viz-wrap .twist-group.highlight .ring-highlight { stroke: gold;
+                                                   filter: drop-shadow(0 0 5px gold); }
+.viz-wrap .twist-group.cork      .ring-cork      { stroke: #4ea8ff;
+                                                   filter: drop-shadow(0 0 5px #4ea8ff); }
 /* Edge highlight overlays the per-type colour from the SVG path's
    class (.prev / .teth / .lead / …). Keep the path's own stroke and
    just thicken + glow it so the original edge type still reads. */
@@ -340,8 +351,6 @@ body {
   stroke-width: 4;
   filter: drop-shadow(0 0 6px gold) drop-shadow(0 0 3px gold);
 }
-.viz-wrap .cork      { r: 12; stroke-width: 5; stroke: #4ea8ff;
-                       filter: drop-shadow(0 0 8px #4ea8ff); }
 /* Equivocation warning glyph next to a twist that has more than one
    successor (conflicting_successors style failures). */
 .viz-wrap .viz-conflict { fill: #ff3b30; font-weight: 700; user-select: none; }
@@ -356,15 +365,16 @@ body {
   box-shadow: inset 0 0 0 2px var(--accent);
 }
 /* Issue layer painted from rust's structured tree. Three severity
-   classes; circles always get one of the three when the twist is
-   mentioned by rust. Edges only paint at warn/bad and only on the
-   types the structype maps to (see ISSUE_EDGES_BY_STRUCTYPE). */
-.viz-wrap .issue-ok   { r: 11; stroke-width: 3; stroke: rgb(0,210,80);
-                        filter: drop-shadow(0 0 4px rgb(0,210,80)); }
-.viz-wrap .issue-warn { r: 12; stroke-width: 4; stroke: #ffae3c;
-                        filter: drop-shadow(0 0 6px #ffae3c); }
-.viz-wrap .issue-bad  { r: 13; stroke-width: 5; stroke: #ff3b30;
-                        filter: drop-shadow(0 0 9px #ff3b30); }
+   classes on the .twist-group; the .ring-issue circle (outermost ring,
+   r=17) carries the colour. Edges still paint via the standalone
+   path.issue-* rules below. */
+.viz-wrap .twist-group.issue-ok   .ring-issue { stroke: rgb(0,210,80);
+                                                filter: drop-shadow(0 0 3px rgb(0,210,80)); }
+.viz-wrap .twist-group.issue-warn .ring-issue { stroke: #ffae3c;
+                                                filter: drop-shadow(0 0 4px #ffae3c); }
+.viz-wrap .twist-group.issue-bad  .ring-issue { stroke: #ff3b30;
+                                                stroke-width: 3;
+                                                filter: drop-shadow(0 0 5px #ff3b30); }
 .viz-wrap path.issue-warn {
   stroke-width: 4; stroke: #ffae3c;
   filter: drop-shadow(0 0 5px #ffae3c);
@@ -373,34 +383,12 @@ body {
   stroke-width: 4; stroke: #ff3b30;
   filter: drop-shadow(0 0 6px #ff3b30) drop-shadow(0 0 3px #ff3b30);
 }
-.viz-wrap.compact .focus     { r: 7; stroke-width: 2.5;
-                               filter: drop-shadow(0 0 3px #ff17c9); }
-.viz-wrap.compact .select    { r: 7.5; stroke-width: 3;
-                               filter: drop-shadow(0 0 4px rgb(0,210,80)); }
-.viz-wrap.compact .highlight { r: 7.5; stroke-width: 2.5;
-                               filter: drop-shadow(0 0 4px gold); }
-.viz-wrap.compact .cork      { r: 7.5; stroke-width: 2.5;
-                               filter: drop-shadow(0 0 4px #4ea8ff); }
-.viz-wrap.compact .issue-ok   { r: 7; stroke-width: 2;
-                                filter: drop-shadow(0 0 2px rgb(0,210,80)); }
-.viz-wrap.compact .issue-warn { r: 7.5; stroke-width: 2;
-                                filter: drop-shadow(0 0 3px #ffae3c); }
-.viz-wrap.compact .issue-bad  { r: 8; stroke-width: 2.5;
-                                filter: drop-shadow(0 0 4px #ff3b30); }
-.viz-wrap.dense .focus       { r: 8; stroke-width: 3;
-                               filter: drop-shadow(0 0 4px #ff17c9); }
-.viz-wrap.dense .select      { r: 8.5; stroke-width: 3.5;
-                               filter: drop-shadow(0 0 5px rgb(0,210,80)); }
-.viz-wrap.dense .highlight   { r: 8.5; stroke-width: 3;
-                               filter: drop-shadow(0 0 5px gold); }
-.viz-wrap.dense .cork        { r: 8.5; stroke-width: 3;
-                               filter: drop-shadow(0 0 5px #4ea8ff); }
-.viz-wrap.dense .issue-ok    { r: 8; stroke-width: 2.5;
-                               filter: drop-shadow(0 0 3px rgb(0,210,80)); }
-.viz-wrap.dense .issue-warn  { r: 8.5; stroke-width: 3;
-                               filter: drop-shadow(0 0 4px #ffae3c); }
-.viz-wrap.dense .issue-bad   { r: 9; stroke-width: 3;
-                               filter: drop-shadow(0 0 5px #ff3b30); }
+/* Compact / dense density scales for the concentric ring stack.
+   The rings render at the same radii regardless of density (set as
+   SVG attrs in render_svg); only the stroke width tapers so big
+   rigs don't blob together. */
+.viz-wrap.compact .twist-group .ring { stroke-width: 1.5; }
+.viz-wrap.dense   .twist-group .ring { stroke-width: 2; }
 
 /* ---------- left-bottom (rig check + examples) ---------- */
 .stack {

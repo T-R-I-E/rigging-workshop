@@ -354,12 +354,23 @@ function render_svg(env) {
         let seg = t.segment
         if(seg?.collapsed && t !== seg.first && t !== seg.last)
             return 0
-        svgs += `<circle cx="${t.cx}" cy="${t.cy}" r="5" fill="#${t.colour}" id="${t.hash}" />`
-        // Equivocation marker: a twist with more than one successor on its
-        // prev chain has conflicting successors — annotate with a ⚠ glyph
-        // just above-and-right of the circle so the failure mode is
-        // visible in the viz without having to read the rig-check panel.
-        // (push_succ in get_in_line populates t.succ.)
+        // Per-twist group with concentric status rings. Each ring is
+        // hidden by default and made visible when the group carries
+        // the matching class (.focus / .select / .highlight / .cork /
+        // .issue-*). Ascending radii from inner→outer so they stack
+        // visibly when several statuses apply at once. The hit-zone
+        // circle on top catches pointer events for the whole twist
+        // (the small inner dot would be a fiddly click target).
+        svgs += `<g class="twist-group" id="${t.hash}">` +
+                `<circle class="ring ring-issue"     cx="${t.cx}" cy="${t.cy}" r="17" fill="none"/>` +
+                `<circle class="ring ring-cork"      cx="${t.cx}" cy="${t.cy}" r="14" fill="none"/>` +
+                `<circle class="ring ring-highlight" cx="${t.cx}" cy="${t.cy}" r="11.5" fill="none"/>` +
+                `<circle class="ring ring-select"    cx="${t.cx}" cy="${t.cy}" r="9" fill="none"/>` +
+                `<circle class="ring ring-focus"     cx="${t.cx}" cy="${t.cy}" r="7" fill="none"/>` +
+                `<circle class="dot"                 cx="${t.cx}" cy="${t.cy}" r="5" fill="#${t.colour}"/>` +
+                `<circle class="hit"                 cx="${t.cx}" cy="${t.cy}" r="9" fill="transparent"/>` +
+                `</g>`
+        // Equivocation marker.
         if (Array.isArray(t.succ) && t.succ.length > 1) {
             svgs += `<text class="viz-conflict" x="${t.cx + 7}" y="${t.cy - 5}" ` +
                     `font-size="11" pointer-events="none">` +
@@ -569,35 +580,34 @@ if(vp) {
     vp.addEventListener('mouseup', e => panning = false)
     vp.addEventListener('mouseleave', e => panning = false)
     vp.addEventListener('click', e => {
-        if(e.target.tagName === 'circle') {
-            let seg = env.segIndex?.[e.target.id]
-            if(seg) return expand_segment(seg)
-            // Three click modes on a twist:
-            //   shift-click — set this twist as the corkline
-            //   dblclick    — set this twist as the focus (see dblclick
-            //                  listener below)
-            //   plain click — select (highlight + cross-pane select)
-            // Rig-check only runs against the focus; plain click no
-            // longer reruns the checkers.
+        // Twist click? Walk up to the .twist-group whose id is the
+        // hash. (The dot, rings, and hit-zone are all <circle>s
+        // inside the group.) A click on the collapsed-segment marker
+        // hits a bare <circle id="seg.id"> outside any group; treat
+        // it via env.segIndex below.
+        let group_id = e.target.closest?.('.twist-group')?.id
+        if (group_id) {
             if (e.shiftKey) {
-                window.workshop.corkline = e.target.id
+                window.workshop.corkline = group_id
                 window.workshop.corkline_source = 'user'
                 apply_cork_dom()
                 if (window.workshop.focus_hash) show_abject_info(window.workshop.focus_hash)
                 return
             }
-            select_node(e.target.id)
+            select_node(group_id)
+            return
+        }
+        if (e.target.tagName === 'circle' && env.segIndex?.[e.target.id]) {
+            expand_segment(env.segIndex[e.target.id])
         }
     })
     vp.addEventListener('dblclick', e => {
-        if(e.target.tagName !== 'circle') return
-        // Don't accept dblclick on the collapsed-segment dots; expand_segment
-        // will have already kicked from the first click.
-        if (env.segIndex?.[e.target.id]) return
-        focus_node(e.target.id)
+        let group_id = e.target.closest?.('.twist-group')?.id
+        if (group_id) focus_node(group_id)
     })
     vp.addEventListener('mousemove', e => {
-        let hashes = e.target.tagName === 'circle' ? [e.target.id] : []
+        let group_id = e.target.closest?.('.twist-group')?.id
+        let hashes = group_id ? [group_id] : []
         document.dispatchEvent(new CustomEvent('workshop:hover', {
             detail: { hashes, source: 'viz' }
         }))
@@ -626,37 +636,42 @@ if(vp) {
 }
 
 // Pick the next twist relative to `cur` for the given arrow direction.
-// Uses laid-out (t.x, t.cy) — cy is the rendered y in SVG coordinates,
-// so ArrowUp wants the smallest cy that's still less than cur.cy.
-// Same-line moves (left/right) require equal cy; cross-line moves
-// (up/down) minimise the x-distance to keep the cursor visually close.
+// Left/right walk along the focused twist's line (same cy). Up/down
+// follow connecting edges — outies (this → other) plus innies (other
+// → this) — so navigation tracks the rig's actual graph structure
+// instead of teleporting across unconnected lines.
 function nearest_twist(env, cur, key) {
     let twists = (env.shapes?.[TWIST] || []).filter(t => {
         if (t === cur || t.cx == null || t.cy == null) return false
         let seg = t.segment
-        // Skip collapsed-segment interior twists — they have no circle.
         return !(seg?.collapsed && t !== seg.first && t !== seg.last)
     })
-    let same_line = twists.filter(t => t.cy === cur.cy)
-    if (key === 'ArrowLeft') {
-        return same_line.filter(t => t.cx < cur.cx)
-            .sort((a, b) => b.cx - a.cx)[0]
-    }
-    if (key === 'ArrowRight') {
+    if (key === 'ArrowLeft' || key === 'ArrowRight') {
+        let same_line = twists.filter(t => t.cy === cur.cy)
+        if (key === 'ArrowLeft') {
+            return same_line.filter(t => t.cx < cur.cx)
+                .sort((a, b) => b.cx - a.cx)[0]
+        }
         return same_line.filter(t => t.cx > cur.cx)
             .sort((a, b) => a.cx - b.cx)[0]
     }
-    // Up = smaller cy (higher on screen); Down = larger cy.
-    let dir_cmp = key === 'ArrowUp' ? (a, b) => b.cy - a.cy   // closest from below
-                                    : (a, b) => a.cy - b.cy
-    let cross = twists.filter(t => key === 'ArrowUp' ? t.cy < cur.cy : t.cy > cur.cy)
-    if (!cross.length) return null
-    // Find the first line above/below, then within it pick the twist
-    // whose x is closest to cur.cx.
-    cross.sort(dir_cmp)
-    let target_cy = cross[0].cy
-    let candidates = cross.filter(t => t.cy === target_cy)
-    candidates.sort((a, b) => Math.abs(a.cx - cur.cx) - Math.abs(b.cx - cur.cx))
+    // Up/down: gather connected twists via outies + innies. Each entry
+    // is [otherTwist, edgeType]. Filter to neighbours that are higher
+    // (ArrowUp → cy < cur.cy) or lower (ArrowDown → cy > cur.cy);
+    // pick the closest in cy, ties broken by x-proximity.
+    let neighbours = new Set()
+    for (let [other] of (cur.outies || [])) if (other && other.cy != null) neighbours.add(other)
+    for (let [other] of (cur.innies || [])) if (other && other.cy != null) neighbours.add(other)
+    let dir = key === 'ArrowUp'
+        ? n => n.cy < cur.cy
+        : n => n.cy > cur.cy
+    let candidates = [...neighbours].filter(dir)
+    if (!candidates.length) return null
+    candidates.sort((a, b) => {
+        let dy = Math.abs(a.cy - cur.cy) - Math.abs(b.cy - cur.cy)
+        if (dy !== 0) return dy
+        return Math.abs(a.cx - cur.cx) - Math.abs(b.cx - cur.cx)
+    })
     return candidates[0]
 }
 
