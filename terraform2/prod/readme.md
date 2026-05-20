@@ -35,7 +35,7 @@ aws s3api put-bucket-versioning \
 aws s3api put-public-access-block \
   --bucket rigchecker-terraform-state \
   --public-access-block-configuration \
-    BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicAccess=true
+    BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true
 
 aws s3api put-bucket-encryption \
   --bucket rigchecker-terraform-state \
