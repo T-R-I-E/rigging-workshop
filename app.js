@@ -786,6 +786,48 @@ function highlight_node(id) {                // legacy single-node entry point
     }))
 }
 
+// Hash literals inside the rust rig-check JSON are rendered as
+// .rc-hash spans (see pretty_json_with_hash_links above). Wire them
+// into the same hover/select/focus model that the viz uses, so the
+// user can chase a reference from the failure tree right into the
+// graph. Delegated handlers on the rig-check pane.
+let _rc_host = el('rigcheck')
+if (_rc_host) {
+    _rc_host.addEventListener('mouseover', e => {
+        let span = e.target.closest('.rc-hash')
+        if (!span) return
+        document.dispatchEvent(new CustomEvent('workshop:hover', {
+            detail: { hashes: [span.dataset.hash], source: 'rigcheck' },
+        }))
+    })
+    _rc_host.addEventListener('mouseout', e => {
+        // mouseout fires per-span; only clear hover when the cursor truly
+        // left every span — checked via relatedTarget. If it's still on a
+        // span (e.g., crossed to an adjacent .rc-hash) the next mouseover
+        // will repaint correctly anyway.
+        if (e.relatedTarget?.closest?.('.rc-hash')) return
+        document.dispatchEvent(new CustomEvent('workshop:hover', {
+            detail: { hashes: [], source: 'rigcheck' },
+        }))
+    })
+    _rc_host.addEventListener('click', e => {
+        let span = e.target.closest('.rc-hash')
+        if (!span) return
+        // Plain click → select. Double-click is handled below; the
+        // browser fires both click AND dblclick on a fast double, so
+        // the dblclick handler stops propagation and we never reach
+        // here in that path.
+        e.stopPropagation()
+        select_node(span.dataset.hash)
+    })
+    _rc_host.addEventListener('dblclick', e => {
+        let span = e.target.closest('.rc-hash')
+        if (!span) return
+        e.stopPropagation()
+        focus_node(span.dataset.hash)
+    })
+}
+
 function scroll_to(x, y) {
     env.vp.x = x
     env.vp.y = y
@@ -1100,12 +1142,78 @@ function format_check_detail(detail) {
         try {
             let parsed = JSON.parse(trimmed)
             if (parsed && typeof parsed === 'object') {
-                let pretty = `<pre class="rc-json">${escape_text(JSON.stringify(parsed, null, 2))}</pre>`
+                let pretty = `<pre class="rc-json">${pretty_json_with_hash_links(parsed)}</pre>`
                 return timing ? `${pretty}<span class="rc-timing">${escape_text(timing)}</span>` : pretty
             }
         } catch {}
     }
     return escape_text(detail)
+}
+
+// TODA hash literal: algo byte 0x41 (sha-256-trimmed) + 32-byte digest,
+// hex-encoded → 66 chars total. The rust check tree carries these in
+// 'reference' fields and embeds them in free-text 'detail' messages.
+// Two patterns: HASH_FULL_RE anchors the whole string; HASH_RE_GLOBAL
+// finds embedded hashes inside larger text. Each call to either uses
+// the regex fresh — never depend on lastIndex.
+const HASH_FULL_RE   = /^41[0-9a-f]{64}$/i
+function hash_re_global() { return /\b41[0-9a-f]{64}\b/gi }
+
+function hash_span(hash) {
+    return `<span class="rc-hash" data-hash="${hash}">${escape_text(hash)}</span>`
+}
+
+// Wrap any 66-char TODA hash found in a free-text string as a
+// rc-hash span. Leaves other text untouched. JSON-escapes the
+// non-hash spans separately so the surrounding text doesn't break
+// the <pre>.
+function linkify_hashes_in_text(s) {
+    let out = ''
+    let last = 0
+    for (let m of s.matchAll(hash_re_global())) {
+        out += escape_text(s.slice(last, m.index))
+        out += hash_span(m[0])
+        last = m.index + m[0].length
+    }
+    out += escape_text(s.slice(last))
+    return out
+}
+
+// JSON.stringify-with-2-spaces, but every string value that matches a
+// full TODA hash is rendered as a hoverable/clickable span; long
+// 'detail' strings have any embedded hashes linkified too. Object
+// keys, numbers, booleans, and nulls render exactly as
+// JSON.stringify would.
+function pretty_json_with_hash_links(value) {
+    function emit(v, indent) {
+        if (v === null) return 'null'
+        if (typeof v === 'boolean') return String(v)
+        if (typeof v === 'number') return String(v)
+        if (typeof v === 'string') {
+            // Full-hash string value → clickable span (with surrounding
+            // quotes for JSON parity). Otherwise, look for embedded
+            // hashes inside the text (rust's 'detail' often quotes
+            // hashes inline like "no candidate hoist on corkline for
+            // lead 41abc…").
+            if (HASH_FULL_RE.test(v)) return `"${hash_span(v)}"`
+            return `"${linkify_hashes_in_text(v)}"`
+        }
+        if (Array.isArray(v)) {
+            if (!v.length) return '[]'
+            let next = indent + '  '
+            let body = v.map(x => `${next}${emit(x, next)}`).join(',\n')
+            return `[\n${body}\n${indent}]`
+        }
+        if (v && typeof v === 'object') {
+            let keys = Object.keys(v)
+            if (!keys.length) return '{}'
+            let next = indent + '  '
+            let body = keys.map(k => `${next}"${escape_text(k)}": ${emit(v[k], next)}`).join(',\n')
+            return `{\n${body}\n${indent}}`
+        }
+        return escape_text(String(v))
+    }
+    return emit(value, '')
 }
 
 function update_check_row(checker_id, state, badge, detail) {

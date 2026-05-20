@@ -588,6 +588,16 @@ body {
   max-height: 320px;
   overflow: auto;
 }
+/* Hash literals inside the JSON are interactive: hover paints the
+   workshop's hover ring on the corresponding viz twist, click selects,
+   double-click focuses. Dotted underline cues the affordance. */
+.rc-json .rc-hash {
+  color: var(--teal);
+  cursor: pointer;
+  text-decoration: underline dotted;
+  text-underline-offset: 2px;
+}
+.rc-json .rc-hash:hover { background: oklch(0.95 0.05 75); }
 .rc-timing {
   display: inline-block;
   margin-top: 4px;
