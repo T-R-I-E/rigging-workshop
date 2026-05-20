@@ -3,3 +3,8 @@
 
 # macOS
 .DS_Store
+
+# etc
+.playwright-mcp/
+.claude/
+rsyncer
