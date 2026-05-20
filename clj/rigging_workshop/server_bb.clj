@@ -6,7 +6,7 @@
    shared namespace and breaks both interpreters.
 
    POST /rigcheck-bb?cork=<hex>[&twist=<hex>]  octet-stream .toda bytes
-        → {colour: green|yellow|red}"
+        → {colour: green|yellow|red, trace: <tree>}"
   (:require [toda.core         :as bb-core]
             [toda.graph        :as bb-graph]
             [toda.atom         :as bb-atom]
@@ -66,25 +66,60 @@
                    :let [[k v] (str/split pair #"=" 2)]]
                [(keyword k) v]))))
 
+(defn- issue->str [issue-kw]
+  (-> issue-kw name str/upper-case))
+
+(defn- dedupe-key [seen k]
+  (if (contains? seen k)
+    (loop [i 2] (let [k' (str k "-" i)]
+                  (if (contains? seen k') (recur (inc i)) k')))
+    k))
+
+(defn- abject->trace
+  "Convert a toda-bb abject map to the canonical trace shape.
+   Abject children are a vec; map them onto an ordered, structype-keyed
+   object (deduping on collisions so JSON keys stay unique)."
+  [abj]
+  (let [{:abject/keys [structype colour issue children reference]} abj
+        kids (reduce (fn [{:keys [m seen]} child]
+                       (let [k (name (:abject/structype child))
+                             k' (dedupe-key seen k)]
+                         {:m (assoc m k' (abject->trace child))
+                          :seen (conj seen k')}))
+                     {:m {} :seen #{}}
+                     children)]
+    (cond-> {:structype (name structype)
+             :colour    (name colour)}
+      issue           (assoc :issue (issue->str issue))
+      reference       (assoc :reference reference)
+      (seq (:m kids)) (assoc :children (:m kids)))))
+
+(defn rigcheck-bytes
+  "Run toda-bb's interpreter over .toda bytes. Returns
+   {:colour <\"red\"|\"yellow\"|\"green\">, :trace <tree>}."
+  [^bytes bytes cork-hex twist-hex]
+  (let [atoms (with-open [is (ByteArrayInputStream. bytes)]
+                (bb-atom/multi-from-input-stream is))
+        lat   (bb-lat/lat atoms)
+        conn  (bb-core/create-graph)
+        _     (bb-graph/populate-twists conn lat)
+        focus-hex (or twist-hex
+                      (some-> (bb-graph/get-end-twists conn) first :twist/id)
+                      cork-hex)
+        abject (bb-core/verify-rig-abject conn cork-hex focus-hex)]
+    {:colour (name (:abject/colour abject))
+     :trace  (abject->trace abject)}))
+
 (defn- handle-rigcheck-bb
   "Run toda-bb's interpreter over the .toda body. cork query param is
    required (hex hash). twist query param is optional; defaults to the
    first end-twist of the populated graph."
   [^HttpExchange ex]
   (try
-    (let [bytes (read-bytes ex)
-          query (parse-query (.getQuery (.getRequestURI ex)))
-          cork-hex  (:cork query)
-          atoms (with-open [is (ByteArrayInputStream. bytes)]
-                  (bb-atom/multi-from-input-stream is))
-          lat   (bb-lat/lat atoms)
-          conn  (bb-core/create-graph)
-          _     (bb-graph/populate-twists conn lat)
-          focus-hex (or (:twist query)
-                        (some-> (bb-graph/get-end-twists conn) first :twist/id)
-                        cork-hex)
-          colour (bb-core/verify-rig conn cork-hex focus-hex)
-          payload (json/write-str {:colour (name colour)})]
+    (let [bytes   (read-bytes ex)
+          query   (parse-query (.getQuery (.getRequestURI ex)))
+          out     (rigcheck-bytes bytes (:cork query) (:twist query))
+          payload (json/write-str out)]
       (send-response! ex 200 "application/json; charset=utf-8" payload))
     (catch Throwable t
       (.printStackTrace t)

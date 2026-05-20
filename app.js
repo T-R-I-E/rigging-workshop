@@ -792,13 +792,15 @@ async function server_check(ctx, base) {
         } catch (_) { /* body isn't JSON — fall through to status-only */ }
         return { state: 'broke', detail }
     }
-    let { colour } = await res.json()
-    return {
-        state: colour === 'green'  ? 'ok'
-             : colour === 'yellow' ? 'warn'
-             : 'bad',
-        detail: colour,
-    }
+    let { colour, trace } = await res.json()
+    let state = colour === 'green'  ? 'ok'
+              : colour === 'yellow' ? 'warn'
+              : 'bad'
+    // Prefer the flattened tree summary when the server supplied a trace
+    // — same shape the rust checker emits, so the rig-check panel can
+    // render the structype/issue tree instead of just the bare colour.
+    let detail = trace ? flatten_trace_detail(trace) : colour
+    return { state, detail, trace }
 }
 
 // Rust-backed checker. Runs rustoda's `check_rig` inside the page via

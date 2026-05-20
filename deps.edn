@@ -20,4 +20,26 @@
   ;; Sidecar server on :7879 — toda-bb only. Run alongside :server.
   :server-bb
   {:extra-deps {toda/toda-bb {:local/root "../toda-bb"}}
-   :main-opts  ["-m" "rigging-workshop.server-bb"]}}}
+   :main-opts  ["-m" "rigging-workshop.server-bb"]}
+
+  ;; Tests for the canonical-rig-checker bridge. Pulls in toda-rig-checker
+  ;; (via the :server alias deps) plus the Cognitect test-runner.
+  :test
+  {:extra-paths ["test"]
+   :extra-deps  {toda/twist-maker       {:local/root "../toda-clj/toda-twist-maker"}
+                 todaq/toda-rig-checker {:local/root "../toda-clj/toda-rig-checker"}
+                 io.github.cognitect-labs/test-runner
+                 {:git/tag "v0.5.1" :git/sha "dfb30dd"}}
+   :main-opts   ["-m" "cognitect.test-runner" "-d" "test"
+                 "-n" "rigging-workshop.server-test"]}
+
+  ;; Tests for the bb sidecar. Separate alias because toda-bb's
+  ;; toda.shielding collides with toda-core's same-named ns.
+  :test-bb
+  {:extra-paths ["test"]
+   :extra-deps  {toda/twist-maker {:local/root "../toda-clj/toda-twist-maker"}
+                 toda/toda-bb     {:local/root "../toda-bb"}
+                 io.github.cognitect-labs/test-runner
+                 {:git/tag "v0.5.1" :git/sha "dfb30dd"}}
+   :main-opts   ["-m" "cognitect.test-runner" "-d" "test"
+                 "-n" "rigging-workshop.server-bb-test"]}}}
