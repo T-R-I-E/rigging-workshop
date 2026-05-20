@@ -95,10 +95,11 @@
       <header class="panel-head">
         <span class="panel-title">Visualization</span>
         <span id="viz-meta" class="panel-meta">—</span>
+        <span class="panel-hint">shift-click sets corkline · double-click sets focus</span>
       </header>
       <div class="panel-body">
         <div class="viz-wrap">
-          <svg id="viz" preserveAspectRatio="xMidYMid meet"></svg>
+          <svg id="viz" preserveAspectRatio="xMidYMid meet" tabindex="0"></svg>
           <div class="viz-legend">
             <div class="row"><span class="sw" style="background:#999"></span> prev</div>
             <div class="row"><span class="sw" style="background:#f9f"></span> teth</div>
@@ -151,6 +152,7 @@
         <span id="meta" class="panel-meta">—</span>
         <div class="hex-toggle" role="group" aria-label="Hex view style">
           <button type="button" data-view="raw">raw</button>
+          <button type="button" data-view="highlight">highlight</button>
           <button type="button" data-view="kiwanoed">kiwanoed</button>
         </div>
       </header>

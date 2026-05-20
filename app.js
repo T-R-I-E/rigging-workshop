@@ -194,6 +194,12 @@ function body_building(env) {
     env.shapes[TWIST]?.forEach(t => {
         t.innies = t.innies.concat(t.succ.map(h => [h, "succ"]))
         t.outies = t.outies.concat([[t.body.prev, "prev"], [t.body.teth, "teth"]].filter(([a,b]) => a))
+        // Reverse-tether: from the fastener (the topline twist this
+        // tethered twist points up at), let consumers walk back down
+        // to this twist. Mirrors the succ-as-prev-reverse handling
+        // above. Arrow-key nav uses this to navigate from a corkline
+        // twist down to the leadlines that tether to it.
+        if (t.body.teth) t.body.teth.innies.push([t, "tethdown"])
 
         let twists = get_twists(t.body.cargooo)
         twists.forEach(t1 => {
@@ -354,7 +360,28 @@ function render_svg(env) {
         let seg = t.segment
         if(seg?.collapsed && t !== seg.first && t !== seg.last)
             return 0
-        svgs += `<circle cx="${t.cx}" cy="${t.cy}" r="5" fill="#${t.colour}" id="${t.hash}" />`
+        // Per-twist group with concentric status rings. Each ring is
+        // hidden by default and made visible when the group carries
+        // the matching class (.focus / .select / .highlight / .cork /
+        // .issue-*). Ascending radii from inner→outer so they stack
+        // visibly when several statuses apply at once. The hit-zone
+        // circle on top catches pointer events for the whole twist
+        // (the small inner dot would be a fiddly click target).
+        svgs += `<g class="twist-group" id="${t.hash}">` +
+                `<circle class="ring ring-issue"     cx="${t.cx}" cy="${t.cy}" r="17" fill="none"/>` +
+                `<circle class="ring ring-cork"      cx="${t.cx}" cy="${t.cy}" r="14" fill="none"/>` +
+                `<circle class="ring ring-highlight" cx="${t.cx}" cy="${t.cy}" r="11.5" fill="none"/>` +
+                `<circle class="ring ring-select"    cx="${t.cx}" cy="${t.cy}" r="9" fill="none"/>` +
+                `<circle class="ring ring-focus"     cx="${t.cx}" cy="${t.cy}" r="7" fill="none"/>` +
+                `<circle class="dot"                 cx="${t.cx}" cy="${t.cy}" r="5" fill="#${t.colour}"/>` +
+                `<circle class="hit"                 cx="${t.cx}" cy="${t.cy}" r="9" fill="transparent"/>` +
+                `</g>`
+        // Equivocation marker.
+        if (Array.isArray(t.succ) && t.succ.length > 1) {
+            svgs += `<text class="viz-conflict" x="${t.cx + 7}" y="${t.cy - 5}" ` +
+                    `font-size="11" pointer-events="none">` +
+                    `<title>${t.succ.length} conflicting successors</title>⚠</text>`
+        }
         edges = edges.concat(t.outies.map(o => [t, o[0], o[1]]))
     })
     edges.sort((a,b) => order.indexOf(a[2]) - order.indexOf(b[2]))
@@ -364,19 +391,22 @@ function render_svg(env) {
         let fx = e[0].cx, fy = e[0].cy, tx = e[1].cx, ty = e[1].cy
         if(!(fx && fy && tx && ty)) return 0
         let dashed = e[0].cx < e[1].cx ? 'dashed' : ''
+        // data-from / data-to let the hover handler light up edges
+        // connected to the currently-highlighted twist(s).
+        let endpoints = `data-from="${e[0].hash}" data-to="${e[1].hash}"`
         if(e[2] === 'teth')
-            edgestr += `<path d="M ${fx} ${fy} Q ${(fx+tx+tx)/3} ${(ty+fy)/2} ${tx} ${ty}" class="${e[2]} ${dashed}"/>`
+            edgestr += `<path d="M ${fx} ${fy} Q ${(fx+tx+tx)/3} ${(ty+fy)/2} ${tx} ${ty}" class="${e[2]} ${dashed}" ${endpoints}/>`
         else if(e[2] === 'lead' || e[2] === 'meet')
-            edgestr += `<path d="M ${fx} ${fy} Q ${(fx+fx+tx)/3} ${(ty+fy)/2} ${tx} ${ty}" class="${e[2]} ${dashed}"/>`
+            edgestr += `<path d="M ${fx} ${fy} Q ${(fx+fx+tx)/3} ${(ty+fy)/2} ${tx} ${ty}" class="${e[2]} ${dashed}" ${endpoints}/>`
         else
-            edgestr += `<path d="M ${fx} ${fy} ${tx} ${ty}" class="${e[2]} ${dashed}"/>`
+            edgestr += `<path d="M ${fx} ${fy} ${tx} ${ty}" class="${e[2]} ${dashed}" ${endpoints}/>`
     })
 
     env.segments?.forEach(seg => {
         if(!seg.collapsed) return
         let f = seg.first, l = seg.last
         if(!f.cx || !l.cx) return
-        edgestr += `<path d="M ${f.cx} ${f.cy} ${l.cx} ${l.cy}" class="prev"/>`
+        edgestr += `<path d="M ${f.cx} ${f.cy} ${l.cx} ${l.cy}" class="prev" data-from="${f.hash}" data-to="${l.hash}"/>`
         let mx = (f.cx + l.cx) / 2, my = f.cy
         svgs += `<circle cx="${mx}" cy="${my}" r="8" fill="#${f.colour}" id="${seg.id}" opacity="0.6" style="pointer-events:auto;cursor:pointer"/>`
         svgs += `<text x="${mx}" y="${my + 3}" text-anchor="middle" font-size="7" fill="#000" style="pointer-events:none">${seg.twists.length}</text>`
@@ -425,15 +455,54 @@ function write_stats(env) {
 
 function notify_rendered(env) {
     document.dispatchEvent(new CustomEvent('workshop:rendered', {detail: env}))
-    // Restore prior click-selection by hash; falls back to env.focus when
-    // none of the previously-selected hashes are in this render.
+    // Default the corkline to the top-leftmost twist for any rig that
+    // didn't come with a sidecar-declared corkline and hasn't been
+    // user-overridden by a shift-click. decorate_twists assigns
+    // cy = 400 - t.first.y * 30, so LARGER t.y → higher on screen;
+    // the topmost line has the maximum y, and within it the leftmost
+    // twist has the minimum x.
+    //
+    // Compile's own corkline_h (from build() in editor.js) is NOT
+    // authoritative here — decompile can pick a non-canonical poptop
+    // for unusual rigs, and the user's mental model is the visual
+    // top-left, not whatever the recompile chose.
+    let src = window.workshop?.corkline_source
+    if (src !== 'sidecar' && src !== 'user') {
+        let twists = env.shapes?.[TWIST] || []
+        let cork = null, best_y = -Infinity, best_x = Infinity
+        for (let t of twists) {
+            if (t.y == null || t.x == null) continue
+            if (t.y > best_y || (t.y === best_y && t.x < best_x)) {
+                best_y = t.y; best_x = t.x; cork = t.hash
+            }
+        }
+        if (cork) {
+            window.workshop.corkline = cork
+            window.workshop.corkline_source = 'auto'
+        }
+    }
+    apply_cork_dom()
+    // Restore prior click-selection by hash (visual only — focus is a
+    // separate concept and arrives below).
     let still = _selected_hashes.filter(h => el(h))
     if (still.length) {
         apply_select_dom(still)
     } else {
         _selected_hashes = []
-        if (env.focus) show_abject_info(env.focus.hash)
     }
+    // Initial focus on this render: prefer the previously-focused
+    // twist if still present in the rebuild, otherwise fall back to
+    // the bundle's tail twist (env.focus). focus_node paints the
+    // .focus ring, updates window.workshop.focus_hash, and triggers
+    // the first rig-check. Also seed the selection to the same twist
+    // so the highlight hex view has a sensible fallback target
+    // before the user clicks or hovers anywhere.
+    let prior = window.workshop?.focus_hash
+    let initial_focus = (prior && el(prior)) ? prior : env.focus?.hash
+    if (initial_focus && !still.length) {
+        select_node(initial_focus)
+    }
+    if (initial_focus) focus_node(initial_focus)
     return env
 }
 
@@ -517,14 +586,34 @@ if(vp) {
     vp.addEventListener('mouseup', e => panning = false)
     vp.addEventListener('mouseleave', e => panning = false)
     vp.addEventListener('click', e => {
-        if(e.target.tagName === 'circle') {
-            let seg = env.segIndex?.[e.target.id]
-            if(seg) return expand_segment(seg)
-            select_node(e.target.id)
+        // Twist click? Walk up to the .twist-group whose id is the
+        // hash. (The dot, rings, and hit-zone are all <circle>s
+        // inside the group.) A click on the collapsed-segment marker
+        // hits a bare <circle id="seg.id"> outside any group; treat
+        // it via env.segIndex below.
+        let group_id = e.target.closest?.('.twist-group')?.id
+        if (group_id) {
+            if (e.shiftKey) {
+                window.workshop.corkline = group_id
+                window.workshop.corkline_source = 'user'
+                apply_cork_dom()
+                if (window.workshop.focus_hash) show_abject_info(window.workshop.focus_hash)
+                return
+            }
+            select_node(group_id)
+            return
+        }
+        if (e.target.tagName === 'circle' && env.segIndex?.[e.target.id]) {
+            expand_segment(env.segIndex[e.target.id])
         }
     })
+    vp.addEventListener('dblclick', e => {
+        let group_id = e.target.closest?.('.twist-group')?.id
+        if (group_id) focus_node(group_id)
+    })
     vp.addEventListener('mousemove', e => {
-        let hashes = e.target.tagName === 'circle' ? [e.target.id] : []
+        let group_id = e.target.closest?.('.twist-group')?.id
+        let hashes = group_id ? [group_id] : []
         document.dispatchEvent(new CustomEvent('workshop:hover', {
             detail: { hashes, source: 'viz' }
         }))
@@ -535,6 +624,65 @@ if(vp) {
             detail: { hashes: [], source: 'viz' }
         }))
     })
+    // Arrow-key navigation when the viz is keyboard-focused (svg has
+    // tabindex="0"). Moves the .select state, not the focus — like
+    // click-arrowing through a list rather than retargeting the
+    // rig-check on every key press. Left/right walk along the
+    // selection's line; up/down follow edges. Active only when #viz
+    // owns document.activeElement so the examples-list arrow nav
+    // keeps working when that pane is focused.
+    vp.addEventListener('keydown', e => {
+        if (!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)) return
+        let pivot_hash = _selected_hashes[0] || window.workshop?.focus_hash
+                                             || env.focus?.hash
+        let cur = env.index?.[pivot_hash]
+        if (!cur) return
+        let next = nearest_twist(env, cur, e.key)
+        if (next) {
+            e.preventDefault()
+            select_node(next.hash)
+        }
+    })
+}
+
+// Pick the next twist relative to `cur` for the given arrow direction.
+// Left/right walk along the focused twist's line (same cy). Up/down
+// follow connecting edges — outies (this → other) plus innies (other
+// → this) — so navigation tracks the rig's actual graph structure
+// instead of teleporting across unconnected lines.
+function nearest_twist(env, cur, key) {
+    let twists = (env.shapes?.[TWIST] || []).filter(t => {
+        if (t === cur || t.cx == null || t.cy == null) return false
+        let seg = t.segment
+        return !(seg?.collapsed && t !== seg.first && t !== seg.last)
+    })
+    if (key === 'ArrowLeft' || key === 'ArrowRight') {
+        let same_line = twists.filter(t => t.cy === cur.cy)
+        if (key === 'ArrowLeft') {
+            return same_line.filter(t => t.cx < cur.cx)
+                .sort((a, b) => b.cx - a.cx)[0]
+        }
+        return same_line.filter(t => t.cx > cur.cx)
+            .sort((a, b) => a.cx - b.cx)[0]
+    }
+    // Up/down: gather connected twists via outies + innies. Each entry
+    // is [otherTwist, edgeType]. Filter to neighbours that are higher
+    // (ArrowUp → cy < cur.cy) or lower (ArrowDown → cy > cur.cy);
+    // pick the closest in cy, ties broken by x-proximity.
+    let neighbours = new Set()
+    for (let [other] of (cur.outies || [])) if (other && other.cy != null) neighbours.add(other)
+    for (let [other] of (cur.innies || [])) if (other && other.cy != null) neighbours.add(other)
+    let dir = key === 'ArrowUp'
+        ? n => n.cy < cur.cy
+        : n => n.cy > cur.cy
+    let candidates = [...neighbours].filter(dir)
+    if (!candidates.length) return null
+    candidates.sort((a, b) => {
+        let dy = Math.abs(a.cy - cur.cy) - Math.abs(b.cy - cur.cy)
+        if (dy !== 0) return dy
+        return Math.abs(a.cx - cur.cx) - Math.abs(b.cx - cur.cx)
+    })
+    return candidates[0]
 }
 
 document.addEventListener('workshop:hover', e => {
@@ -542,6 +690,16 @@ document.addEventListener('workshop:hover', e => {
     let hashes = e.detail.hashes || []
     vp.querySelectorAll('.highlight').forEach(c => c.classList.remove('highlight'))
     for (let h of hashes) el(h)?.classList.add('highlight')
+    // Also light up every edge that touches one of the hovered twists,
+    // so the structural neighbourhood (prev / teth / hitch role) of the
+    // selection pops together with the dot itself.
+    if (hashes.length) {
+        let set = new Set(hashes)
+        vp.querySelectorAll('path[data-from], path[data-to]').forEach(p => {
+            if (set.has(p.getAttribute('data-from')) ||
+                set.has(p.getAttribute('data-to'))) p.classList.add('highlight')
+        })
+    }
 })
 
 document.addEventListener('workshop:select', e => {
@@ -575,9 +733,82 @@ function expand_segment(seg) {
     select_node(seg.first.hash)
 }
 
+// Apply the .cork CSS class to whichever twist circle matches the
+// current window.workshop.corkline. Called after a render, after a
+// shift-click override, and any other time the cork hash changes. The
+// class is independent of .select / .highlight / .focus so the user
+// can see all four states at once.
+function apply_cork_dom() {
+    if (!vp) return
+    vp.querySelectorAll('.cork').forEach(c => c.classList.remove('cork'))
+    let cork = window.workshop?.corkline
+    if (cork) el(cork)?.classList.add('cork')
+}
+
+// Paint a per-colour issue layer on every twist named in rust's
+// structured tree, including the green ones — they show the rig's
+// healthy structure alongside the broken bits. Edges only paint for
+// non-green twists, and only the edge types the structype maps to
+// (e.g. a 'lead' failure paints the lead's teth/lead/meet edges
+// rather than every edge touching the lead twist). Tooltips on each
+// circle aggregate every structype reference for that hash.
+//
+// Listener fires on every rust check; an empty payload clears stale
+// paint from a previous fixture.
+document.addEventListener('workshop:issue', e => {
+    if (!vp) return
+    // Clear all four classes on both circles and edges.
+    vp.querySelectorAll('.issue-bad, .issue-warn, .issue-ok').forEach(n => {
+        n.classList.remove('issue-bad', 'issue-warn', 'issue-ok')
+        n.removeAttribute('data-issue-tooltip')
+    })
+    let issues = e.detail?.issues || []
+    if (!issues.length) return
+    // Per-hash: collapse multiple structype references into one tooltip
+    // and one colour class (worst wins: bad > warn > ok).
+    let by_hash = new Map()
+    for (let i of issues) {
+        let entry = by_hash.get(i.hash) || { worst: 'ok', lines: [], structypes: [] }
+        let rank = { ok: 0, warn: 1, bad: 2 }
+        let mycol = i.colour === 'red'   ? 'bad'
+                  : i.colour === 'yellow' ? 'warn'
+                  : 'ok'
+        if (rank[mycol] > rank[entry.worst]) entry.worst = mycol
+        entry.lines.push(`${i.structype} [${i.colour}] ${i.issue || ''} ${i.detail || ''}`.trim())
+        entry.structypes.push({ structype: i.structype, colour: i.colour })
+        by_hash.set(i.hash, entry)
+    }
+    for (let [hash, entry] of by_hash) {
+        let circle = el(hash)
+        if (!circle) continue
+        circle.classList.add('issue-' + entry.worst)
+        circle.setAttribute('data-issue-tooltip', entry.lines.join('\n'))
+    }
+    // Edges: only paint the ones whose TYPE matches the structype's
+    // role at the implicated twist. Two passes by severity so a 'bad'
+    // edge wins over an overlapping 'warn'.
+    for (let severity of ['warn', 'bad']) {
+        for (let i of issues) {
+            let sev = i.colour === 'red'    ? 'bad'
+                    : i.colour === 'yellow' ? 'warn'
+                    : null
+            if (sev !== severity) continue
+            let edge_types = ISSUE_EDGES_BY_STRUCTYPE[i.structype]
+            if (!edge_types || !edge_types.length) continue
+            for (let etype of edge_types) {
+                vp.querySelectorAll(`path.${etype}[data-from="${i.hash}"]`).forEach(p => {
+                    p.classList.remove('issue-warn', 'issue-bad')
+                    p.classList.add('issue-' + sev)
+                })
+            }
+        }
+    }
+})
+
 // Apply .select to the given hashes (clearing any previous selection).
-// Pure DOM update — does NOT broadcast a select event. show_abject_info
-// runs against the first hash so the rig-check panel reflects the click.
+// Pure DOM update — does NOT run a rig-check. Focus + rig-check are
+// driven by focus_node (double-click), kept separate from selection
+// so a single click can't accidentally retarget the checker pipeline.
 function apply_select_dom(hashes) {
     _selected_hashes = [...hashes]
     _selected_set.forEach(d => d.classList.remove('select'))
@@ -589,7 +820,6 @@ function apply_select_dom(hashes) {
             _selected_set.add(dom)
         }
     }
-    if (hashes[0]) show_abject_info(hashes[0])
 }
 
 function select_node(id) {
@@ -604,10 +834,73 @@ function select_node(id) {
     }))
 }
 
+// Set THE focus — singular — to the named twist. Repaints the .focus
+// ring (clearing any prior), updates window.workshop.focus_hash so
+// other callers (the cork shift-click handler, the rust-check pipeline)
+// can find it, runs the rig-check against the new focus, and
+// broadcasts a workshop:focus event so other panes (the hex 'focused'
+// view) can sync.
+function focus_node(id) {
+    let t = env.index?.[id]
+    if (!t) return
+    let seg = t.segment
+    if (seg?.collapsed && t !== seg.first && t !== seg.last)
+        return expand_segment(seg)
+    if (!vp) return
+    vp.querySelectorAll('.focus').forEach(d => d.classList.remove('focus'))
+    el(id)?.classList.add('focus')
+    if (!window.workshop) window.workshop = {}
+    window.workshop.focus_hash = id
+    show_abject_info(id)
+    document.dispatchEvent(new CustomEvent('workshop:focus', { detail: { hash: id } }))
+}
+
 function highlight_node(id) {                // legacy single-node entry point
     document.dispatchEvent(new CustomEvent('workshop:hover', {
         detail: { hashes: id ? [id] : [], source: 'viz' }
     }))
+}
+
+// Hash literals inside the rust rig-check JSON are rendered as
+// .rc-hash spans (see pretty_json_with_hash_links above). Wire them
+// into the same hover/select/focus model that the viz uses, so the
+// user can chase a reference from the failure tree right into the
+// graph. Delegated handlers on the rig-check pane.
+let _rc_host = el('rigcheck')
+if (_rc_host) {
+    _rc_host.addEventListener('mouseover', e => {
+        let span = e.target.closest('.rc-hash')
+        if (!span) return
+        document.dispatchEvent(new CustomEvent('workshop:hover', {
+            detail: { hashes: [span.dataset.hash], source: 'rigcheck' },
+        }))
+    })
+    _rc_host.addEventListener('mouseout', e => {
+        // mouseout fires per-span; only clear hover when the cursor truly
+        // left every span — checked via relatedTarget. If it's still on a
+        // span (e.g., crossed to an adjacent .rc-hash) the next mouseover
+        // will repaint correctly anyway.
+        if (e.relatedTarget?.closest?.('.rc-hash')) return
+        document.dispatchEvent(new CustomEvent('workshop:hover', {
+            detail: { hashes: [], source: 'rigcheck' },
+        }))
+    })
+    _rc_host.addEventListener('click', e => {
+        let span = e.target.closest('.rc-hash')
+        if (!span) return
+        // Plain click → select. Double-click is handled below; the
+        // browser fires both click AND dblclick on a fast double, so
+        // the dblclick handler stops propagation and we never reach
+        // here in that path.
+        e.stopPropagation()
+        select_node(span.dataset.hash)
+    })
+    _rc_host.addEventListener('dblclick', e => {
+        let span = e.target.closest('.rc-hash')
+        if (!span) return
+        e.stopPropagation()
+        focus_node(span.dataset.hash)
+    })
 }
 
 function scroll_to(x, y) {
@@ -707,38 +1000,39 @@ const CHECKERS = [
                 await interp.verifyHitchLine(ctx.twistHash)
                 return { state: 'ok', detail: 'verified' }
             } catch (e) {
+                // Spec §9.1.3 (p.30): MISSING / UNKNOWN issues are yellow,
+                // INVALID / MISMATCH issues are red. svgiewer/src names a
+                // few INVALID-class invariant violations with a "Missing"
+                // prefix even though all relevant atoms are present and a
+                // structural rule was broken. We classify those as red here
+                // until the JS hierarchy is cleaned up — see
+                // js-rig-checker-surgical-changes.md.
+                //
+                //   MissingHoistError  — no hoist exists for this lead (e.g.
+                //                        hh_tether_null: NULL teth → not fast)
+                //   MissingPostEntry   — post twist exists but its rigs lack
+                //                        the canonical entry for the lead
+                //   MissingSuccessor   — line ends before reaching stop
+                //
+                // Everything else with a "Missing" prefix (MissingError,
+                // MissingHashPacketError, MissingPrevError, MissingPrevious)
+                // is a genuine atom-not-in-bundle situation → yellow.
+                // MissingPrevious stays yellow only because the wrapper in
+                // interpret.js:prev() currently swallows the inner type;
+                // see surgical-changes.md §2 for the upstream fix.
                 let name = e?.name || e?.constructor?.name || ''
-                let msg  = e?.message || String(e)
-                let ref  = ctx.twistHex
-                // Build structured trace so the rig-check panel can show
-                // meaningful structype + issue + detail, matching the
-                // canonical .json sidecar shape emitted by the rust checker.
-                let trace = null
-                if (name === 'MissingHoistError') {
-                    trace = trace_leaf('lead',       'red', 'MISMATCH', msg, ref)
-                } else if (name === 'MissingSuccessor') {
-                    trace = trace_leaf('corkline',   'red', 'INVALID',  msg, ref)
-                } else if (name === 'MissingPostEntry') {
-                    trace = trace_leaf('post-key',   'red', 'MISMATCH', msg, ref)
-                } else if (name === 'LooseTwistError') {
-                    trace = trace_leaf('half-hitch', 'red', 'INVALID',  msg, ref)
-                } else if (name === 'ReqSatError') {
-                    trace = trace_leaf('rig',        'red', 'INVALID',  msg, ref)
-                // yellow / MISSING bucket: genuine atom-not-in-bundle.
-                // MissingHashPacketError and MissingPrevError live in
-                // twist.js (extend NamedError, not MissingError) so they
-                // aren't caught by the MissingError check below.
-                } else if (name === 'MissingHashPacketError' || name === 'MissingPrevError') {
-                    trace = trace_leaf('rig',    'yellow', 'MISSING', msg, ref)
-                } else if (name === 'MissingError' || name === 'MissingPrevious') {
-                    trace = trace_leaf('rig',    'yellow', 'MISSING', msg, ref)
-                } else {
-                    throw e   // genuinely unexpected → surface as FAIL
+                const JS_INVALID_AS_MISSING = new Set([
+                    'MissingHoistError',
+                    'MissingPostEntry',
+                    'MissingSuccessor',
+                ])
+                if (JS_INVALID_AS_MISSING.has(name)) {
+                    return { state: 'bad', detail: e?.message || String(e) }
                 }
-                // Spec §9.1.3 (p.30): MISSING / UNKNOWN → yellow,
-                // INVALID / MISMATCH → red.
-                let state = trace?.colour === 'red' ? 'bad' : 'warn'
-                return { state, detail: msg, trace }
+                if (/^Missing/.test(name)) {
+                    return { state: 'warn', detail: e?.message || String(e) }
+                }
+                throw e
             }
         },
     },
@@ -796,11 +1090,13 @@ async function server_check(ctx, base) {
     let state = colour === 'green'  ? 'ok'
               : colour === 'yellow' ? 'warn'
               : 'bad'
-    // Prefer the flattened tree summary when the server supplied a trace
-    // — same shape the rust checker emits, so the rig-check panel can
-    // render the structype/issue tree instead of just the bare colour.
-    let detail = trace ? flatten_trace_detail(trace) : colour
-    return { state, detail, trace }
+    // When the server supplied a structured trace, return it as a JSON
+    // string in `detail` so format_check_detail pretty-prints it the
+    // same way it does the rust checker's tree (with hash links and
+    // structype tints). Older servers that only emit `{colour}` fall
+    // through to the bare colour string.
+    let detail = trace ? JSON.stringify(trace) : colour
+    return { state, detail }
 }
 
 // Rust-backed checker. Runs rustoda's `check_rig` inside the page via
@@ -827,95 +1123,191 @@ async function rust_check(ctx) {
     if (error) return { state: 'broke', detail: `wasm load failed: ${error.message || error}` }
     try {
         let bytes = ctx.bytes instanceof Uint8Array ? ctx.bytes : new Uint8Array(ctx.bytes)
-        let raw = mod.check_rig(bytes, ctx.corklineHex, ctx.twistHex)
-        let trace = JSON.parse(raw)
-        // Extract state from the root colour; default to ok.
-        let state = trace.colour === 'green'  ? 'ok'
-                  : trace.colour === 'yellow' ? 'warn'
-                  : 'bad'
-        // Provide a concise flattened summary so results_differ stays
-        // deterministic and the detail field remains human-readable
-        // when traces aren't rendered (e.g. in bench reports).
-        let detail = flatten_trace_detail(trace)
-        return { state, detail, trace }
+        // Pass ctx.twistHex as the focus so the rust checker pivots around
+        // the user-selected twist, matching the js / clj / bb checkers.
+        // Without this it falls back to parse_lat's last-twist heuristic
+        // (the CLI default) and reports "rig supports up to X but focus is Y"
+        // whenever the user clicks anything other than the file's tail twist.
+        let { state, detail } = JSON.parse(mod.check_rig(bytes, ctx.corklineHex, ctx.twistHex))
+        // Broadcast structured issues from the rust tree so viz / editor
+        // can paint red highlights on the implicated twists. Dispatched
+        // here (and not in the panel renderer) so the broadcast lands
+        // even when the panel's 'rebuild-same' path short-circuits the
+        // render. Always emits an event — green/empty payload clears
+        // any stale issue paint from a previous check.
+        let issues = state === 'ok' ? [] : extract_rust_issues(detail)
+        document.dispatchEvent(new CustomEvent('workshop:issue', {
+            detail: { issues, focus: ctx.twistHex },
+        }))
+        return { state, detail }
     } catch (e) {
         // wasm threw or produced malformed JSON — broke, not bad.
         return { state: 'broke', detail: e.message || String(e) }
     }
 }
 
+// Walk rust's structured tree, collecting every node with a reference
+// twist — including green ones. Each entry carries the structype so
+// the viz can paint edges specifically involved in the failure rather
+// than every edge touching the implicated twist. The 'rig' umbrella
+// is skipped when it has children (the colour comes from one of them).
+function extract_rust_issues(detail_str) {
+    if (typeof detail_str !== 'string') return []
+    let tree
+    try { tree = JSON.parse(detail_str) } catch { return [] }
+    let issues = []
+    function walk(node) {
+        if (!node || typeof node !== 'object') return
+        let { structype, colour, reference, issue, detail, children } = node
+        let kids = children && Object.values(children)
+        let is_leaf = !kids || kids.length === 0
+        let skip = structype === 'rig' && !is_leaf
+        if (!skip && colour && reference) {
+            issues.push({ hash: reference, structype, issue, detail, colour })
+        }
+        if (kids) for (let k of kids) walk(k)
+    }
+    walk(tree)
+    return issues
+}
+
+// Map a structype to the edge types in the viz that participate in
+// that role. Used to paint just the edges actually implicated by a
+// failure (rather than every edge touching the implicated twist).
+// Container structypes (rig / half-hitch / hitch / lash / splice)
+// have no edges of their own — the leaves under them carry the
+// specifics.
+const ISSUE_EDGES_BY_STRUCTYPE = {
+    'lead':         ['teth', 'lead', 'meet'],
+    'meet':         ['meet', 'teth', 'prev'],
+    'post':         ['post', 'prev'],
+    'hoist':        ['meet', 'prev', 'post'],
+    'fastener':     ['teth', 'lead'],
+    'corkline':     ['prev', 'teth'],
+    'succession':   ['prev'],
+    'topline-key':  [],
+    'rig':          [],
+    'half-hitch':   [],
+    'hitch':        [],
+    'lash':         [],
+    'splice':       [],
+}
+
 function escape_text(s) {
     return String(s).replace(/[<&]/g, c => c === '<' ? '&lt;' : '&amp;')
 }
 
-// ── structured error trace ───────────────────────────────────────────
-
-const TRACE_COLOURS = { green: 'ok', yellow: 'warn', red: 'bad' }
-
-function trace_leaf(structype, colour, issue, detail, reference) {
-    return { structype, colour, issue, detail, reference }
-}
-
-function walk_issues(trace) {
-    if (!trace) return []
-    if (!trace.children) {
-        return trace.issue ? [{ structype: trace.structype, issue: trace.issue, detail: trace.detail }] : []
-    }
-    let issues = []
-    for (let key of Object.keys(trace.children)) {
-        issues.push(...walk_issues(trace.children[key]))
-    }
-    return issues
-}
-
-function flatten_trace_detail(trace) {
-    let issues = walk_issues(trace)
-    if (issues.length === 0) return trace.colour || 'ok'
-    return issues.map(i => `${i.structype}: ${i.issue} — ${i.detail}`).join('; ')
-}
-
-function render_trace(trace) {
-    if (!trace) return ''
-    let cls = TRACE_COLOURS[trace.colour] ? `trace-${TRACE_COLOURS[trace.colour]}` : ''
-    let parts = []
-    if (trace.structype) {
-        parts.push(`<span class="trace-st ${cls}">${escape_text(trace.structype)}</span>`)
-    }
-    if (trace.issue) {
-        parts.push(`<span class="trace-issue ${cls}">${escape_text(trace.issue)}</span>`)
-    }
-    if (trace.detail) {
-        parts.push(`<span class="trace-detail">${escape_text(trace.detail)}</span>`)
-    }
-    if (trace.reference && trace.structype !== 'rig') {
-        parts.push(`<span class="trace-ref">${escape_text(trace.reference.slice(0, 12))}…</span>`)
-    }
-    let head = `<div class="trace-node">${parts.join(' ')}</div>`
-    if (!trace.children) return head
-    let kids = Object.keys(trace.children).map(k =>
-        `<div class="trace-child"><span class="trace-key">${escape_text(k)}</span>${render_trace(trace.children[k])}</div>`
-    ).join('')
-    return `<div class="trace-tree ${cls}">${head}<div class="trace-children">${kids}</div></div>`
-}
-
-// ── check rows ────────────────────────────────────────────────────────
-
-function render_check_row(c, state, badge, detail, trace) {
-    let body = trace ? render_trace(trace)
-             : `<span class="rc-source">${c.label}</span> ${escape_text(detail)}`
+function render_check_row(c, state, badge, detail) {
+    // Pretty-print structured JSON details (rust returns its
+    // structype/colour/reference tree as a JSON string). Falls back to
+    // plain escaped text when detail isn't parseable JSON or isn't an
+    // object/array. Call sites append a trailing " · Nms" timing
+    // suffix; strip it before parsing so JSON.parse doesn't choke.
+    let body = format_check_detail(detail)
     return `<div class="rig-check ${state}" data-checker="${c.id}">` +
            `<span class="badge">${badge}</span>` +
-           `<div>${body}</div>` +
+           `<div><span class="rc-source">${c.label}</span> ${body}</div>` +
            `</div>`
 }
 
-function update_check_row(checker_id, state, badge, detail, trace) {
+function format_check_detail(detail) {
+    if (typeof detail !== 'string') return escape_text(String(detail ?? ''))
+    // Split off the trailing timing suffix " · 12ms" that call sites
+    // append. The JSON sits before it; render the JSON pretty and the
+    // timing as plain text trailing the <pre>.
+    let timing = ''
+    let m = detail.match(/\s*·\s*\d+ms\s*$/)
+    let body = detail
+    if (m) {
+        timing = m[0].trim()
+        body = detail.slice(0, m.index)
+    }
+    let trimmed = body.trim()
+    if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+        try {
+            let parsed = JSON.parse(trimmed)
+            if (parsed && typeof parsed === 'object') {
+                let pretty = `<pre class="rc-json">${pretty_json_with_hash_links(parsed)}</pre>`
+                return timing ? `${pretty}<span class="rc-timing">${escape_text(timing)}</span>` : pretty
+            }
+        } catch {}
+    }
+    return escape_text(detail)
+}
+
+// TODA hash literal: algo byte 0x41 (sha-256-trimmed) + 32-byte digest,
+// hex-encoded → 66 chars total. The rust check tree carries these in
+// 'reference' fields and embeds them in free-text 'detail' messages.
+// Two patterns: HASH_FULL_RE anchors the whole string; HASH_RE_GLOBAL
+// finds embedded hashes inside larger text. Each call to either uses
+// the regex fresh — never depend on lastIndex.
+const HASH_FULL_RE   = /^41[0-9a-f]{64}$/i
+function hash_re_global() { return /\b41[0-9a-f]{64}\b/gi }
+
+function hash_span(hash) {
+    return `<span class="rc-hash" data-hash="${hash}">${escape_text(hash)}</span>`
+}
+
+// Wrap any 66-char TODA hash found in a free-text string as a
+// rc-hash span. Leaves other text untouched. JSON-escapes the
+// non-hash spans separately so the surrounding text doesn't break
+// the <pre>.
+function linkify_hashes_in_text(s) {
+    let out = ''
+    let last = 0
+    for (let m of s.matchAll(hash_re_global())) {
+        out += escape_text(s.slice(last, m.index))
+        out += hash_span(m[0])
+        last = m.index + m[0].length
+    }
+    out += escape_text(s.slice(last))
+    return out
+}
+
+// JSON.stringify-with-2-spaces, but every string value that matches a
+// full TODA hash is rendered as a hoverable/clickable span; long
+// 'detail' strings have any embedded hashes linkified too. Object
+// keys, numbers, booleans, and nulls render exactly as
+// JSON.stringify would.
+function pretty_json_with_hash_links(value) {
+    function emit(v, indent) {
+        if (v === null) return 'null'
+        if (typeof v === 'boolean') return String(v)
+        if (typeof v === 'number') return String(v)
+        if (typeof v === 'string') {
+            // Full-hash string value → clickable span (with surrounding
+            // quotes for JSON parity). Otherwise, look for embedded
+            // hashes inside the text (rust's 'detail' often quotes
+            // hashes inline like "no candidate hoist on corkline for
+            // lead 41abc…").
+            if (HASH_FULL_RE.test(v)) return `"${hash_span(v)}"`
+            return `"${linkify_hashes_in_text(v)}"`
+        }
+        if (Array.isArray(v)) {
+            if (!v.length) return '[]'
+            let next = indent + '  '
+            let body = v.map(x => `${next}${emit(x, next)}`).join(',\n')
+            return `[\n${body}\n${indent}]`
+        }
+        if (v && typeof v === 'object') {
+            let keys = Object.keys(v)
+            if (!keys.length) return '{}'
+            let next = indent + '  '
+            let body = keys.map(k => `${next}"${escape_text(k)}": ${emit(v[k], next)}`).join(',\n')
+            return `{\n${body}\n${indent}}`
+        }
+        return escape_text(String(v))
+    }
+    return emit(value, '')
+}
+
+function update_check_row(checker_id, state, badge, detail) {
     let host = el('rigcheck')
     if (!host) return
     let row = host.querySelector(`[data-checker="${checker_id}"]`)
     let c   = CHECKERS.find(x => x.id === checker_id)
     if (!row || !c) return
-    row.outerHTML = render_check_row(c, state, badge, detail, trace)
+    row.outerHTML = render_check_row(c, state, badge, detail)
 }
 
 function bytes_equal(a, b) {
@@ -947,7 +1339,14 @@ function classify_pass(ctx) {
     let init = window.workshop?.initial_toda_load
     if (!init) return 'no-init'                         // .trdl / fresh editor / moved on
     if (bytes_equal(ctx.bytes, init.bytes)) {
-        return init.results.size === 0 ? 'initial' : 'rebuild-same'
+        if (init.results.size === 0)                   return 'initial'
+        // Same bytes but the focus changed (user clicked a different twist
+        // in the viz) — the cached per-checker results are for the old
+        // focus and need to be re-run for the new one. Cork override
+        // (shift-click) also lands here via a different corkline.
+        if (init.last_focus !== ctx.twistHex)          return 'initial'
+        if (init.last_cork  !== ctx.corklineHex)       return 'initial'
+        return 'rebuild-same'
     }
     return 'rebuild-diff'
 }
@@ -1093,8 +1492,8 @@ function show_abject_info(id) {
         Promise.all(CHECKERS.map(async c => {
             let t0 = performance.now()
             try {
-                let { state, detail, trace } = await c.run(ctx)
-                return { c, state, detail, dt: performance.now() - t0, trace }
+                let { state, detail } = await c.run(ctx)
+                return { c, state, detail, dt: performance.now() - t0 }
             } catch (e) {
                 console.error(`[${c.label}]`, e)
                 return {
@@ -1104,12 +1503,12 @@ function show_abject_info(id) {
                 }
             }
         })).then(results => {
-            for (let { c, state, detail, dt, trace } of results) {
+            for (let { c, state, detail, dt } of results) {
                 let init_res = init.results.get(c.id)
                 if (!results_differ(init_res, { state, detail })) continue
                 rc.insertAdjacentHTML('beforeend',
                     render_check_row(c, state, badge_for(state),
-                                     `${detail} · ${dt.toFixed(0)}ms`, trace)
+                                     `${detail} · ${dt.toFixed(0)}ms`)
                         .replace('class="rig-check',
                                  'data-section="diff" class="rig-check'))
             }
@@ -1118,6 +1517,17 @@ function show_abject_info(id) {
     }
 
     // pass === 'initial' or 'no-init': fresh full render.
+    // Stash the focus + corkline this pass used so classify_pass can
+    // distinguish a click-driven focus change from a same-bytes rebuild.
+    if (window.workshop?.initial_toda_load) {
+        window.workshop.initial_toda_load.last_focus = ctx.twistHex
+        window.workshop.initial_toda_load.last_cork  = ctx.corklineHex
+        // A new initial pass invalidates the cached per-checker results
+        // (they were for the previous focus/cork).
+        if (pass === 'initial') {
+            window.workshop.initial_toda_load.results.clear()
+        }
+    }
     rc.className = 'rig-check-list'
     rc.innerHTML = CHECKERS.map(c =>
         render_check_row(c, '', 'CHECK', 'verifying…')).join('')
@@ -1125,12 +1535,12 @@ function show_abject_info(id) {
     for (let c of CHECKERS) {
         let t0 = performance.now()
         c.run(ctx)
-            .then(({state, detail, trace}) => {
+            .then(({state, detail}) => {
                 let dt = (performance.now() - t0).toFixed(0)
-                update_check_row(c.id, state, badge_for(state), `${detail} · ${dt}ms`, trace)
+                update_check_row(c.id, state, badge_for(state), `${detail} · ${dt}ms`)
                 // Snapshot the initial pass so future rebuilds can compare.
                 if (pass === 'initial') {
-                    window.workshop.initial_toda_load.results.set(c.id, {state, detail, trace})
+                    window.workshop.initial_toda_load.results.set(c.id, {state, detail})
                 }
             })
             .catch(e => {

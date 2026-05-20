@@ -62,8 +62,10 @@ function decoration_field(set_effect, css_class) {
 
 const set_hover  = StateEffect.define()  // payload: Set<lineNumber>
 const set_select = StateEffect.define()  // payload: Set<lineNumber>
+const set_issue  = StateEffect.define()  // payload: Set<lineNumber>
 const hover_field  = decoration_field(set_hover,  'cm-hl-hover')
 const select_field = decoration_field(set_select, 'cm-hl-select')
+const issue_field  = decoration_field(set_issue,  'cm-hl-issue')
 
 const cursor_broadcast = EditorView.updateListener.of(update => {
   if (update.docChanged) schedule_build()
@@ -97,6 +99,7 @@ const view = new EditorView({
     json(),
     hover_field,
     select_field,
+    issue_field,
     cursor_broadcast,
   ],
 })
@@ -134,6 +137,25 @@ document.addEventListener('workshop:select', e => {
   if (e.detail.source === 'editor') return
   let target = new Set(e.detail.hashes || [])
   view.dispatch({ effects: set_select.of(lines_for(target)) })
+})
+
+// Highlight TRDL lines whose entity emits any twist the rust checker
+// flagged. Same lines_for() lookup the hover/select machinery already
+// uses — issue is just a separate decoration layer so it can coexist
+// with click-selection and hover. Cache the last payload so build()
+// can re-apply after line_hashes lands; rust fires its issue event
+// during the initial render (synchronous), which happens ~300ms
+// before the debounced auto-build populates line_hashes.
+let _last_issue_hashes = new Set()
+document.addEventListener('workshop:issue', e => {
+  let issues = e.detail?.issues || []
+  // Editor only highlights non-green failures — green leaves are
+  // structural confirmations rust gives along the way; surfacing
+  // them in the TRDL pane would be noise.
+  _last_issue_hashes = new Set(
+    issues.filter(i => i.colour !== 'green').map(i => i.hash)
+  )
+  view.dispatch({ effects: set_issue.of(lines_for(_last_issue_hashes)) })
 })
 
 // Hover dispatch: mousemove over the editor → broadcast that line's hashes.
@@ -230,6 +252,15 @@ async function build() {
   if (my !== build_seq) return                  // stale: a newer build is queued
   last_built_bytes = bytes
   line_hashes = lineHashes
+  // line_hashes is what lines_for() consults to translate twist hashes
+  // back to editor line numbers. If a workshop:issue event came in
+  // before the build finished (rust fires its event during the synch
+  // viz render, ~300ms ahead of this debounced compile), the lines_for
+  // lookup found nothing and the editor stayed unpainted. Now that
+  // line_hashes is current, re-apply.
+  if (_last_issue_hashes.size) {
+    view.dispatch({ effects: set_issue.of(lines_for(_last_issue_hashes)) })
+  }
   // .toda load lifecycle: load_bytes ran decompile and stashed the resulting
   // TRDL text on initial_toda_load.decompile_text. If the editor still shows
   // exactly that text, the user hasn't edited — the build that fired here is
@@ -243,7 +274,14 @@ async function build() {
   if (init && init.decompile_text != null && get_doc() === init.decompile_text) {
     return
   }
-  if (corkline) window.workshop.corkline = corkline
+  // Don't overwrite a sidecar-supplied corkline with compile's idea —
+  // sidecar is the authoritative source. Auto-default (top-left twist,
+  // applied by app.js's notify_rendered) is also preserved across
+  // rebuilds, since the same TRDL keeps producing the same top-left.
+  if (corkline && window.workshop.corkline_source !== 'sidecar') {
+    window.workshop.corkline = corkline
+    window.workshop.corkline_source = 'compile'
+  }
   try {
     window.workshop.render(bytes)
   } catch (e) {
@@ -299,6 +337,11 @@ function deselect_rig() {
   render_rigs_list()
   clear_rig_meta()
   window.workshop.initial_toda_load = null
+  // Drop any sidecar-derived corkline from the previously-loaded rig.
+  // For upload/URL loads (no sidecar), app.js's notify_rendered will
+  // default it to the top-leftmost twist after the viz lays out.
+  window.workshop.corkline = null
+  window.workshop.corkline_source = null
 }
 
 async function load_file(file) {
@@ -647,7 +690,10 @@ async function load_rig_meta(rig_url, explicit_json_url) {
     // → recompile cycle finishes, and without this the rig-check panel
     // shows "No corkline available". For .trdl loads the auto-build also
     // sets workshop.corkline, but they should agree round-trip.
-    if (m.corkline) window.workshop.corkline = m.corkline
+    if (m.corkline) {
+      window.workshop.corkline = m.corkline
+      window.workshop.corkline_source = 'sidecar'
+    }
   } catch {
     section.hidden = true
   }

@@ -43,6 +43,9 @@ const KNOWN_SYMBOLS = {
 // reloads — saves the user from re-flipping after every refresh.
 let _view = (typeof localStorage !== 'undefined'
              && localStorage.getItem('hex_view')) || 'raw'
+// Migration: the old 'focused' value (singular twist driven by
+// double-click) is now 'highlight' (driven by hover with fallbacks).
+if (_view === 'focused') _view = 'highlight'
 
 let _usage = new Map()
 let _last_select = []
@@ -249,14 +252,25 @@ function content_hex(buf, atom) {
   return space_hex(head) + ' …'
 }
 
+function copy_btn(full_hash) {
+  // Inline unicode glyph for the copy icon; a hex-pane-level click
+  // handler reads data-copy and writes it to the clipboard. The button
+  // is keyboard-focusable so it doesn't slip out of the keyboard nav
+  // path inside the otherwise mostly-static dump.
+  return `<button class="copy-icon" type="button" data-copy="${full_hash}"` +
+         ` title="Copy ${full_hash}" aria-label="Copy full hash">⎘</button>`
+}
+
 function render_atom_raw(buf, atom) {
   let shape_label = SHAPE_NAMES[atom.shape] ?? atom.shape.toString(16)
   let length      = atom.bin.length
   let hash_short  = truncate_hash(atom.hash)
   let content     = content_hex(buf, atom)
   let trie_class  = atom.shape === PAIRTRIE ? ' trie' : ''
+  // Wrap the hash + copy icon in one cell so the 4-column .atom grid
+  // doesn't see a stray 5th child.
   return `<div class="atom" data-hash="${atom.hash}">
-    <span class="b-hash" title="${atom.hash}">${hash_short}</span>
+    <span class="b-hash-cell"><span class="b-hash" title="${atom.hash}">${hash_short}</span>${copy_btn(atom.hash)}</span>
     <span class="b-tag">${shape_label}</span>
     <span class="b-len">${length}</span>
     <span class="b-content${trie_class}">${content}</span>
@@ -308,7 +322,7 @@ function render_slot_row(field, slot, names, extra_cls = '') {
   }
   let field_html = field ? `<span class="kx-fieldname">${field}</span>` : ''
   let name_html  = comment(annotate_slot(slot, names))
-  return `<div class="kx-row kx-field ${extra_cls}">${field_html}<span class="kx-value">${fmt_hash(slot)}</span>${name_html}</div>`
+  return `<div class="kx-row kx-field ${extra_cls}">${field_html}<span class="kx-value">${fmt_hash(slot)}</span>${copy_btn(slot)}${name_html}</div>`
 }
 
 function render_body_fields(env, atom, names) {
@@ -377,7 +391,7 @@ function render_atom_kiwanoed(env, atom, names) {
   let name      = names.get(atom.hash)
   let header    = `<div class="kx-row kx-header">` +
                   `<span class="kx-hash" title="${atom.hash}">${fmt_hash(atom.hash)}</span>` +
-                  `${comment(name)}</div>`
+                  `${copy_btn(atom.hash)}${comment(name)}</div>`
   let body_len  = (atom.bin.last - atom.bin.cfirst + 1)
   let len_hex   = body_len.toString(16).padStart(8, '0').match(/.{4}/g).join(' ')
   let shape_hex = atom.shape.toString(16).padStart(2, '0')
@@ -401,12 +415,18 @@ function render_hex(env) {
   let host = document.getElementById('hex')
   if (!host) return
   build_usage(env)
-  host.classList.toggle('kiwanoed', _view === 'kiwanoed')
+  // 'highlight' shares the kiwanoed styling (multi-line atom cards),
+  // narrowed to one twist + its body. Keep the .kiwanoed class on
+  // the host for both.
+  let kiwano_like = _view === 'kiwanoed' || _view === 'highlight'
+  host.classList.toggle('kiwanoed', kiwano_like)
   if (!env.atoms?.length) {
     host.innerHTML = '<div class="empty">no atoms</div>'
     return
   }
-  if (_view === 'kiwanoed') {
+  if (_view === 'highlight') {
+    render_highlight_view(host, env)
+  } else if (_view === 'kiwanoed') {
     let names = compute_names(env)
     host.innerHTML = env.atoms.map(a => render_atom_kiwanoed(env, a, names)).join('')
   } else {
@@ -418,9 +438,49 @@ function render_hex(env) {
   paint('select', _last_select)
 }
 
+// Render the highlight view: whatever twist is currently mouse-hovered
+// in any pane (viz / hex / editor). Falls back to the click-selected
+// twist if nothing's hovered, then to the focused twist. Re-renders
+// on workshop:hover, workshop:select, workshop:focus.
+let _last_hover = []
+function render_highlight_view(host, env) {
+  let names = compute_names(env)
+  let by_hash = new Map(env.atoms.map(a => [a.hash, a]))
+  let candidates = [..._last_hover, ..._last_select,
+                    window.workshop?.focus_hash].filter(Boolean)
+  let target = null
+  for (let h of candidates) {
+    let a = by_hash.get(h)
+    if (a) { target = a; break }
+  }
+  if (!target) {
+    host.innerHTML = '<div class="empty">hover a twist</div>'
+    return
+  }
+  let parts = [render_atom_kiwanoed(env, target, names)]
+  if (target.shape === TWIST) {
+    let body_h = pluck_slot(env.buff, target.bin.cfirst)
+    let body_atom = by_hash.get(body_h)
+    if (body_atom) parts.push(render_atom_kiwanoed(env, body_atom, names))
+  }
+  host.innerHTML = parts.join('')
+}
+
 const host = document.getElementById('hex')
 
+// While the user scrolls the panel-body, rows pass under a stationary
+// cursor and mouseover would otherwise keep firing — making the
+// .hover highlight chase the scroll, which reads as 'the highlighting
+// changes while I scroll'. Suppress hover dispatch for a short window
+// after every scroll event. Cleared after 200ms of idle so a real
+// mouse move resumes immediately.
+let _scrolling_until = 0
+function on_scroll() { _scrolling_until = Date.now() + 200 }
+host?.parentElement?.addEventListener('scroll', on_scroll, { passive: true })
+host?.addEventListener('scroll', on_scroll, { passive: true })
+
 host?.addEventListener('mouseover', e => {
+  if (Date.now() < _scrolling_until) return
   let row = e.target.closest('.atom')
   if (!row) return
   document.dispatchEvent(new CustomEvent('workshop:hover', {
@@ -435,6 +495,27 @@ host?.addEventListener('mouseleave', () => {
 })
 
 host?.addEventListener('click', e => {
+  // Copy-icon clicks fire before the select-on-atom click — pull the
+  // hash off data-copy, write to clipboard, flash a brief 'copied!'
+  // state on the button, and stop propagation so the atom doesn't
+  // also re-select.
+  let copy = e.target.closest('.copy-icon')
+  if (copy) {
+    let hash = copy.dataset.copy
+    if (hash) {
+      navigator.clipboard?.writeText(hash).then(() => {
+        copy.classList.add('copied')
+        let prior = copy.textContent
+        copy.textContent = '✓'
+        setTimeout(() => {
+          copy.classList.remove('copied')
+          copy.textContent = prior
+        }, 900)
+      }).catch(() => {})
+    }
+    e.stopPropagation()
+    return
+  }
   let row = e.target.closest('.atom')
   if (!row) return
   document.dispatchEvent(new CustomEvent('workshop:select', {
@@ -452,10 +533,15 @@ function paint(klass, hashes) {
   }
 }
 
-document.addEventListener('workshop:hover', e => paint('hover', e.detail.hashes))
+document.addEventListener('workshop:hover', e => {
+  _last_hover = e.detail.hashes || []
+  paint('hover', _last_hover)
+  if (_view === 'highlight' && _last_env) render_hex(_last_env)
+})
 document.addEventListener('workshop:select', e => {
   _last_select = e.detail.hashes || []
   paint('select', _last_select)
+  if (_view === 'highlight' && _last_env) render_hex(_last_env)
 })
 
 document.addEventListener('workshop:rendered', e => render_hex(e.detail))
@@ -464,13 +550,21 @@ document.addEventListener('workshop:rendered', e => render_hex(e.detail))
 // Wired to the .hex-toggle buttons in the panel header. Persists the choice
 // to localStorage so the user doesn't have to re-pick after every reload.
 function set_view(v) {
-  if (v !== 'raw' && v !== 'kiwanoed') return
+  // Migrate the old 'focused' localStorage value to the new name.
+  if (v === 'focused') v = 'highlight'
+  if (v !== 'raw' && v !== 'kiwanoed' && v !== 'highlight') return
   _view = v
   try { localStorage.setItem('hex_view', v) } catch {}
   document.querySelectorAll('.hex-toggle button').forEach(b =>
     b.classList.toggle('active', b.dataset.view === v))
   if (_last_env) render_hex(_last_env)
 }
+
+// Re-render the hex pane whenever focus changes — only matters when
+// the highlight view is active (and only as the third fallback).
+document.addEventListener('workshop:focus', () => {
+  if (_view === 'highlight' && _last_env) render_hex(_last_env)
+})
 
 document.querySelectorAll('.hex-toggle button').forEach(b => {
   b.classList.toggle('active', b.dataset.view === _view)
