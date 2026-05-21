@@ -846,6 +846,14 @@ body {
 }
 .hex.kiwanoed .kx-field .kx-value { color: var(--ink); }
 .hex.kiwanoed .kx-field .kx-null  { color: var(--ink-3); }
+/* Twist-hash links inside slot rows (highlight view only). Styled like
+   the atom-card header hash so they read as 'jump to that twist'. */
+.hex.kiwanoed .kx-twist-link {
+  color: var(--teal);
+  cursor: pointer;
+  text-decoration: underline dotted;
+  text-underline-offset: 2px;
+}
 /* Pairtrie pairs: key row + value row, value indented one space-equivalent
    beyond the key (matches the reference). Both indent in from the shape
    line. */

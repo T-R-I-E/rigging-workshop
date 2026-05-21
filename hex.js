@@ -315,17 +315,23 @@ function annotate_slot(slot, names) {
   return symbol_label(slot) || names.get(slot) || null
 }
 
-function render_slot_row(field, slot, names, extra_cls = '') {
+function render_slot_row(field, slot, names, extra_cls = '', link_set = null) {
   if (is_null_slot(slot)) {
     let field_html = field ? `<span class="kx-fieldname">${field}</span>` : ''
     return `<div class="kx-row kx-field ${extra_cls}">${field_html}<span class="kx-null">00</span></div>`
   }
   let field_html = field ? `<span class="kx-fieldname">${field}</span>` : ''
   let name_html  = comment(annotate_slot(slot, names))
-  return `<div class="kx-row kx-field ${extra_cls}">${field_html}<span class="kx-value">${fmt_hash(slot)}</span>${copy_btn(slot)}${name_html}</div>`
+  // link_set holds the set of hashes that, when seen as slot values,
+  // should render as clickable links (used by the highlight view to
+  // hop between twists without rendering each as its own atom card).
+  let link = link_set?.has(slot)
+  let value_cls  = link ? 'kx-value kx-twist-link' : 'kx-value'
+  let value_attr = link ? ` data-link-hash="${slot}" tabindex="0" role="link"` : ''
+  return `<div class="kx-row kx-field ${extra_cls}">${field_html}<span class="${value_cls}"${value_attr}>${fmt_hash(slot)}</span>${copy_btn(slot)}${name_html}</div>`
 }
 
-function render_body_fields(env, atom, names) {
+function render_body_fields(env, atom, names, link_set) {
   let fields = ['prev', 'teth', 'shld', 'reqs', 'rigs', 'carg']
   let i = atom.bin.cfirst
   let end = atom.bin.last + 1
@@ -333,13 +339,13 @@ function render_body_fields(env, atom, names) {
   for (let f of fields) {
     if (i >= end) break
     let s = pluck_slot(env.buff, i)
-    parts.push(render_slot_row(f, s, names))
+    parts.push(render_slot_row(f, s, names, '', link_set))
     i += slot_len(s)
   }
   return parts.join('')
 }
 
-function render_twist_fields(env, atom, names) {
+function render_twist_fields(env, atom, names, link_set) {
   let fields = ['body', 'sats']
   let i = atom.bin.cfirst
   let end = atom.bin.last + 1
@@ -347,13 +353,13 @@ function render_twist_fields(env, atom, names) {
   for (let f of fields) {
     if (i >= end) break
     let s = pluck_slot(env.buff, i)
-    parts.push(render_slot_row(f, s, names))
+    parts.push(render_slot_row(f, s, names, '', link_set))
     i += slot_len(s)
   }
   return parts.join('')
 }
 
-function render_pairtrie(env, atom, names) {
+function render_pairtrie(env, atom, names, link_set) {
   let i = atom.bin.cfirst
   let end = atom.bin.last + 1
   let parts = []
@@ -363,20 +369,20 @@ function render_pairtrie(env, atom, names) {
     let v = pluck_slot(env.buff, i); i += slot_len(v)
     parts.push(
       `<div class="kx-pair">` +
-        render_slot_row('', k, names, 'kx-key') +
-        render_slot_row('', v, names, 'kx-val') +
+        render_slot_row('', k, names, 'kx-key', link_set) +
+        render_slot_row('', v, names, 'kx-val', link_set) +
       `</div>`)
   }
   return parts.join('')
 }
 
-function render_hashes(env, atom, names) {
+function render_hashes(env, atom, names, link_set) {
   let i = atom.bin.cfirst
   let end = atom.bin.last + 1
   let parts = []
   while (i < end) {
     let h = pluck_slot(env.buff, i); i += slot_len(h)
-    parts.push(render_slot_row('', h, names, 'kx-listitem'))
+    parts.push(render_slot_row('', h, names, 'kx-listitem', link_set))
   }
   return parts.join('')
 }
@@ -387,7 +393,7 @@ function render_arb(env, atom) {
     .map(l => `<div class="kx-row kx-data">${l}</div>`).join('')
 }
 
-function render_atom_kiwanoed(env, atom, names) {
+function render_atom_kiwanoed(env, atom, names, link_set = null) {
   let name      = names.get(atom.hash)
   let header    = `<div class="kx-row kx-header">` +
                   `<span class="kx-hash" title="${atom.hash}">${fmt_hash(atom.hash)}</span>` +
@@ -398,12 +404,12 @@ function render_atom_kiwanoed(env, atom, names) {
   let shape     = `<div class="kx-row kx-shape">${shape_hex} ${len_hex}</div>`
   let payload
   switch (atom.shape) {
-    case BODY:     payload = render_body_fields(env, atom, names);  break
-    case TWIST:    payload = render_twist_fields(env, atom, names); break
-    case PAIRTRIE: payload = render_pairtrie(env, atom, names);     break
-    case HASHES:   payload = render_hashes(env, atom, names);       break
-    case ARB:      payload = render_arb(env, atom);                 break
-    default:       payload = render_arb(env, atom)                  // fallback: bytes
+    case BODY:     payload = render_body_fields(env, atom, names, link_set);  break
+    case TWIST:    payload = render_twist_fields(env, atom, names, link_set); break
+    case PAIRTRIE: payload = render_pairtrie(env, atom, names, link_set);     break
+    case HASHES:   payload = render_hashes(env, atom, names, link_set);       break
+    case ARB:      payload = render_arb(env, atom);                           break
+    default:       payload = render_arb(env, atom)                            // fallback: bytes
   }
   return `<div class="atom kx-atom" data-shape="${atom.shape.toString(16)}" data-hash="${atom.hash}">` +
          header + shape + payload + `</div>`
@@ -438,15 +444,16 @@ function render_hex(env) {
   paint('select', _last_select)
 }
 
-// Render the highlight view: whatever twist is currently mouse-hovered
-// in any pane (viz / hex / editor). Falls back to the click-selected
-// twist if nothing's hovered, then to the focused twist. Re-renders
-// on workshop:hover, workshop:select, workshop:focus.
+// Render the highlight view: the click-selected twist, falling back to
+// the focused twist. Mouseover deliberately does NOT change the target —
+// the panel locks to a click/focus pick so it doesn't chase the cursor
+// while the user looks around. Re-renders on workshop:select and
+// workshop:focus only.
 let _last_hover = []
 function render_highlight_view(host, env) {
   let names = compute_names(env)
   let by_hash = new Map(env.atoms.map(a => [a.hash, a]))
-  let candidates = [..._last_hover, ..._last_select,
+  let candidates = [..._last_select,
                     window.workshop?.focus_hash].filter(Boolean)
   let target = null
   for (let h of candidates) {
@@ -454,16 +461,51 @@ function render_highlight_view(host, env) {
     if (a) { target = a; break }
   }
   if (!target) {
-    host.innerHTML = '<div class="empty">hover a twist</div>'
+    host.innerHTML = '<div class="empty">click a twist</div>'
     return
   }
-  let parts = [render_atom_kiwanoed(env, target, names)]
+  let atoms, link_set
   if (target.shape === TWIST) {
-    let body_h = pluck_slot(env.buff, target.bin.cfirst)
-    let body_atom = by_hash.get(body_h)
-    if (body_atom) parts.push(render_atom_kiwanoed(env, body_atom, names))
+    atoms = gather_referenced_atoms(env, target, by_hash)
+    // Other twists in env aren't rendered as atom cards here — instead
+    // their hash references render as clickable links so the user can
+    // jump to them. Exclude the root since it IS the rendered card.
+    link_set = new Set((env.shapes?.[TWIST] || [])
+      .map(t => t.hash)
+      .filter(h => h !== target.hash))
+  } else {
+    atoms = [target]
+    link_set = null
   }
-  host.innerHTML = parts.join('')
+  host.innerHTML = atoms.map(a => render_atom_kiwanoed(env, a, names, link_set)).join('')
+}
+
+// BFS the atoms reachable from `root` (a twist) by following hash slots.
+// Expands into body / pairtries / hashes; stops at arb (no refs) and at
+// other twists (those are surfaced as clickable hash links inside slot
+// rows, not as their own atom cards). Symbol slots and dangling refs
+// fall through the by_hash miss and are simply skipped.
+function gather_referenced_atoms(env, root, by_hash) {
+  let visited = new Set()
+  let ordered = []
+  let queue = [root.hash]
+  while (queue.length) {
+    let h = queue.shift()
+    if (!h || is_null_slot(h) || visited.has(h)) continue
+    let a = by_hash.get(h)
+    if (!a) continue
+    visited.add(h)
+    if (a.shape === TWIST && a.hash !== root.hash) continue
+    ordered.push(a)
+    if (a.shape === ARB) continue
+    let i = a.bin.cfirst, end = a.bin.last + 1
+    while (i < end) {
+      let s = pluck_slot(env.buff, i)
+      i += slot_len(s)
+      if (!is_null_slot(s)) queue.push(s)
+    }
+  }
+  return ordered
 }
 
 const host = document.getElementById('hex')
@@ -516,6 +558,21 @@ host?.addEventListener('click', e => {
     e.stopPropagation()
     return
   }
+  // Twist-link clicks (highlight view only): hash text inside a slot row
+  // that points at another twist. Re-select to that twist; the highlight
+  // view's select-listener handles the rebuild. Stop propagation so the
+  // enclosing .atom doesn't also fire a select for the parent atom.
+  let link = e.target.closest('.kx-twist-link')
+  if (link) {
+    let hash = link.dataset.linkHash
+    if (hash) {
+      document.dispatchEvent(new CustomEvent('workshop:select', {
+        detail: { hashes: [hash], source: 'hex-link' },
+      }))
+    }
+    e.stopPropagation()
+    return
+  }
   let row = e.target.closest('.atom')
   if (!row) return
   document.dispatchEvent(new CustomEvent('workshop:select', {
@@ -536,7 +593,8 @@ function paint(klass, hashes) {
 document.addEventListener('workshop:hover', e => {
   _last_hover = e.detail.hashes || []
   paint('hover', _last_hover)
-  if (_view === 'highlight' && _last_env) render_hex(_last_env)
+  // Highlight view deliberately does NOT re-render on hover — see
+  // render_highlight_view for the rationale.
 })
 document.addEventListener('workshop:select', e => {
   _last_select = e.detail.hashes || []
