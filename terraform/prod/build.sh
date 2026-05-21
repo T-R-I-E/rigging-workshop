@@ -14,7 +14,7 @@ TAG="${2:?image tag required}"
 REGION="${3:?region required}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-WORKSHOP_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+WORKSHOP_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 PARENT_DIR="$(cd "$WORKSHOP_DIR/.." && pwd)"
 
 for dep in "$PARENT_DIR/toda-clj" "$PARENT_DIR/toda-bb"; do
@@ -73,8 +73,8 @@ echo "logging into $REGISTRY" >&2
 aws ecr get-login-password --region "$REGION" \
   | docker login --username AWS --password-stdin "$REGISTRY"
 
-echo "building $ECR_URL:$TAG" >&2
-docker build --platform=linux/amd64 -t "$ECR_URL:$TAG" "$STAGE"
+echo "building $ECR_URL:$TAG (linux/arm64)" >&2
+docker build --platform=linux/arm64 -t "$ECR_URL:$TAG" "$STAGE"
 
 echo "pushing $ECR_URL:$TAG" >&2
 docker push "$ECR_URL:$TAG"

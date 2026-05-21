@@ -56,9 +56,9 @@
 - **Neutral CHECK rows**: `.rig-check` default is panel-coloured;
   explicit `.rig-check.ok` carries the green styling. The in-progress
   CHECK state no longer reads as green.
-- **clj / bb checkers point at the CloudFront HTTPS endpoint**
-  (`d2ttoitg64tuy9.cloudfront.net/rigcheck-clj` and `…/rigcheck-bb`,
-  fronting the deployed ALB).
+- **clj / bb checkers point at the ALB HTTPS endpoint**
+  (`rigchecker.todaq.net/rigcheck-clj` and `…/rigcheck-bb`,
+  ACM-issued cert directly on the ALB; see `terraform2/`).
   Localhost URLs commented next to them as the offline-dev fallback.
 - **Compile fix**: `expand_hitches` no longer emits `{lead: null}` as a
   post-rig entry when the hitch has no hoist (the shape decompile emits

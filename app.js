@@ -1040,13 +1040,13 @@ const CHECKERS = [
         id: 'clj',
         label: 'clj · toda-rig-checker',
         // async run(ctx) { return server_check(ctx, 'http://localhost:7878/rigcheck') },
-        async run(ctx) { return server_check(ctx, 'https://d2ttoitg64tuy9.cloudfront.net/rigcheck-clj') },
+        async run(ctx) { return server_check(ctx, 'https://rigchecker.todaq.net/rigcheck-clj') },
     },
     {
         id: 'bb',
         label: 'clj · toda-bb',
         // async run(ctx) { return server_check(ctx, 'http://localhost:7879/rigcheck-bb') },
-        async run(ctx) { return server_check(ctx, 'https://d2ttoitg64tuy9.cloudfront.net/rigcheck-bb') },
+        async run(ctx) { return server_check(ctx, 'https://rigchecker.todaq.net/rigcheck-bb') },
     },
     {
         id: 'rust',
@@ -1077,16 +1077,26 @@ async function server_check(ctx, base) {
         // Spec-wise this is in the yellow / unknown bucket per §9.1.3,
         // but we visually distinguish it from a real yellow so the user
         // can see "checker failed to process" cases separately.
-        return { state: 'broke',
-                 detail: `HTTP ${res.status}: ${(await res.text()).slice(0,120)}` }
+        let detail = `HTTP ${res.status}`
+        try {
+            let err = await res.json()
+            detail = err.type && err.message
+                ? `${err.type}: ${err.message}`.slice(0, 120)
+                : JSON.stringify(err).slice(0, 120)
+        } catch (_) { /* body isn't JSON — fall through to status-only */ }
+        return { state: 'broke', detail }
     }
-    let { colour } = await res.json()
-    return {
-        state: colour === 'green'  ? 'ok'
-             : colour === 'yellow' ? 'warn'
-             : 'bad',
-        detail: colour,
-    }
+    let { colour, trace } = await res.json()
+    let state = colour === 'green'  ? 'ok'
+              : colour === 'yellow' ? 'warn'
+              : 'bad'
+    // When the server supplied a structured trace, return it as a JSON
+    // string in `detail` so format_check_detail pretty-prints it the
+    // same way it does the rust checker's tree (with hash links and
+    // structype tints). Older servers that only emit `{colour}` fall
+    // through to the bare colour string.
+    let detail = trace ? JSON.stringify(trace) : colour
+    return { state, detail }
 }
 
 // Rust-backed checker. Runs rustoda's `check_rig` inside the page via

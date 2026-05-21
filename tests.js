@@ -56,7 +56,16 @@ async function server_compile(trdl_text) {
     headers: { 'Content-Type': 'text/plain' },
     body: trdl_text,
   })
-  if (!res.ok) throw new Error(`server: ${res.status} ${await res.text()}`)
+  if (!res.ok) {
+    let detail = `HTTP ${res.status}`
+    try {
+      let err = await res.json()
+      detail = err.type && err.message
+        ? `${err.type}: ${err.message}`
+        : JSON.stringify(err)
+    } catch (_) { /* body isn't JSON — fall through to status-only */ }
+    throw new Error(`server: ${detail}`)
+  }
   let { bytes } = await res.json()
   return b64_to_buffer(bytes)
 }

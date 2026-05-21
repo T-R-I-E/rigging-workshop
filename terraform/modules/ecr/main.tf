@@ -1,3 +1,8 @@
+variable "project_name" {
+  type     = string
+  nullable = false
+}
+
 resource "aws_ecr_repository" "app" {
   name                 = var.project_name
   image_tag_mutability = "MUTABLE"
@@ -24,4 +29,12 @@ resource "aws_ecr_lifecycle_policy" "app" {
       action = { type = "expire" }
     }]
   })
+}
+
+output "repository_url" {
+  value = aws_ecr_repository.app.repository_url
+}
+
+output "repository_name" {
+  value = aws_ecr_repository.app.name
 }

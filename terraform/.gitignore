@@ -1,12 +1,13 @@
 .terraform/
-terraform.tfstate
-terraform.tfstate.backup
+*.tfstate
 *.tfstate.*
-crash.log
-crash.*.log
 *.tfvars
 *.tfvars.json
+crash.log
+crash.*.log
 override.tf
 override.tf.json
 *_override.tf
 *_override.tf.json
+*.tfplan
+apply.plan
