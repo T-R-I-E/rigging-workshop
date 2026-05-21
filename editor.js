@@ -749,6 +749,19 @@ async function load_rig(path) {
   active_rig = path
   render_rigs_list()
   set_loaded_label(rig_label(path))
+  // Reflect the current rig in the URL hash so the page is shareable /
+  // bookmarkable. replaceState (not pushState) keeps the back button from
+  // accumulating an entry per arrow-key step through the list, and does
+  // NOT fire hashchange — only manual URL edits / browser nav do, which
+  // are handled below.
+  // window.history is qualified because the local `history` symbol is
+  // shadowed by CodeMirror's history extension imported at the top of
+  // this file. Without the prefix, `history.replaceState` resolves to a
+  // non-existent property of the extension function.
+  try {
+    let want = '#' + path
+    if (location.hash !== want) window.history.replaceState(null, '', want)
+  } catch {}
   // Await the meta fetch so that workshop.corkline is set from the canonical
   // JSON before load_bytes triggers an immediate render — otherwise the
   // .toda rig-check fires with no corkline yet.
@@ -858,11 +871,18 @@ render_rigs_list()
 // Kick off sidecar fetches in parallel so each rig's dot fills in as
 // its .json arrives. Independent of the example-rig load below.
 update_dot_colours()
-// On first load, select the spec's appendix B example. Sets active_rig
-// so arrow-key navigation works, loads the sidecar metadata, and seeds
-// the editor with the decompiled TRDL. The fetch is synchronous from
-// the user's perspective (single round-trip to localhost).
-load_rig('todatests/rigging/example_rig_from_spec.toda').catch(e => {
+// React to URL-bar edits and browser back/forward — load the rig named
+// in the new hash if it differs from the active one. Our own replaceState
+// inside load_rig does not fire hashchange, so this only catches user nav.
+window.addEventListener('hashchange', () => {
+  let path = decodeURIComponent(location.hash.slice(1))
+  if (path && path !== active_rig) load_rig(path)
+})
+// On first load, honor an explicit ?rig from the URL hash; otherwise
+// fall back to the spec's appendix B example.
+let initial_rig = decodeURIComponent(location.hash.slice(1))
+                  || 'todatests/rigging/example_rig_from_spec.toda'
+load_rig(initial_rig).catch(e => {
   console.warn('initial example load failed; falling back to inline STARTER doc', e)
   schedule_build()
 })
