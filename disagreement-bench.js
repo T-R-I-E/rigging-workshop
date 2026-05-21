@@ -232,8 +232,8 @@ const RIGS = [
   'todatests/rigging/valid_kiwano_f5.toda',
 ]
 
-const CLJ_URL = 'https://d2ttoitg64tuy9.cloudfront.net/rigcheck-clj'
-const BB_URL  = 'https://d2ttoitg64tuy9.cloudfront.net/rigcheck-bb'
+const CLJ_URL = 'https://rigchecker.todaq.net/rigcheck-clj'
+const BB_URL  = 'https://rigchecker.todaq.net/rigcheck-bb'
 const CHECKER_TIMEOUT_MS = 10000
 
 // ----------------------------------------------------------------------------
@@ -272,7 +272,16 @@ async function server_check(ctx, base) {
       body: ctx.bytes,
     })
   } catch { return { v: 'broke', detail: 'server offline' } }
-  if (!res.ok) return { v: 'broke', detail: `HTTP ${res.status}` }
+  if (!res.ok) {
+    let detail = `HTTP ${res.status}`
+    try {
+      let err = await res.json()
+      detail = err.type && err.message
+        ? `${err.type}: ${err.message}`.slice(0, 120)
+        : JSON.stringify(err).slice(0, 120)
+    } catch (_) { /* body isn't JSON — fall through to status-only */ }
+    return { v: 'broke', detail }
+  }
   let { colour } = await res.json()
   return {
     v: colour === 'green' ? 'ok' : colour === 'yellow' ? 'warn' : 'bad',
