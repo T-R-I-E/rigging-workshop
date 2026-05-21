@@ -58,7 +58,7 @@ See [TODO.md](TODO.md) for current plan, tasks, and deferred items.
   `clj/rigging_workshop/server_bb.clj` — two sidecar Clojure servers.
   Optional: the workshop's clj/bb rig-checkers now point at the
   ALB-fronted deployment (`rigchecker.todaq.net/rigcheck-clj` and
-  `…/rigcheck-bb`, HTTPS via ACM on the ALB; see `terraform2/`),
+  `…/rigcheck-bb`, HTTPS via ACM on the ALB; see `terraform/`),
   so the local servers are only needed for `tests.html` byte-equality
   parity checks. Localhost URLs are kept commented next to the live
   ones in `app.js` as an offline-dev fallback.

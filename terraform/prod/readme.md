@@ -61,7 +61,7 @@ Requires terraform 1.11+.
 ## Deploy
 
 ```bash
-cd terraform2/prod
+cd terraform/prod
 terraform init
 terraform plan -out=apply.plan
 terraform apply apply.plan
