@@ -1,4 +1,5 @@
-# Clojure tools.deps compile cache (test-oracle server only).
+# Clojure tools.deps compile cache (only created when running the
+# local rigchecker servers from ../rigchecker/ for tests.html parity).
 .cpcache/
 
 # macOS

@@ -190,7 +190,8 @@ Plumbing options:
   fine up to a few dozen rigs.
 - Server-side batch endpoint: POST bytes once, take a list of
   `(twist, cork)` pairs, return a list of results. Requires extending
-  `clj/rigging_workshop/server.clj` and `server_bb.clj`.
+  `clj/rigchecker/server.clj` and `server_bb.clj` in the sibling
+  `rigchecker` repo.
 
 ### D. result aggregation and UI
 

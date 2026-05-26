@@ -32,7 +32,9 @@ See [TODO.md](TODO.md) for current plan, tasks, and deferred items.
     streams (v1: per-shape atom counts). Used to assess decompile→recompile
     round-trip fidelity when byte-equality isn't possible (random shields
     / sigs / pubkeys).
-- `tests.html`, `tests.js` — byte-equality test harness vs the Clojure server.
+- `tests.html`, `tests.js` — byte-equality test harness vs the Clojure
+  rigchecker server (sibling `../rigchecker/`). Needs `clj -M:server`
+  running there on `localhost:7878`.
 - `src/`, `rels.js` — symlinks into `../svgiewer/`. Don't edit; they're shared.
 - `rigs/` — symlink into `../todaclj/toda-twist-maker/rigs/`. Workshop's
   primary example set, served from a path that stays inside the served root.
@@ -54,39 +56,28 @@ See [TODO.md](TODO.md) for current plan, tasks, and deferred items.
   committed instead. Wired into `app.js` as the 4th `CHECKERS` entry
   (`id: 'rust'`); loaded lazily, falls back to `warn` if the bundle is
   missing or fails to instantiate.
-- `deps.edn`, `clj/rigging_workshop/server.clj`,
-  `clj/rigging_workshop/server_bb.clj` — two sidecar Clojure servers.
-  Optional: the workshop's clj/bb rig-checkers now point at the
-  ALB-fronted deployment (`rigchecker.todaq.net/rigcheck-clj` and
-  `…/rigcheck-bb`, HTTPS via ACM on the ALB; see `terraform/`),
-  so the local servers are only needed for `tests.html` byte-equality
-  parity checks. Localhost URLs are kept commented next to the live
-  ones in `app.js` as an offline-dev fallback.
+- Rig-check backend lives in the sibling `../rigchecker/` repo
+  (`TodaQFinance/rigchecker`). The workshop's clj/bb rig-checkers point at
+  the ALB-fronted deployment (`rigchecker.todaq.net/rigcheck-clj` and
+  `…/rigcheck-bb`, HTTPS via ACM); see that repo's `terraform/`. Localhost
+  URLs are kept commented next to the live ones in `app.js` as an
+  offline-dev fallback for when you've run `clj -M:server` /
+  `clj -M:server-bb` from `../rigchecker/`.
 
 ## Running
 1. Static server serving `~/Dev` (already running per dev setup).
 2. Open `http://<host>/toda/riggingworkshop/` — the workshop runs entirely in
-   the browser. No Clojure server needed.
+   the browser.
 
-## Running the Clojure servers (optional)
+## Running tests.html parity harness (optional)
 
-Two sidecar servers, run in separate terminals. Both are optional —
-the workshop's main UI runs entirely in the browser. The servers exist
-to support `tests.html` byte-equality checks and the dual rig-check
-display in the rig-check panel.
+`tests.html` calls `localhost:7878/compile` for byte-equality checks
+against the canonical Clojure compiler. Boot the server from the sibling
+rigchecker repo:
 
-Main server (port 7878) — compile/decompile + canonical toda-rig-checker:
 ```
-clj -M:server
+cd ../rigchecker && clj -M:server
 ```
-
-BB server (port 7879) — toda-bb interpreter, runs in its own JVM because
-toda-bb's `toda.shielding` namespace collides with toda-core's:
-```
-clj -M:server-bb
-```
-
-`tests.html` only needs the main server.
 
 ## Known v1 caveats
 - `ed25519.js` uses raw 32-byte public keys; the Clojure server wraps them

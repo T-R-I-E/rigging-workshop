@@ -58,8 +58,9 @@
   CHECK state no longer reads as green.
 - **clj / bb checkers point at the ALB HTTPS endpoint**
   (`rigchecker.todaq.net/rigcheck-clj` and `…/rigcheck-bb`,
-  ACM-issued cert directly on the ALB; see `terraform/`).
-  Localhost URLs commented next to them as the offline-dev fallback.
+  ACM-issued cert directly on the ALB; deploy infra lives in the
+  sibling `TodaQFinance/rigchecker` repo). Localhost URLs commented
+  next to them as the offline-dev fallback.
 - **Compile fix**: `expand_hitches` no longer emits `{lead: null}` as a
   post-rig entry when the hitch has no hoist (the shape decompile emits
   for `unit_rig.toda`-style files). One-line guard; 6 compile failures
@@ -94,8 +95,8 @@
       `lashed_non_colinear`, `corkline_incomplete_late`).
     - 0 — `twist_gain` cases (recompile never invents twists).
 - `tests.html` (byte-equality vs Clojure server): not run this session
-  (requires local Clojure server on port 7878). Last recorded state
-  before the ALB swap: 29 pass · 0 fail · 3 skip.
+  (requires `cd ../rigchecker && clj -M:server` for port 7878). Last
+  recorded state before the ALB swap: 29 pass · 0 fail · 3 skip.
 
 ## Open / next
 - **Tighten `bytes_struct_equal`** beyond shape counts: digest each
