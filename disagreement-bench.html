@@ -30,22 +30,22 @@
   td.note { white-space: pre-wrap; font-family: var(--mono); font-size: 11px;
             color: var(--ink-3); max-width: 380px; }
   td.path { max-width: 280px; overflow: hidden; text-overflow: ellipsis; }
-  .v-ok    { color: #4d8a2a; font-weight: 600; }
-  .v-warn  { color: #b48634; font-weight: 600; }
-  .v-broke { color: #a85a1a; font-weight: 700; letter-spacing: 0.02em;
-             background: color-mix(in oklab, #d77f2a 18%, transparent);
+  .v-ok    { color: var(--ok);   font-weight: 600; }
+  .v-warn  { color: var(--warn); font-weight: 600; }
+  .v-broke { color: var(--warn); font-weight: 700; letter-spacing: 0.02em;
+             background: color-mix(in oklab, var(--warn) 18%, transparent);
              padding: 0 4px; border-radius: 2px; }
-  .v-bad   { color: var(--bad-strong, #c45a4d); font-weight: 600; }
+  .v-bad   { color: var(--bad);  font-weight: 600; }
   .v-skip  { color: var(--ink-3); }
-  .v-green  { color: #4d8a2a; font-weight: 600; }
-  .v-yellow { color: #b48634; font-weight: 600; }
-  .v-red    { color: var(--bad-strong, #c45a4d); font-weight: 600; }
+  .v-green  { color: var(--ok);   font-weight: 600; }
+  .v-yellow { color: var(--warn); font-weight: 600; }
+  .v-red    { color: var(--bad);  font-weight: 600; }
   /* highlight cells that disagree with the canonical colour */
-  td.cell.disagrees { background: color-mix(in oklab, #d77f2a 12%, transparent); }
-  .verdict.perfect    { color: #4d8a2a; font-weight: 700; }
-  .verdict.partial    { color: #b48634; font-weight: 700; }
-  .verdict.imperfect  { color: var(--bad-strong, #c45a4d); font-weight: 700; }
-  .verdict.error      { color: var(--bad-strong, #c45a4d); font-style: italic; }
+  td.cell.disagrees { background: color-mix(in oklab, var(--warn) 12%, transparent); }
+  .verdict.perfect    { color: var(--ok);   font-weight: 700; }
+  .verdict.partial    { color: var(--warn); font-weight: 700; }
+  .verdict.imperfect  { color: var(--bad);  font-weight: 700; }
+  .verdict.error      { color: var(--bad);  font-style: italic; }
   .summary { margin: 12px 0; padding: 8px 10px; border: 1px solid var(--line);
              border-radius: 4px; background: var(--panel); }
 </style>
