@@ -355,6 +355,61 @@ async function load_file(file) {
   }
 }
 
+// base64url ⇄ utf-8 text. Pads/unpads on decode; replaces +//= on encode so
+// the result is hash-safe (no URL-escaping needed in #trdl=...).
+function b64url_encode(text) {
+  let bytes = new TextEncoder().encode(text)
+  let bin = ''
+  for (let b of bytes) bin += String.fromCharCode(b)
+  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+}
+function b64url_decode(s) {
+  let b64 = s.replace(/-/g, '+').replace(/_/g, '/')
+  while (b64.length % 4) b64 += '='
+  let bin = atob(b64)
+  let bytes = new Uint8Array(bin.length)
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i)
+  return new TextDecoder().decode(bytes)
+}
+
+// Inline TRDL handoff (#trdl=<base64url>): drop the active file selection
+// and push the decoded text straight into the editor. set_doc triggers the
+// debounced auto-build, which fires the rig-check pipeline as usual.
+function load_inline_trdl(text, label) {
+  deselect_rig()
+  set_loaded_label(label || 'shared rig')
+  set_doc(text)
+}
+
+// sessionStorage handoff (#blob=<key>): single-use — we consume and delete
+// the entry so a page reload doesn't replay stale content.
+function load_from_blob(key) {
+  let text = sessionStorage.getItem(key)
+  if (text == null) throw new Error(`blob "${key}" not found in sessionStorage`)
+  sessionStorage.removeItem(key)
+  load_inline_trdl(text, 'shared rig')
+}
+
+// Parse location.hash into one of three handoff forms. Returns null when
+// the hash is empty so callers can fall back to a default rig.
+function route_hash() {
+  let raw = location.hash.slice(1)
+  if (!raw) return null
+  let eq = raw.indexOf('=')
+  if (eq > 0) {
+    let key = raw.slice(0, eq), val = raw.slice(eq + 1)
+    if (key === 'trdl') return { kind: 'trdl', value: val }
+    if (key === 'blob') return { kind: 'blob', value: decodeURIComponent(val) }
+  }
+  return { kind: 'path', value: decodeURIComponent(raw) }
+}
+
+async function load_from_hash(route) {
+  if (route.kind === 'path') return load_rig(route.value)
+  if (route.kind === 'trdl') return load_inline_trdl(b64url_decode(route.value), 'shared rig')
+  if (route.kind === 'blob') return load_from_blob(route.value)
+}
+
 async function load_url(url) {
   deselect_rig()
   set_loaded_label(url.split('/').pop() || url)
@@ -400,12 +455,33 @@ document.getElementById('file-input').addEventListener('change', e => {
   let f = e.target.files[0]
   if (f) load_file(f)
 })
-document.getElementById('btn-load').addEventListener('click', () => {
+// URL field: load on Enter or on blur-after-edit. No separate Load button.
+function try_load_url() {
   let url = document.getElementById('url-input').value.trim()
   if (url) load_url(url)
-})
+}
+document.getElementById('url-input').addEventListener('change', try_load_url)
 document.getElementById('url-input').addEventListener('keydown', e => {
-  if (e.key === 'Enter') document.getElementById('btn-load').click()
+  if (e.key === 'Enter') { e.preventDefault(); try_load_url() }
+})
+
+// Share URL: encode the current editor doc as #trdl=<base64url> and copy
+// to the clipboard. Always inline — the URL captures exactly what's on
+// screen now, edits and all.
+document.getElementById('btn-share').addEventListener('click', async () => {
+  let btn  = document.getElementById('btn-share')
+  let lbl  = btn.querySelector('.btn-label')
+  let orig = lbl.textContent
+  try {
+    let text = get_doc()
+    let url = `${location.origin}${location.pathname}#trdl=${b64url_encode(text)}`
+    await navigator.clipboard.writeText(url)
+    lbl.textContent = 'Copied!'
+  } catch (e) {
+    console.warn('share failed', e)
+    lbl.textContent = 'Copy failed'
+  }
+  setTimeout(() => { lbl.textContent = orig }, 1500)
 })
 
 // --- examples panel ---------------------------------------------------------
@@ -693,18 +769,22 @@ list_rigs().then(rigs => {
   render_rigs_list()
   update_dot_colours()
 }).catch(e => console.warn('[editor] rig manifest walk failed', e))
-// React to URL-bar edits and browser back/forward — load the rig named
-// in the new hash if it differs from the active one. Our own replaceState
-// inside load_rig does not fire hashchange, so this only catches user nav.
+// React to URL-bar edits and browser back/forward. Hash forms:
+//   #<path>           → load file (existing)
+//   #trdl=<base64url> → inline TRDL payload (from share link)
+//   #blob=<key>       → consume sessionStorage[key] (from sibling-tool handoff)
+// load_rig's own replaceState does not fire hashchange, so this only sees
+// genuine user / sibling-tab nav.
 window.addEventListener('hashchange', () => {
-  let path = decodeURIComponent(location.hash.slice(1))
-  if (path && path !== active_rig) load_rig(path)
+  let route = route_hash()
+  if (!route) return
+  if (route.kind === 'path' && route.value === active_rig) return
+  load_from_hash(route).catch(e => set_rigcheck('bad', 'LOAD ERROR', e.message))
 })
-// On first load, honor an explicit ?rig from the URL hash; otherwise
-// fall back to the spec's appendix B example.
-let initial_rig = decodeURIComponent(location.hash.slice(1))
-                  || 'todatests/rigging/example_rig_from_spec.toda'
-load_rig(initial_rig).catch(e => {
-  console.warn('initial example load failed; falling back to inline STARTER doc', e)
+// On first load, honour the URL hash; otherwise fall back to the spec's
+// appendix B example.
+let initial_route = route_hash() || { kind: 'path', value: 'todatests/rigging/example_rig_from_spec.toda' }
+load_from_hash(initial_route).catch(e => {
+  console.warn('initial load failed; falling back to inline STARTER doc', e)
   schedule_build()
 })
