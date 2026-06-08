@@ -256,6 +256,50 @@ function determine_line_order(lines_map, poptop_name, abject_name) {
   return [poptop_name, abject_name, ...others]
 }
 
+// ---- v2-feature gate ----
+//
+// The workshop tracks the canonical Clojure / Rust toolchain, which
+// implements only the original Rigging Specification (basic-body
+// twists, shape 0x49). The new TRDL spec defaults `version` to 2 and
+// introduces liftable bodies, lift-tickets, end-hitches, and spool
+// poptops — none of which exist in the canonical compilers yet.
+//
+// We accept and preserve these fields at parse time so authors can
+// write spec-shaped TRDL today, but refuse to compile rigs that
+// actually use the v2 semantics. The workshop's default `version` is
+// therefore 1 (deviation from the spec default of 2); explicit
+// `version: 2` triggers the gate.
+function validate_v1_compatible(rig_entity, line_entities, hitch_entities, twist_entities) {
+  let version = rig_entity?.version ?? 1
+  if (version !== 1) {
+    throw new Error(
+      `rig version ${version} is not yet supported; this workshop ` +
+      `implements the original Rigging Specification only (version 1). ` +
+      `Liftable bodies, end-hitches, spool poptops, and lift-tickets ` +
+      `are spec-defined but pending canonical implementation.`)
+  }
+  for (let h of hitch_entities) {
+    if (h.end === true)
+      throw new Error(`hitch "${h.entity_id}": end-hitches are a v2 feature, not implemented yet`)
+    if (h.liftable === true)
+      throw new Error(`hitch "${h.entity_id}": liftable leads are a v2 feature, not implemented yet`)
+    if (h['lift-ticket'] != null && h['lift-ticket'] !== 'none')
+      throw new Error(`hitch "${h.entity_id}": lift-ticket synthesis is a v2 feature, not implemented yet`)
+  }
+  for (let t of twist_entities) {
+    // `lift: "none"` is the v1-compatible value (basic twist, the
+    // default). Any other lift value selects liftable-body semantics.
+    if ('lift' in t && t.lift !== 'none' && t.lift !== undefined)
+      throw new Error(`twist "${t.entity_id}": lift values other than "none" are a v2 feature, not implemented yet`)
+  }
+  for (let l of line_entities) {
+    // `liftreqs: "none"` is explicit v1-compat. Anything else (null,
+    // a reqsat ref) selects liftable-body semantics.
+    if ('liftreqs' in l && l.liftreqs !== 'none' && l.liftreqs !== undefined)
+      throw new Error(`line "${l.entity_id}": liftreqs other than "none" is a v2 feature, not implemented yet`)
+  }
+}
+
 // ---- Spec assembly ----
 
 export function trdl_to_spec(entities) {
@@ -263,6 +307,8 @@ export function trdl_to_spec(entities) {
   let line_entities  = entities.filter(e => e.entity_type === 'line')
   let hitch_entities = entities.filter(e => e.entity_type === 'hitch')
   let twist_entities = entities.filter(e => e.entity_type === 'twist')
+
+  validate_v1_compatible(rig_entity, line_entities, hitch_entities, twist_entities)
 
   let poptop_name = rig_entity?.poptop || 'poptop'
   let abject_name = rig_entity?.abject || 'abject'
