@@ -716,7 +716,10 @@ export async function decompile(buf, name = 'rig', corkline_hint = null) {
       }
     })
   }
-  for (let [id, o] of twist_overrides) out.push({ id, ...o })
+  // New TRDL spec: per-twist overrides use `{"twist": id, ...}`. The
+  // bare `{"id": ...}` shorthand was dropped in the new spec — objects
+  // without a recognised type key are now discarded by parse_trdl_string.
+  for (let [id, o] of twist_overrides) out.push({ twist: id, ...o })
 
   // Raw atom entities: targeted scan for non-twist atoms in env that
   // are referenced but NOT pulled in by any override's lat-merge path.

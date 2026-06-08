@@ -23,20 +23,31 @@ function random_shield_hex() {
 
 // ---- Parsing & classification ----
 
+// Spec: each non-empty, non-comment line is one JSON object. Lines beginning
+// with `//` are comments (after trimming leading whitespace). Objects whose
+// top-level key isn't one of the eight recognised entity types are silently
+// discarded.
 export function parse_trdl_string(s) {
   return s.split('\n')
-          .filter(line => line.trim() !== '')
+          .map(line => line.trim())
+          .filter(line => line !== '' && !line.startsWith('//'))
           .map(line => classify_entity(JSON.parse(line)))
+          .filter(e => e !== null)
 }
 
 function classify_entity(m) {
-  if      ('rig'   in m) return { ...m, entity_type: 'rig',   entity_id: m.rig   }
-  else if ('line'  in m) return { ...m, entity_type: 'line',  entity_id: m.line  }
-  else if ('hitch' in m) return { ...m, entity_type: 'hitch', entity_id: m.hitch }
-  else if ('twist' in m) return { ...m, entity_type: 'twist', entity_id: m.twist }
-  else if ('id'    in m) return { ...m, entity_type: 'twist', entity_id: m.id    }
-  else if ('atom'  in m) return { ...m, entity_type: 'atom',  entity_id: m.atom  }
-  else throw new Error('Unknown TRDL entity (no rig/line/hitch/twist/id/atom key)')
+  if      ('rig'    in m) return { ...m, entity_type: 'rig',    entity_id: m.rig    }
+  else if ('spool'  in m) return { ...m, entity_type: 'spool',  entity_id: m.spool  }
+  else if ('line'   in m) return { ...m, entity_type: 'line',   entity_id: m.line   }
+  else if ('hitch'  in m) return { ...m, entity_type: 'hitch',  entity_id: m.hitch  }
+  else if ('twist'  in m) return { ...m, entity_type: 'twist',  entity_id: m.twist  }
+  else if ('reqsat' in m) return { ...m, entity_type: 'reqsat', entity_id: m.reqsat }
+  else if ('trie'   in m) return { ...m, entity_type: 'trie',   entity_id: m.trie   }
+  else if ('atom'   in m) return { ...m, entity_type: 'atom',   entity_id: m.atom   }
+  // Objects without a recognised type key are discarded (spec §Syntax).
+  // This includes the legacy {"id": "..."} shorthand for twists; callers
+  // must now use {"twist": "..."} explicitly.
+  else return null
 }
 
 // "a[3]" → "a_3", "mytwist" → "mytwist". Returns null on null/undefined input.
