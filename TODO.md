@@ -47,6 +47,47 @@
   pairtrie key/value labelling. Toggle between raw and kiwanoed.
 
 ## Done — this session
+- **TRDL spec alignment (phases 1–4)** against
+  `resources/trdl-spec.md`. Four commits on top of the prior state:
+  1. **Parser surface** — `//` comment lines tolerated; bare
+     `{"id":…}` shorthand dropped (objects without a recognised type
+     key are silently discarded per spec); `spool` / `reqsat` / `trie`
+     classified as known types; decompile emits per-twist overrides
+     as `{"twist": id, …}` not `{"id": id, …}`.
+  2. **Utility evaluator (`toda/values.js`)** — full grammar for
+     `null` / `unit` / `hex()` / `base64()` / `+` concat / `sort()` /
+     `hash()` / `symbol()` plus a name-resolver hook. `sign()` /
+     `shield()` deferred. Wired into the `atom` entity so `data` +
+     `length` + integer `shape` work; legacy `raw` field preserved.
+     Symbols sourced from a new `toda/symbols.js` (poptop, context,
+     actionable class identifiers).
+  3. **v2 field gate** — `hitch.end` / `hitch.liftable` /
+     `hitch.lift-ticket` / `twist.lift` / `line.liftreqs` /
+     `rig.version` parsed and preserved; default rig version = 1
+     (workshop deviation from spec default 2 — see
+     `validate_v1_compatible` comment); any v2 semantics throw a
+     clear error at trdl_to_spec time. Documented in the validator's
+     leading comment.
+  4. **Trie entity** — `{"trie": "name", "entries": {"<expr>":
+     "<expr>"}}` builds a pairtrie atom whose entries are evaluated
+     via values.js (twist refs by `line[N]` form resolved against the
+     twist map). `twist.cargo` referencing a trie name lands the
+     trie's atom hash in body.carg. Cycles (trie → twist → same
+     trie) rejected by a unified topo pass. spool / reqsat entities
+     rejected (v2).
+
+  Tests live in `tmp/phase1.test.mjs … phase4b.test.mjs` (run via
+  `node tmp/phase*.test.mjs` — bypasses the browser harness, no
+  Clojure server needed). 344 pass / 0 fail at session end: 32
+  byte-stable rig snapshots, ~270 decompile-roundtrip checks across
+  `tests/` + `todatests/`, plus the per-phase unit tests.
+
+  Carry-over (deferred): liftable bodies (shape 0x4a), end-hitch +
+  lift-ticket synthesis, named reqsat entities (incl. rslist /
+  rsline), spool poptops, sign() / shield() helpers. All blocked on
+  canonical (Clojure / Rust) implementations — the workshop's role
+  is to track them, not to invent layouts.
+
 - **Status pill in collapsed h4** for both rig-meta (green/yellow/red)
   and rig-check sections. Rig-check pill later split into one mini pill
   per checker (js, clj, bb, rust) so all four states are visible at a
