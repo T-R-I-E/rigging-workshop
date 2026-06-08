@@ -269,7 +269,7 @@ function determine_line_order(lines_map, poptop_name, abject_name) {
 // actually use the v2 semantics. The workshop's default `version` is
 // therefore 1 (deviation from the spec default of 2); explicit
 // `version: 2` triggers the gate.
-function validate_v1_compatible(rig_entity, line_entities, hitch_entities, twist_entities) {
+function validate_v1_compatible(rig_entity, line_entities, hitch_entities, twist_entities, spool_entities, reqsat_entities) {
   let version = rig_entity?.version ?? 1
   if (version !== 1) {
     throw new Error(
@@ -277,6 +277,18 @@ function validate_v1_compatible(rig_entity, line_entities, hitch_entities, twist
       `implements the original Rigging Specification only (version 1). ` +
       `Liftable bodies, end-hitches, spool poptops, and lift-tickets ` +
       `are spec-defined but pending canonical implementation.`)
+  }
+  if (spool_entities.length) {
+    throw new Error(
+      `spool entities are a v2 feature, not implemented yet. ` +
+      `(See spec §"spool" — addendum-level feature requiring liftable ` +
+      `bodies and a spool poptop.)`)
+  }
+  if (reqsat_entities.length) {
+    throw new Error(
+      `reqsat entities are not yet implemented. ` +
+      `(Inline \`line.reqsat\` field still works for ed25519 / null cases. ` +
+      `Named reqsats — rslist / rsline included — pending canonical impl.)`)
   }
   for (let h of hitch_entities) {
     if (h.end === true)
@@ -307,8 +319,12 @@ export function trdl_to_spec(entities) {
   let line_entities  = entities.filter(e => e.entity_type === 'line')
   let hitch_entities = entities.filter(e => e.entity_type === 'hitch')
   let twist_entities = entities.filter(e => e.entity_type === 'twist')
+  let spool_entities = entities.filter(e => e.entity_type === 'spool')
+  let reqsat_entities = entities.filter(e => e.entity_type === 'reqsat')
+  let trie_entities  = entities.filter(e => e.entity_type === 'trie')
 
-  validate_v1_compatible(rig_entity, line_entities, hitch_entities, twist_entities)
+  validate_v1_compatible(rig_entity, line_entities, hitch_entities,
+                          twist_entities, spool_entities, reqsat_entities)
 
   let poptop_name = rig_entity?.poptop || 'poptop'
   let abject_name = rig_entity?.abject || 'abject'
@@ -457,9 +473,20 @@ export function trdl_to_spec(entities) {
       length: e.length,
     }))
 
+  // Trie entities — built into pairtrie atoms by compile.js after
+  // twists exist (entries can reference twists by their `line[N]`
+  // form). We pass through the entries dictionary verbatim; compile
+  // does the evaluator + lookup work.
+  let tries = trie_entities.map(e => ({
+    name:    e.entity_id,
+    type:    e.type ?? 'pairtrie',
+    entries: e.entries ?? {},
+  }))
+
   return {
     lines:  edn_lines,
     atoms,
+    tries,
     output: {
       focus: focus_id_kw,
       merge:    last_ids,

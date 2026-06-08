@@ -131,6 +131,38 @@ export function parse_expr(text) {
   return node
 }
 
+// Bare-name references in `text`, excluding language-built-in names
+// (`null`, `unit`) and function arguments that are sort keys / hash
+// algorithms / symbol names. Used by the compiler to compute
+// dependencies of trie entries on other entities.
+export function refs_in(text) {
+  let names = new Set()
+  walk_refs(parse_expr(text), names)
+  return names
+}
+
+function walk_refs(node, names) {
+  switch (node.tag) {
+    case 'name':
+      if (node.name !== 'null' && node.name !== 'unit')
+        names.add(node.name)
+      break
+    case 'literal':
+      break
+    case 'concat':
+      for (let p of node.parts) walk_refs(p, names)
+      break
+    case 'func': {
+      // symbol(<name>) — arg is a literal symbol-table name, not a ref
+      if (node.name === 'symbol') break
+      // sort(<key>, …) / hash(<alg>, …) — first arg is a literal token
+      let start = (node.name === 'sort' || node.name === 'hash') ? 1 : 0
+      for (let i = start; i < node.args.length; i++) walk_refs(node.args[i], names)
+      break
+    }
+  }
+}
+
 // ---- evaluator ------------------------------------------------------------
 
 export async function evaluate(text, resolve_name) {

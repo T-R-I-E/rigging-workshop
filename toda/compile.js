@@ -4,7 +4,7 @@ import { byte_concat, sha256, be32, bytes_to_hex, hex_to_bytes } from './bytes.j
 import { lat_focus, lat_to_bytes, NULL_HASH, get_hash, from_packet, SHAPE } from './lat.js'
 import { arb, pairtrie, body, twist as build_twist } from './factory.js'
 import { keypair as ed_keypair, req_pairtrie, sign_fn } from './ed25519.js'
-import { evaluate } from './values.js'
+import { evaluate, refs_in } from './values.js'
 
 const SYM_POPTOP = '22c70173874680c58e5c1d32854bd10486aac6f1aa821b56e3d512fd72e45ac72e'
 
@@ -134,14 +134,41 @@ async function collect_line_keypairs(specs) {
   return kps
 }
 
-async function build_twists(lines) {
+async function build_twists(lines, trie_specs = []) {
   let all_specs = collect_twist_specs(lines)
   let by_id     = new Map(all_specs.map(s => [s.id, s]))
-  let sorted    = topo_sort(all_specs)
   let line_keys = await collect_line_keypairs(all_specs)
   let twists    = new Map()
+  let trie_hashes = new Map()      // name → atom hash hex
+  let trie_lat    = new Map()       // accumulated trie atoms
 
-  for (let spec of sorted) {
+  // Unified topo across twists + tries:
+  //   * twist X may depend on a trie via its cargo field (if cargo
+  //     is a string matching a declared trie name).
+  //   * trie T may depend on twists referenced by name in its entries.
+  // Cycles (T → X → T) are rejected by the topo pass.
+  let trie_names = new Set(trie_specs.map(t => t.name))
+  let twist_ids  = new Set(all_specs.map(s => s.id))
+  let unified_nodes = [
+    ...all_specs.map(s => ({ kind: 'twist', id: s.id, spec: s })),
+    ...trie_specs.map(t => ({ kind: 'trie', id: t.name, spec: t })),
+  ]
+  let all_ids = new Set(unified_nodes.map(n => n.id))
+  let sorted = topo_sort_unified(unified_nodes, all_ids, twist_ids, trie_names)
+
+  for (let node of sorted) {
+    if (node.kind === 'trie') {
+      let one = await build_one_trie(node.spec, twists, trie_hashes)
+      let hash = lat_focus(one)
+      trie_hashes.set(node.id, hash)
+      for (let [k, v] of one) {
+        if (trie_lat.has(k)) trie_lat.delete(k)
+        trie_lat.set(k, v)
+      }
+      continue
+    }
+    let spec = node.spec
+    {
     let { id, prev_id, tether, cargo, shield, rig, shield_source,
           poptop, reqsat, line, rigs_raw, rigs_shape, rigs_null,
           rigs_hash, cargo_raw, cargo_shape, shield_raw, shield_shape,
@@ -221,6 +248,11 @@ async function build_twists(lines) {
       cargo_val = await arb(hex_to_bytes(cargo.slice(4)))
     } else if (typeof cargo === 'string' && /^(41|22)[0-9a-f]{64}$/i.test(cargo)) {
       cargo_val = cargo
+    } else if (typeof cargo === 'string' && trie_hashes.has(cargo)) {
+      // Trie entity reference — the body.carg slot holds the trie's
+      // atom hash. The trie atom itself is built earlier in the same
+      // topo pass (see build_one_trie) and merged into trie_lat.
+      cargo_val = trie_hashes.get(cargo)
     } else if (cargo) {
       cargo_val = await str_to_hash(cargo)
     }
@@ -290,9 +322,93 @@ async function build_twists(lines) {
     })
 
     twists.set(id, twist_lat)
+    }
   }
 
-  return twists
+  return { twists, trie_lat, trie_hashes }
+}
+
+// Topo over the unified twist+trie node list. Deps:
+//   * twist node depends on referenced twists (existing twist_deps),
+//     plus a trie when its cargo string matches a declared trie name.
+//   * trie node depends on every twist OR trie referenced by name in
+//     any entry expression (excluding null/unit, sort keys, hash
+//     algos, and symbol() name args — see refs_in).
+function topo_sort_unified(nodes, all_ids, twist_ids, trie_names) {
+  let node_idx = new Map(nodes.map((n, i) => [n.id, i]))
+  let id_deps = new Map()
+  for (let n of nodes) id_deps.set(n.id, node_deps(n, all_ids, twist_ids, trie_names))
+  let sorted = []
+  let remaining = new Set(all_ids)
+  while (remaining.size) {
+    let ready = [...remaining].filter(id =>
+      [...id_deps.get(id)].every(d => !remaining.has(d)))
+      .sort((a, b) => node_idx.get(a) - node_idx.get(b))
+    if (!ready.length) {
+      throw new Error('Circular dependency in twist/trie specs: ' + [...remaining])
+    }
+    for (let id of ready) { sorted.push(id); remaining.delete(id) }
+  }
+  return sorted.map(id => nodes[node_idx.get(id)])
+}
+
+function node_deps(node, all_ids, twist_ids, trie_names) {
+  if (node.kind === 'twist') {
+    let deps = new Set(twist_deps(node.spec, twist_ids))
+    if (typeof node.spec.cargo === 'string' && trie_names.has(node.spec.cargo)) {
+      deps.add(node.spec.cargo)
+    }
+    return deps
+  }
+  // trie node
+  let deps = new Set()
+  for (let [k, v] of Object.entries(node.spec.entries)) {
+    for (let ref of refs_in(k)) if (all_ids.has(ref_to_kw_top(ref))) deps.add(ref_to_kw_top(ref))
+    for (let ref of refs_in(v)) if (all_ids.has(ref_to_kw_top(ref))) deps.add(ref_to_kw_top(ref))
+  }
+  return deps
+}
+
+// Convert "poptop[0]" → "poptop_0" to match twist spec ids; pass other
+// names (trie / atom names) through unchanged.
+function ref_to_kw_top(ref) {
+  let m = /^(.+)\[(\d+)\]$/.exec(ref)
+  return m ? `${m[1]}_${m[2]}` : ref
+}
+
+// Build a single trie spec into a lat. Entries are evaluated via
+// values.js with name resolution covering twists (by `line[N]` form)
+// and previously-built tries (by their bare name).
+async function build_one_trie(trie_spec, twists, trie_hashes) {
+  if (trie_spec.type && trie_spec.type !== 'pairtrie')
+    throw new Error(`trie type "${trie_spec.type}" not yet supported`)
+  let resolve = make_unified_resolver(twists, trie_hashes)
+  let pairs = []
+  for (let [key_expr, val_expr] of Object.entries(trie_spec.entries)) {
+    let k = await evaluate(key_expr, resolve)
+    let v = await evaluate(val_expr, resolve)
+    pairs.push([bytes_to_hex(k), bytes_to_hex(v)])
+  }
+  let lat = await pairtrie(pairs)
+  if (!lat) {
+    // Empty trie. Build an empty pairtrie atom directly so the trie
+    // name still has a defined hash. Mirrors lat.factory.pairtrie's
+    // null-on-empty short-circuit by going around it.
+    return await from_packet(SHAPE.pairtrie, new Uint8Array(0))
+  }
+  return lat
+}
+
+function make_unified_resolver(twists, trie_hashes) {
+  return function resolve(name) {
+    // Twist reference: "poptop[0]" or bare "poptop_0"
+    let m = /^(.+)\[(\d+)\]$/.exec(name)
+    let kw = m ? `${m[1]}_${m[2]}` : name
+    let lat = twists.get(kw)
+    if (lat) return lat_focus(lat)
+    if (trie_hashes.has(name)) return trie_hashes.get(name)
+    throw new Error(`unknown reference: ${name}`)
+  }
 }
 
 function assemble_output(twists, output) {
@@ -365,17 +481,31 @@ async function packet_with_length(shape_byte, length, content) {
 
 // Public entry point. Returns { bytes, twists, corkline_h }.
 export async function build(spec) {
-  let twists  = await build_twists(spec.lines)
+  let { twists, trie_lat } = await build_twists(spec.lines, spec.tries ?? [])
   let out_lat = assemble_output(twists, spec.output)
-  // Atom entities are merged at the BEGINNING of the byte stream.
-  // Several rig-checkers treat the last atom in the bundle as the
-  // rig's focus (the topline-ish anchor); appending extras at the
-  // end would shift that off. Prepending preserves the final-atom-
-  // is-focus invariant while still ensuring the extras are present.
+  // Atom + trie entities are merged at the BEGINNING of the byte
+  // stream. Several rig-checkers treat the last atom in the bundle
+  // as the rig's focus (the topline-ish anchor); appending extras
+  // at the end would shift that off. Prepending preserves the
+  // final-atom-is-focus invariant while still ensuring the extras
+  // are present.
+  let extras_lat = null
   if (spec.atoms?.length) {
-    let extras = await build_atoms(spec.atoms)
+    extras_lat = await build_atoms(spec.atoms)
+  }
+  if (trie_lat && trie_lat.size) {
+    if (extras_lat) {
+      for (let [k, v] of trie_lat) {
+        if (extras_lat.has(k)) extras_lat.delete(k)
+        extras_lat.set(k, v)
+      }
+    } else {
+      extras_lat = trie_lat
+    }
+  }
+  if (extras_lat) {
     let reordered = new Map()
-    for (let [k, v] of extras) reordered.set(k, v)
+    for (let [k, v] of extras_lat) reordered.set(k, v)
     for (let [k, v] of out_lat) {
       if (!reordered.has(k)) reordered.set(k, v)
     }
