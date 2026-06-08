@@ -391,16 +391,25 @@ export function trdl_to_spec(entities) {
     last_ids.push(focus_id_kw)
   }
 
-  // Raw atom entities: {"atom":"<hash>", "shape":"arb", "raw":"<hex>"}
-  // get registered as standalone atoms in the output bundle, regardless
-  // of whether any twist spec references them. Designed-bad rigs whose
-  // body slots point at non-twist atoms (the cork_prev_invalid_*
-  // family: arb in a twist.prev slot) need this — the literal-hex
-  // override gets the body bytes right but the arb atom itself isn't
-  // pulled in by the lat-merging path.
+  // Atom entities. Two complementary input forms:
+  //   * `raw` (workshop legacy / decompile output): verbatim hex bytes for
+  //     the atom content. Used when round-tripping designed-bad rigs
+  //     whose body slots point at specific atoms.
+  //   * `data` (spec form): a bitstream expression — evaluated via
+  //     values.js (utility functions, symbols, constants, concat).
+  //
+  // Spec also defines `shape` (name or integer), `alg`, `length`, `id`.
+  // For phase 2 we wire `data`, integer `shape`, and `length`; `alg` and
+  // `id` arrive with phase 4 alongside reqsat/trie/spool.
   let atoms = entities
     .filter(e => e.entity_type === 'atom')
-    .map(e => ({ hash: e.atom, shape: e.shape || 'arb', raw: e.raw }))
+    .map(e => ({
+      hash:   e.atom,
+      shape:  e.shape ?? 'arb',
+      raw:    e.raw,
+      data:   e.data,
+      length: e.length,
+    }))
 
   return {
     lines:  edn_lines,

@@ -1,9 +1,10 @@
 // Build pipeline. spec → twists map → output bytes. Mirrors twist-maker.core.
 
-import { byte_concat, sha256, bytes_to_hex, hex_to_bytes } from './bytes.js'
+import { byte_concat, sha256, be32, bytes_to_hex, hex_to_bytes } from './bytes.js'
 import { lat_focus, lat_to_bytes, NULL_HASH, get_hash, from_packet, SHAPE } from './lat.js'
 import { arb, pairtrie, body, twist as build_twist } from './factory.js'
 import { keypair as ed_keypair, req_pairtrie, sign_fn } from './ed25519.js'
+import { evaluate } from './values.js'
 
 const SYM_POPTOP = '22c70173874680c58e5c1d32854bd10486aac6f1aa821b56e3d512fd72e45ac72e'
 
@@ -315,23 +316,50 @@ function assemble_output(twists, output) {
   return merged
 }
 
-// Build raw atom entities into a lat. Each entity creates one atom via
-// from_packet(shape, content) — its hash is determined by the bytes.
-// Caller merges this lat alongside the twist lats so the atoms end up
-// in the output bundle regardless of whether any twist's lat references
-// them. Used for designed-bad rigs whose body slots point at non-twist
-// atoms (cork_prev_invalid_*: arb in a twist's prev slot).
+// Build atom entities into a lat. Each entity creates one atom whose
+// content can come from either:
+//   * `raw` (legacy / decompile output): verbatim hex string
+//   * `data` (spec): a bitstream expression evaluated via values.js
+//
+// `shape` can be a name (SHAPE[…]) or an integer byte (passed through
+// directly so shapes outside SHAPE work for fixtures).
+//
+// `length` overrides the BE32 length field in the packet — used by
+// designed-bad rigs that intentionally encode the wrong length so the
+// atom hash differs from the canonical (length-correct) one.
 async function build_atoms(atom_entries) {
   let lat = new Map()
-  for (let { shape, raw } of atom_entries) {
-    let shape_byte = SHAPE[shape]
+  for (let entry of atom_entries) {
+    let { shape, raw, data, length } = entry
+    let shape_byte = typeof shape === 'number' ? shape : SHAPE[shape]
     if (shape_byte == null) continue
-    let atom_lat = await from_packet(shape_byte, hex_to_bytes(raw))
+    let content
+    if (raw != null)       content = hex_to_bytes(raw)
+    else if (data != null) content = await evaluate(data)
+    else                   content = new Uint8Array(0)
+    let len_field = (length != null) ? length : content.length
+    let atom_lat = (length != null && length !== content.length)
+      ? await packet_with_length(shape_byte, len_field, content)
+      : await from_packet(shape_byte, content)
     for (let [k, v] of atom_lat) {
       if (lat.has(k)) lat.delete(k)
       lat.set(k, v)
     }
   }
+  return lat
+}
+
+// Build an atom whose packet's BE32 length field disagrees with the
+// content length. The hash is computed over the (mis-length) packet,
+// so the resulting atom is intentionally non-canonical. Mirrors
+// from_packet in lat.js but exposes the length field explicitly.
+async function packet_with_length(shape_byte, length, content) {
+  let pkt = byte_concat(new Uint8Array([shape_byte]), be32(length), content)
+  let digest = await sha256(pkt)
+  let hash_b = byte_concat(new Uint8Array([0x41]), digest)
+  let atom_bytes = byte_concat(hash_b, pkt)
+  let lat = new Map()
+  lat.set(bytes_to_hex(hash_b), atom_bytes)
   return lat
 }
 
