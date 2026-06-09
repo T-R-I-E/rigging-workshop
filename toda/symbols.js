@@ -7,6 +7,14 @@
 export const SYMBOLS = {
   poptop:             '22c70173874680c58e5c1d32854bd10486aac6f1aa821b56e3d512fd72e45ac72e',
   context:            '2208318633b506017519e9b90b0bdc8451772415ba29144ab7778cb09cc2d2fa6a',
+  // Reqsat type symbols — keyed in body.reqs / twist.sats pairtries to
+  // identify the reqsat algorithm.
+  ed25519:            '223d5f4f95cdb1cdfc71014efa1a669fd42599a0ce2000d914a409e48bccaed584',
+  secp256r1:          '22eabd2839f9e57cf2c372e686e5856cf651d7f07d0d396b3699d1d228b5931945',
+  // Canonical spec name is "reqsatlist"; the user-facing TRDL type
+  // string is "rslist" (per the new spec). The symbol's name is
+  // "reqsatlist".
+  reqsatlist:         '22c9bf129a42fd9478fc42c986ba5b8786675ee42109cd3a9fdba208f4e9654148',
   // Actionable class identifiers — referenced from abject focus / cargo
   // tries. Useful once trie / abject support lands; harmless to ship now.
   'delegate-initiate': '22251dbe656f28f8fd46de35a13c1d74921cb73c1c198800b77eb2417f09435a82',

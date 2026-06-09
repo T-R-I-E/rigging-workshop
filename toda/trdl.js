@@ -284,11 +284,15 @@ function validate_v1_compatible(rig_entity, line_entities, hitch_entities, twist
       `(See spec §"spool" — addendum-level feature requiring liftable ` +
       `bodies and a spool poptop.)`)
   }
-  if (reqsat_entities.length) {
-    throw new Error(
-      `reqsat entities are not yet implemented. ` +
-      `(Inline \`line.reqsat\` field still works for ed25519 / null cases. ` +
-      `Named reqsats — rslist / rsline included — pending canonical impl.)`)
+  // Named reqsats: ed25519 and secp256r1 + rslist (canonical name
+  // `reqsatlist`) are implemented. rsline has no canonical compiler
+  // or verifier yet and is rejected.
+  for (let r of reqsat_entities) {
+    let type = r.type ?? 'ed25519'
+    if (type === 'rsline')
+      throw new Error(`reqsat "${r.entity_id}": rsline is not yet implemented (no canonical impl)`)
+    if (type !== 'ed25519' && type !== 'secp256r1' && type !== 'rslist')
+      throw new Error(`reqsat "${r.entity_id}": unknown type "${type}"`)
   }
   for (let h of hitch_entities) {
     if (h.end === true)
@@ -483,10 +487,23 @@ export function trdl_to_spec(entities) {
     entries: e.entries ?? {},
   }))
 
+  // Named reqsat entities. Compile resolves these to keypairs / req
+  // atoms / sign-fns and wires them into lines that reference them
+  // by name. ed25519 / secp256r1: single-key reqsats with a fresh
+  // keypair per entity (shared across lines that reference the
+  // same name). rslist: a hashes-atom of [weight, sub_req] entries,
+  // signed by aggregating sub-reqsat signatures.
+  let reqsats = reqsat_entities.map(e => ({
+    name: e.entity_id,
+    type: e.type ?? 'ed25519',
+    list: e.list,        // rslist only
+  }))
+
   return {
     lines:  edn_lines,
     atoms,
     tries,
+    reqsats,
     output: {
       focus: focus_id_kw,
       merge:    last_ids,

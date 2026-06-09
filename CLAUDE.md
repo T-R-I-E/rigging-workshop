@@ -80,9 +80,14 @@ cd ../rigchecker && clj -M:server
 ```
 
 ## Known v1 caveats
-- `ed25519.js` uses raw 32-byte public keys; the Clojure server wraps them
-  in X.509. Bytes diverge on `reqsat: ed25519` rigs (none of the test rigs
-  use ed25519, so this hasn't surfaced in practice).
+- `ed25519.js` uses raw 32-byte public keys, which is the canonical format
+  per RFC 8032 §5.1.5 (and per the rustoda reqsat verifier's explicit
+  comment: "No SPKI/DER wrapping — Ed25519 has only one canonical form,
+  so the wrapping would be redundant given the reqsat trie key already
+  identifies the algorithm"). The Clojure twist-maker (`twist-maker.ed25519`)
+  encodes via Java's `.getEncoded` which produces X.509 SubjectPublicKeyInfo
+  bytes — diverging from the rest of the toolchain on `reqsat: ed25519`
+  rigs. The workshop is correct; the Clojure compiler is the outlier.
 - `decompile.js` finds candidate hoists by scanning rig pairtries for the
   bare `I(meet)` value, then confirms the spec-canonical quad against the
   lead's shield (NULL → plain hash, arb → prefixed hash). Works for both

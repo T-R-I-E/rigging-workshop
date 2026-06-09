@@ -5,6 +5,7 @@ import { lat_focus, lat_to_bytes, NULL_HASH, get_hash, from_packet, SHAPE } from
 import { arb, pairtrie, body, twist as build_twist } from './factory.js'
 import { keypair as ed_keypair, req_pairtrie, sign_fn } from './ed25519.js'
 import { evaluate, refs_in } from './values.js'
+import { generate_reqsat_key, single_key_req_lat, build_rslist_reqsat } from './reqsat_keys.js'
 
 const SYM_POPTOP = '22c70173874680c58e5c1d32854bd10486aac6f1aa821b56e3d512fd72e45ac72e'
 
@@ -134,11 +135,75 @@ async function collect_line_keypairs(specs) {
   return kps
 }
 
-async function build_twists(lines, trie_specs = []) {
+// Build named-reqsat entities into a name → reqsat-info map. Each
+// entry has { type, pub, sym, req_lat, sign_fn } — same shape as a
+// per-line legacy ed25519 reqsat — so the downstream build path
+// doesn't care whether the reqsat is named or inline.
+//
+// Currently implemented:
+//   * ed25519: WebCrypto, raw 32-byte pubkey, raw 64-byte sig.
+//
+// Phase 5b will add secp256r1; phase 5c will add rslist. Both still
+// throw a clear "not yet implemented" here for now.
+async function build_reqsat_map(reqsat_specs) {
+  let by_name   = new Map(reqsat_specs.map(r => [r.name, r]))
+  let names_set = new Set(reqsat_specs.map(r => r.name))
+
+  // Dep graph — only rslist depends on other reqsats (its list refs).
+  let deps_of = (name) => {
+    let r = by_name.get(name)
+    if (r.type !== 'rslist') return new Set()
+    let list = r.list ?? [{ reqsat: null, weight: 255 }]
+    let d = new Set()
+    for (let item of list)
+      if (item.reqsat != null && names_set.has(item.reqsat)) d.add(item.reqsat)
+    return d
+  }
+
+  // Topo: rslist after its sub-reqsats. Cycles → throw.
+  let remaining = new Set(names_set)
+  let sorted = []
+  while (remaining.size) {
+    let ready = [...remaining].filter(n =>
+      [...deps_of(n)].every(d => !remaining.has(d)))
+    if (!ready.length)
+      throw new Error(`Circular dependency in rslist reqsats: ${[...remaining]}`)
+    for (let n of ready) { sorted.push(n); remaining.delete(n) }
+  }
+
+  let map = new Map()
+  for (let name of sorted) {
+    let r = by_name.get(name)
+    if (r.type === 'ed25519' || r.type === 'secp256r1') {
+      let info = await generate_reqsat_key(r.type)
+      info.req_lat = await single_key_req_lat(info)
+      map.set(name, info)
+    } else if (r.type === 'rslist') {
+      let info = await build_rslist_reqsat(r, map)
+      map.set(name, info)
+    } else {
+      throw new Error(`reqsat "${name}": unknown type "${r.type}"`)
+    }
+  }
+  return map
+}
+
+async function build_twists(lines, trie_specs = [], reqsat_map = new Map()) {
   let all_specs = collect_twist_specs(lines)
   let by_id     = new Map(all_specs.map(s => [s.id, s]))
   let line_keys = await collect_line_keypairs(all_specs)
   let twists    = new Map()
+  // Validate every line's reqsat field — either it's one of the
+  // legacy literals (null / ed25519) or it matches a named reqsat
+  // entity declared by the rig. We do this up front so an unknown
+  // name fails before topo, with a message naming the reqsat instead
+  // of failing deep inside the per-twist body construction.
+  for (let s of all_specs) {
+    let r = s.reqsat
+    if (!r || r === 'null' || r === 'ed25519') continue
+    if (!reqsat_map.has(r))
+      throw new Error(`line "${s.line}": reqsat "${r}" is not declared (no matching reqsat entity)`)
+  }
   let trie_hashes = new Map()      // name → atom hash hex
   let trie_lat    = new Map()       // accumulated trie atoms
 
@@ -283,9 +348,25 @@ async function build_twists(lines, trie_specs = []) {
       rig_lat = rig ? await build_rig_lat(twists, rig_shield, rig) : null
     }
 
-    let kp        = (reqsat === 'ed25519') ? line_keys.get(line) : null
-    let req_lat   = kp ? await req_pairtrie(kp.pub) : null
-    let signFn    = kp ? sign_fn(kp.secret) : null
+    // Reqsat resolution. Three paths:
+    //   * `reqsat: "ed25519"` — legacy, per-line auto-generated keypair
+    //     via the @noble path (browser-only; Node hits import errors).
+    //   * `reqsat: "<named>"` — entity-declared; reqsat_map carries a
+    //     ready { req_lat, sign_fn } produced by build_reqsat_map.
+    //   * `reqsat: "null"` / missing — no req atom, no sig.
+    let req_lat = null
+    let signFn  = null
+    if (reqsat === 'ed25519') {
+      let kp = line_keys.get(line)
+      if (kp) {
+        req_lat = await req_pairtrie(kp.pub)
+        signFn  = sign_fn(kp.secret)
+      }
+    } else if (reqsat && reqsat !== 'null' && reqsat_map.has(reqsat)) {
+      let info = reqsat_map.get(reqsat)
+      req_lat = info.req_lat
+      signFn  = info.sign_fn
+    }
 
     // reqs override: raw > hash > null > ed25519-derived (above).
     // Used for designed-bad reqsat fixtures whose body.reqs slot holds
@@ -481,7 +562,8 @@ async function packet_with_length(shape_byte, length, content) {
 
 // Public entry point. Returns { bytes, twists, corkline_h }.
 export async function build(spec) {
-  let { twists, trie_lat } = await build_twists(spec.lines, spec.tries ?? [])
+  let reqsat_map = await build_reqsat_map(spec.reqsats ?? [])
+  let { twists, trie_lat } = await build_twists(spec.lines, spec.tries ?? [], reqsat_map)
   let out_lat = assemble_output(twists, spec.output)
   // Atom + trie entities are merged at the BEGINNING of the byte
   // stream. Several rig-checkers treat the last atom in the bundle
