@@ -83,10 +83,20 @@
   `tests/` + `todatests/`, plus the per-phase unit tests.
 
   Carry-over (deferred): liftable bodies (shape 0x4a), end-hitch +
-  lift-ticket synthesis, named reqsat entities (incl. rslist /
-  rsline), spool poptops, sign() / shield() helpers. All blocked on
-  canonical (Clojure / Rust) implementations — the workshop's role
-  is to track them, not to invent layouts.
+  lift-ticket synthesis, spool poptops, sign() / shield() helpers
+  in the value evaluator, rsline reqsats. All blocked on canonical
+  (Clojure / Rust) implementations — the workshop's role is to
+  track them, not to invent layouts.
+
+- **TRDL spec alignment phase 5 — named reqsat entities**. ed25519
+  (raw 32-byte pubkey, raw 64-byte sig per RFC 8032 §5.1.5 — the
+  workshop is canonical here, the Clojure `twist-maker.ed25519`'s
+  X.509 wrap is the outlier; CLAUDE.md note flipped), secp256r1
+  (WebCrypto P-256/SHA-256, SPKI pubkey, DER ECDSA sig matching
+  todaadot), rslist (canonical symbol "reqsatlist" → HashesAtom of
+  [weight_arb, sub_req_pairtrie] entries; topo-sorted over deps with
+  cycle rejection). New module `toda/reqsat_keys.js`. rsline still
+  rejected. 15 phase-5 tests across 5a/5b/5c green; 407 total.
 
 - **Status pill in collapsed h4** for both rig-meta (green/yellow/red)
   and rig-check sections. Rig-check pill later split into one mini pill
