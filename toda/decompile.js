@@ -66,6 +66,15 @@ function read_pairtrie(env, atom) {
   return pairs
 }
 
+function read_hashlist(env, atom) {
+  let hashes = []
+  for (let i = atom.cfirst; i <= atom.last; ) {
+    let h = pluck_hash(env.bytes, i); i += h.len
+    hashes.push(h.hex)
+  }
+  return hashes
+}
+
 function decode_body(env, body_hash) {
   let a = env.index[body_hash]
   if (!a || a.shape !== BODY) return null
@@ -750,6 +759,18 @@ export async function decompile(buf, name = 'rig', corkline_hint = null) {
     let shape_name = SHAPE_NAMES[atom.shape] || `0x${atom.shape.toString(16)}`
     let raw_hex = bytes_to_hex(env.bytes.subarray(atom.cfirst, atom.last + 1))
     out.push({ atom: h, shape: shape_name, raw: raw_hex })
+    // Recurse through container atoms. A reqsat trie nests (pairtrie value
+    // → hashlist → pubkey/signature arbs); without walking that nesting the
+    // recompile drops the deeper atoms and the rig's shape counts diverge
+    // (reqsattrie rigs lost arb/hashlist atoms). For non-reqsat rigs the
+    // pairtrie contents are computed key hashes (not bundle atoms) or twists,
+    // so this adds nothing. Cycle-safe via seen_atoms; final Lat dedups by
+    // hash so an atom reachable both here and via a raw override collapses.
+    if (atom.shape === PAIRTRIE) {
+      for (let [k, v] of read_pairtrie(env, atom)) { emit_atom_for(k); emit_atom_for(v) }
+    } else if (atom.shape === HASHLIST) {
+      for (let ref of read_hashlist(env, atom)) emit_atom_for(ref)
+    }
   }
   // Orphan-body emission: some imPERFECT fixtures (hh_tether_missing,
   // hh_wrong_hoist_values, ...) have body atoms in orig that no twist
