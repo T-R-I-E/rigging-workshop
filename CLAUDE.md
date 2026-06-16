@@ -56,6 +56,26 @@ See [TODO.md](TODO.md) for current plan, tasks, and deferred items.
   committed instead. Wired into `app.js` as the 4th `CHECKERS` entry
   (`id: 'rust'`); loaded lazily, falls back to `warn` if the bundle is
   missing or fails to instantiate.
+- `toda/rignet/` — compiled browser ES modules of the `../rignet` checker
+  (a from-scratch TypeScript TODA interpreter; it uses WebCrypto, so the
+  check path is browser-safe). Only the check-path closure of
+  `interpreter`/`atom`/`lat` is bundled — `tsc` emits the full transitive
+  set, which excludes `index.ts` (`node:fs`) and `torus.ts` (webtorrent).
+  Rebuild after changes to `../rignet/src` with (build to a writable dir,
+  then copy — the `rignet` symlink points outside the workshop):
+  ```
+  rignet/node_modules/.bin/tsc rignet/src/interpreter.ts \
+      rignet/src/atom.ts rignet/src/lat.ts \
+      --outDir "$TMPDIR/rignet-dist" --target ES2022 --module ES2022 \
+      --moduleResolution bundler --skipLibCheck
+  cp "$TMPDIR/rignet-dist"/*.js toda/rignet/
+  ```
+  Wired into `app.js` as the 5th `CHECKERS` entry (`id: 'rignet'`); loaded
+  lazily, falls back to `broke` if the bundle is missing. `rignet_check`
+  replicates `parseTodaBytes` inline (atomFromBytes loop → `lat` → `checkRig`)
+  and maps green/yellow/red → ok/warn/bad. Caveat: `checkRig(l, corklineHex)`
+  takes only the corkline and derives the focus from the file, so it verifies
+  the rig's own focus rather than the user-clicked twist.
 - Rig-check backend lives in the sibling `../rigchecker/` repo
   (`TodaQFinance/rigchecker`). The workshop's clj/bb rig-checkers point at
   the ALB-fronted deployment (`rigchecker.todaq.net/rigcheck-clj` and

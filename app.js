@@ -1054,6 +1054,11 @@ const CHECKERS = [
         label: 'rust · rustoda',
         async run(ctx) { return rust_check(ctx) },
     },
+    {
+        id: 'rignet',
+        label: 'rignet · ts',
+        async run(ctx) { return rignet_check(ctx) },
+    },
 ]
 
 // Shared server-checker driver. The two server endpoints take the same
@@ -1143,6 +1148,49 @@ async function rust_check(ctx) {
         return { state, detail }
     } catch (e) {
         // wasm threw or produced malformed JSON — broke, not bad.
+        return { state: 'broke', detail: e.message || String(e) }
+    }
+}
+
+// rignet checker — the rignet project's TypeScript interpreter, compiled to
+// browser ES modules (toda/rignet/, tsc output of ../rignet/src — check path
+// only, so no node:fs / torrent code). Loaded lazily like rust; a failed load
+// degrades to 'broke'. Unlike js/clj/bb/rust, rignet's checkRig takes only the
+// corkline and derives the focus from the file, so it verifies the rig's own
+// focus rather than the user-clicked twist (ctx.twistHex is not consulted).
+let _rignet_load
+async function load_rignet() {
+    if (!_rignet_load) _rignet_load = (async () => {
+        try {
+            let [atom, latMod, interp] = await Promise.all([
+                import('./toda/rignet/atom.js'),
+                import('./toda/rignet/lat.js'),
+                import('./toda/rignet/interpreter.js'),
+            ])
+            return { atomFromBytes: atom.atomFromBytes, lat: latMod.lat, checkRig: interp.checkRig }
+        } catch (e) {
+            return { error: e }
+        }
+    })()
+    return _rignet_load
+}
+async function rignet_check(ctx) {
+    let r = await load_rignet()
+    if (r.error) return { state: 'broke', detail: `rignet load failed: ${r.error.message || r.error}` }
+    try {
+        let bytes = ctx.bytes instanceof Uint8Array ? ctx.bytes : new Uint8Array(ctx.bytes)
+        // Replicate rignet's parseTodaBytes (its index.ts pulls node:fs, so we
+        // build the lat ourselves): atomFromBytes loop → lat → checkRig.
+        let atoms = [], offset = 0
+        while (offset < bytes.length) {
+            let atm = await r.atomFromBytes(bytes.slice(offset))
+            atoms.push(atm)
+            offset += atm.serialized.length
+        }
+        let colour = await r.checkRig(r.lat(atoms), ctx.corklineHex)
+        let state = colour === 'green' ? 'ok' : colour === 'yellow' ? 'warn' : 'bad'
+        return { state, detail: colour }
+    } catch (e) {
         return { state: 'broke', detail: e.message || String(e) }
     }
 }
