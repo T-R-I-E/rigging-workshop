@@ -16,7 +16,15 @@ import { Twist } from './src/core/twist.js'
 import { Hash } from './src/core/hash.js'
 
 import { check_via_worker } from './toda/rustoda-wasm/client.js'
+import { atomFromBytes as rignet_atomFromBytes } from './toda/rignet/atom.js'
+import { lat as rignet_lat } from './toda/rignet/lat.js'
+import { checkRig as rignet_checkRig } from './toda/rignet/interpreter.js'
 import { list_rigs } from './rig-manifest.js'
+
+// The checkers, in column order. Drives the per-rig result maps, the
+// agreement counts, and the rendered cells — add a checker here and it
+// threads through everything below.
+const CHECKER_KEYS = ['js', 'clj', 'bb', 'rust', 'rignet']
 
 class HalfHitchInterpreter extends Interpreter {
   constructor(...args) { super(...args); this._visited = new Set() }
@@ -120,6 +128,26 @@ async function rust_check(ctx) {
   } catch (e) { return { v: 'broke', detail: e.message || String(e) } }
 }
 
+// rignet runs entirely in-browser from the compiled bundle at toda/rignet/.
+// Replicates rignet's parseTodaBytes inline (its index.ts pulls node:fs):
+// atomFromBytes loop → lat → checkRig. checkRig takes only the corkline and
+// derives the focus from the file (so it ignores ctx.twistHex, like app.js).
+async function rignet_check(ctx) {
+  try {
+    let bytes = ctx.bytes instanceof Uint8Array ? ctx.bytes : new Uint8Array(ctx.bytes)
+    let atoms = [], offset = 0
+    while (offset < bytes.length) {
+      let atm = await rignet_atomFromBytes(bytes.slice(offset))
+      atoms.push(atm)
+      offset += atm.serialized.length
+    }
+    let colour = await rignet_checkRig(rignet_lat(atoms), ctx.corklineHex)
+    return { v: colour === 'green' ? 'ok' : colour === 'yellow' ? 'warn' : 'bad', detail: colour }
+  } catch (e) {
+    return { v: 'broke', detail: e.message || String(e) }
+  }
+}
+
 function with_timeout(promise, ms, label) {
   return Promise.race([
     promise.catch(e => ({ v: 'broke', detail: e?.message || String(e) })),
@@ -128,13 +156,14 @@ function with_timeout(promise, ms, label) {
 }
 
 async function run_all_checkers(ctx) {
-  let [js, clj, bb, rust] = await Promise.all([
+  let [js, clj, bb, rust, rignet] = await Promise.all([
     with_timeout(js_check(ctx),              CHECKER_TIMEOUT_MS, 'js'),
     with_timeout(server_check(ctx, CLJ_URL), CHECKER_TIMEOUT_MS, 'clj'),
     with_timeout(server_check(ctx, BB_URL),  CHECKER_TIMEOUT_MS, 'bb'),
     rust_check(ctx),
+    with_timeout(rignet_check(ctx),          CHECKER_TIMEOUT_MS, 'rignet'),
   ])
-  return { js, clj, bb, rust }
+  return { js, clj, bb, rust, rignet }
 }
 
 // ----------------------------------------------------------------------------
@@ -216,18 +245,14 @@ async function run_one(path) {
   function vToCol(v) {
     return v === 'ok' ? 'green' : v === 'warn' ? 'yellow' : v === 'bad' ? 'red' : v
   }
-  r.colours = {
-    js:   vToCol(r.results.js.v),
-    clj:  vToCol(r.results.clj.v),
-    bb:   vToCol(r.results.bb.v),
-    rust: vToCol(r.results.rust.v),
-  }
-  let agreeingCheckers = ['js','clj','bb','rust'].filter(k => r.colours[k] === r.canonical)
+  r.colours = {}
+  for (let k of CHECKER_KEYS) r.colours[k] = vToCol(r.results[k].v)
+  let agreeingCheckers = CHECKER_KEYS.filter(k => r.colours[k] === r.canonical)
   r.canonicalAgreementCount = agreeingCheckers.length
-  // Per-checker checker-vs-checker agreement matters too: are all 4
-  // verdicts identical? (independent of canonical)
-  r.allFourAgree = new Set(Object.values(r.colours)).size === 1
-  console.log(`[disagree] ✓ ${path} → canonical=${r.canonical} js=${r.colours.js} clj=${r.colours.clj} bb=${r.colours.bb} rust=${r.colours.rust}`)
+  // Checker-vs-checker agreement (independent of canonical): identical verdicts?
+  r.allAgree = new Set(Object.values(r.colours)).size === 1
+  console.log(`[disagree] ✓ ${path} → canonical=${r.canonical} ` +
+    CHECKER_KEYS.map(k => `${k}=${r.colours[k]}`).join(' '))
   return r
 }
 
@@ -237,10 +262,11 @@ async function run_one(path) {
 function pill(verdict_obj, canonical) {
   if (!verdict_obj) return ['<span class="v-skip">—</span>', false]
   let v = verdict_obj.v
+  // Display the spec colour (GREEN/YELLOW/RED) to match the canonical pill.
+  // 'broke' has no colour — it keeps its own label/badge.
   let col = v === 'ok' ? 'green' : v === 'warn' ? 'yellow' : v === 'bad' ? 'red' : v
   let disagrees = col !== canonical
-  let cls = `v-${v}`
-  return [`<span class="${cls}">${v.toUpperCase()}</span>`, disagrees]
+  return [`<span class="v-${col}">${col.toUpperCase()}</span>`, disagrees]
 }
 
 function canonical_pill(c) {
@@ -254,17 +280,17 @@ function render_row(tbody, r) {
   let verdict, vClass
   if (r.error) {
     verdict = 'ERR'; vClass = 'error'
-  } else if (r.canonicalAgreementCount === 4) {
+  } else if (r.canonicalAgreementCount === CHECKER_KEYS.length) {
     verdict = 'PERFECT'; vClass = 'perfect'
   } else if (r.canonicalAgreementCount === 0) {
     verdict = 'NONE AGREE'; vClass = 'imperfect'
   } else {
-    verdict = `${r.canonicalAgreementCount}/4`; vClass = 'partial'
+    verdict = `${r.canonicalAgreementCount}/${CHECKER_KEYS.length}`; vClass = 'partial'
   }
 
   let note = r.error || ''
   if (!r.error && r.results) {
-    let disagreers = ['js','clj','bb','rust'].filter(k => r.colours[k] !== r.canonical)
+    let disagreers = CHECKER_KEYS.filter(k => r.colours[k] !== r.canonical)
     if (disagreers.length) {
       note = disagreers.map(k => `${k}: ${r.colours[k]} (${escape_html((r.results[k].detail || '').slice(0,80))})`).join('\n')
     } else {
@@ -273,7 +299,7 @@ function render_row(tbody, r) {
   }
   if (r.moniker) note = (note ? note + '\n\n' : '') + 'moniker: ' + escape_html(r.moniker.slice(0, 200))
 
-  let cells = ['js', 'clj', 'bb', 'rust'].map(k => {
+  let cells = CHECKER_KEYS.map(k => {
     let [html, disagrees] = pill(r.results?.[k], r.canonical)
     return `<td class="cell ${disagrees ? 'disagrees' : ''}">${html}</td>`
   }).join('')
@@ -318,7 +344,7 @@ async function run_all() {
 
   _results = []
   let perfect = 0, partial = 0, noneAgree = 0, errs = 0
-  let perChecker = { js: 0, clj: 0, bb: 0, rust: 0 }
+  let perChecker = Object.fromEntries(CHECKER_KEYS.map(k => [k, 0]))
   for (let i = 0; i < targets.length; i++) {
     progress.textContent = `${i + 1}/${targets.length} · ${targets[i].replace(/^.*\//, '')}`
     let r = await run_one(targets[i])
@@ -329,7 +355,7 @@ async function run_all() {
     else if (r.canonicalAgreementCount === 0) noneAgree++
     else partial++
     if (r.colours && r.canonical) {
-      for (let k of ['js','clj','bb','rust']) {
+      for (let k of CHECKER_KEYS) {
         if (r.colours[k] !== r.canonical) perChecker[k]++
       }
     }
@@ -337,13 +363,13 @@ async function run_all() {
   progress.textContent = ''
   summary.hidden = false
   summary.innerHTML =
-    `<strong>${perfect}</strong> all-4-agree-canonical · ` +
+    `<strong>${perfect}</strong> all-${CHECKER_KEYS.length}-agree-canonical · ` +
     `<strong>${partial}</strong> partial · ` +
     `<strong>${noneAgree}</strong> none-agree-canonical · ` +
     `<strong>${errs}</strong> error · ` +
     `${targets.length} total<br>` +
     `disagrees vs canonical: ` +
-    ['js','clj','bb','rust'].map(k =>
+    CHECKER_KEYS.map(k =>
       `${k}=<strong>${perChecker[k]}</strong>`).join(' · ')
   download.disabled = _results.length === 0
 }
