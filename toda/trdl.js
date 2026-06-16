@@ -152,7 +152,9 @@ function collect_twist_overrides(twist_entities) {
     // lash_succession_reqsat_fail. Without this, the workshop
     // auto-generates ed25519 req tries and the body.reqs slot diverges.
     if ('reqs'  in e) {
-      if (e.reqs === 'null') {
+      // "none" === "null" for reqs/sats: "none" is the reqsat named by the
+      // null atom, so both produce an explicit NULL trie slot (spec §twist).
+      if (e.reqs === 'null' || e.reqs === 'none') {
         o.reqs_null = true
       } else if (e.reqs && typeof e.reqs === 'object') {
         if ('raw' in e.reqs) {
@@ -167,7 +169,8 @@ function collect_twist_overrides(twist_entities) {
     // sats lives on the twist atom itself, not the body, so it threads
     // through factory.twist via sat_override (added alongside this).
     if ('sats'  in e) {
-      if (e.sats === 'null') {
+      // "none" === "null" for reqs/sats (see reqs above).
+      if (e.sats === 'null' || e.sats === 'none') {
         o.sats_null = true
       } else if (e.sats && typeof e.sats === 'object') {
         if ('raw' in e.sats) {
@@ -349,7 +352,10 @@ export function trdl_to_spec(entities) {
     let info = lines_map.get(line_name)
     if (!info) continue
     let { ids, shielded, reqsat } = info
-    let reqsat_kw = (reqsat && reqsat !== 'null') ? reqsat : null
+    // Per TRDL spec, the implicit reqsat named "none" represents using null as
+    // the reqs/sats trie, so "none" and "null" are synonyms here: both mean
+    // "no reqsat". (Bare "null"/falsy also collapse to no reqsat.)
+    let reqsat_kw = (reqsat && reqsat !== 'null' && reqsat !== 'none') ? reqsat : null
     let poptop_first = lines_map.get(poptop_name)?.ids[0]
 
     let specs = ids.map((id, i) => {

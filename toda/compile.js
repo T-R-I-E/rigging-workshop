@@ -194,13 +194,14 @@ async function build_twists(lines, trie_specs = [], reqsat_map = new Map()) {
   let line_keys = await collect_line_keypairs(all_specs)
   let twists    = new Map()
   // Validate every line's reqsat field — either it's one of the
-  // legacy literals (null / ed25519) or it matches a named reqsat
-  // entity declared by the rig. We do this up front so an unknown
-  // name fails before topo, with a message naming the reqsat instead
-  // of failing deep inside the per-twist body construction.
+  // legacy literals (null / none / ed25519) or it matches a named reqsat
+  // entity declared by the rig. ("none" is the implicit reqsat for the null
+  // trie — a synonym for "null" — so it needs no declared entity.) We do this
+  // up front so an unknown name fails before topo, with a message naming the
+  // reqsat instead of failing deep inside the per-twist body construction.
   for (let s of all_specs) {
     let r = s.reqsat
-    if (!r || r === 'null' || r === 'ed25519') continue
+    if (!r || r === 'null' || r === 'none' || r === 'ed25519') continue
     if (!reqsat_map.has(r))
       throw new Error(`line "${s.line}": reqsat "${r}" is not declared (no matching reqsat entity)`)
   }
@@ -353,7 +354,8 @@ async function build_twists(lines, trie_specs = [], reqsat_map = new Map()) {
     //     via the @noble path (browser-only; Node hits import errors).
     //   * `reqsat: "<named>"` — entity-declared; reqsat_map carries a
     //     ready { req_lat, sign_fn } produced by build_reqsat_map.
-    //   * `reqsat: "null"` / missing — no req atom, no sig.
+    //   * `reqsat: "null"` / `"none"` / missing — no req atom, no sig
+    //     ("none" is the implicit reqsat for the null trie; a synonym for null).
     let req_lat = null
     let signFn  = null
     if (reqsat === 'ed25519') {
@@ -362,7 +364,7 @@ async function build_twists(lines, trie_specs = [], reqsat_map = new Map()) {
         req_lat = await req_pairtrie(kp.pub)
         signFn  = sign_fn(kp.secret)
       }
-    } else if (reqsat && reqsat !== 'null' && reqsat_map.has(reqsat)) {
+    } else if (reqsat && reqsat !== 'null' && reqsat !== 'none' && reqsat_map.has(reqsat)) {
       let info = reqsat_map.get(reqsat)
       req_lat = info.req_lat
       signFn  = info.sign_fn
