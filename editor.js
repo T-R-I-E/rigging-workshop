@@ -34,6 +34,10 @@ const STARTER = `{"rig":"Example rig from spec"}
 
 let last_built_bytes = null
 let line_hashes = []                         // entityIdx → [hash, ...]; from /compile
+// The TRDL text as last loaded (STARTER, a decompiled .toda, a canonical
+// .trdl, an opened file, …). The doc is "edited" iff it differs from this.
+// set_doc updates it on every load path; the editor never writes it itself.
+let loaded_baseline = STARTER
 
 // --- highlight machinery -----------------------------------------------------
 // Two independent decoration fields so a transient hover doesn't replace the
@@ -69,7 +73,7 @@ const select_field = decoration_field(set_select, 'cm-hl-select')
 const issue_field  = decoration_field(set_issue,  'cm-hl-issue')
 
 const cursor_broadcast = EditorView.updateListener.of(update => {
-  if (update.docChanged) schedule_build()
+  if (update.docChanged) { schedule_build(); refresh_edited_indicator() }
   // Broadcast select ONLY on explicit cursor moves (click, arrow keys) — not
   // on typing-induced moves. Typing both moves the cursor and changes the
   // doc, and re-broadcasting on every keystroke would clobber whatever the
@@ -190,9 +194,22 @@ view.dom.addEventListener('mouseleave', () => {
 function get_doc() { return view.state.doc.toString() }
 
 function set_doc(text) {
+  // Record the baseline before dispatching so the docChanged listener that
+  // fires synchronously during dispatch sees doc === baseline (not edited).
+  loaded_baseline = text
   view.dispatch({
     changes: { from: 0, to: view.state.doc.length, insert: text },
   })
+  refresh_edited_indicator()
+}
+
+// "edited" = the doc no longer matches what we loaded. Drives the marker in
+// the editor panel header and gates the rig-switch discard prompt.
+function refresh_edited_indicator() {
+  let edited = get_doc() !== loaded_baseline
+  if (window.workshop) window.workshop.edited = edited
+  let marker = document.getElementById('editor-edited')
+  if (marker) marker.hidden = !edited
 }
 
 function escape_html(s) {
@@ -262,19 +279,25 @@ async function build() {
   if (_last_issue_hashes.size) {
     view.dispatch({ effects: set_issue.of(lines_for(_last_issue_hashes)) })
   }
-  // .toda load lifecycle: load_bytes ran decompile and stashed the resulting
-  // TRDL text on initial_toda_load.decompile_text. If the editor still shows
-  // exactly that text, the user hasn't edited — the build that fired here is
-  // the auto-build triggered by load_bytes's set_doc(text). Re-rendering with
-  // the recompiled bytes would replace viz/hex/rig-check with a lossy
-  // reconstruction of what the user just loaded (v1 decompile loses shield
-  // bytes, regenerates random shields, etc.). Skip the render and leave the
-  // canonical .json corkline alone. Once the user actually edits the TRDL,
-  // get_doc() will differ from decompile_text and rendering resumes.
+  // .toda load lifecycle. A .toda load renders the loaded (lossless) bytes
+  // into viz/hex and pins them as initial_toda_load; the editor shows the TRDL
+  // we put there (a decompilation, or — Case B — the canonical sibling .trdl),
+  // which equals loaded_baseline until the user edits.
+  //
+  //   * Unedited (get_doc() === loaded_baseline): keep the loaded bytes on
+  //     screen — re-rendering the recompiled bytes would replace them with a
+  //     lossy reconstruction (v1 decompile regenerates random shields, etc.).
+  //     Instead surface the decompile→recompile round-trip in the rig-check
+  //     panel only, without touching viz/hex.
+  //   * First edit (doc now differs): the editor is the source of truth. Drop
+  //     the baseline so the panel stops comparing against the loaded .toda;
+  //     viz/hex/rig-check flip to the recompiled bytes from here on.
   let init = window.workshop?.initial_toda_load
-  if (init && init.decompile_text != null && get_doc() === init.decompile_text) {
+  if (init && get_doc() === loaded_baseline) {
+    window.workshop.compare_roundtrip?.(bytes, corkline)
     return
   }
+  if (init) window.workshop.initial_toda_load = null
   // Don't overwrite a sidecar-supplied corkline with compile's idea —
   // sidecar is the authoritative source. Auto-default (top-left twist,
   // applied by app.js's notify_rendered) is also preserved across
@@ -291,7 +314,11 @@ async function build() {
   }
 }
 
-async function load_bytes(buf) {
+// Load .toda bytes. `editor_trdl`, when given, is a canonical sibling .trdl
+// (Case B): we put it in the editor instead of decompiling, so the round-trip
+// compares the loaded .toda against compile(canonical .trdl). Without it
+// (Case A — URL/file import, or a canned .toda with no .trdl) we decompile.
+async function load_bytes(buf, editor_trdl = null) {
   // Fail-fast: detect abjects and oversized files BEFORE running decompile,
   // the visualizer, or the hex dump. The workshop is for single test rigs;
   // abjects and big files belong in abject-workshop (see abject-workshop.md).
@@ -304,26 +331,26 @@ async function load_bytes(buf) {
     window.workshop.render_unsupported(check.bailReason)
     return
   }
-  // setting the doc fires the auto-build via the updateListener; render the
-  // original bytes immediately for instant feedback while the rebuild runs.
-  // Also pin this as the "initial toda load" so the rig-check panel can
-  // detect lossy decompile→recompile round-trips: if the recompile produces
-  // different bytes, we want to surface that rather than overwriting the
-  // first-pass rig-check results.
+  // set_doc fires the auto-build via the updateListener; render the loaded
+  // bytes immediately for instant (lossless) feedback while the rebuild runs.
+  // Pin this as the "initial toda load" so build() can keep the loaded bytes
+  // on screen and surface the decompile→recompile round-trip (compare_roundtrip)
+  // rather than overwriting the first-pass rig-check results.
   try {
     // window.workshop.corkline was just set by load_rig_meta (when the
     // sidecar carries a corkline hash). Pass it as a hint to decompile
     // so the corkline-line identification doesn't fall back to the
     // heuristic on rigs with non-canonical poptop topologies.
-    let text = await decompile(buf, window.workshop?.corkline || null)
+    let text = editor_trdl != null
+      ? editor_trdl
+      : await decompile(buf, window.workshop?.corkline || null)
     window.workshop.initial_toda_load = {
       bytes,
       rig_id:  active_rig,
       results: new Map(),       // checker_id → {state, badge, detail}
       workshop_check: check,    // reuse fail-fast result; show_abject_info caches off this
-      decompile_text: text,     // baseline for "has the user edited?" check in build()
     }
-    set_doc(text)
+    set_doc(text)               // sets loaded_baseline — build()'s "edited?" check
     last_built_bytes = buf
     window.workshop.render(buf)
   } catch (e) {
@@ -668,19 +695,49 @@ async function load_rig(path) {
     if (path.toLowerCase().endsWith('.trdl')) {
       set_doc(await res.text())                 // auto-build picks it up
     } else {
-      await load_bytes(await res.arrayBuffer()) // .toda → decompile path
+      // .toda. If a canonical sibling .trdl exists (Case B), show it in the
+      // editor and round-trip against compile(it); otherwise decompile (A).
+      let buf = await res.arrayBuffer()
+      await load_bytes(buf, await fetch_sibling_trdl(path))
     }
   } catch (err) {
     set_rigcheck('bad', 'LOAD ERROR', `${path}: ${err.message}`)
   }
 }
 
+// Fetch the canonical sibling .trdl for a canned .toda path, or null if there
+// isn't one. Same basename, .toda → .trdl (mirrors the .json sidecar lookup).
+// Consult the manifest rather than blind-probing — a missing sibling would
+// otherwise log a 404 to the console on every Case A load. RIGS lists both
+// .toda and .trdl under the sidebar roots. (On the very first load the walk
+// may not have finished; a Case B rig opened via initial URL hash then
+// degrades to Case A — decompiled rather than canonical TRDL — still a correct
+// rig, just not the hand-authored text.)
+async function fetch_sibling_trdl(toda_path) {
+  let trdl_url = toda_path.replace(/\.toda$/i, '.trdl')
+  if (trdl_url === toda_path || !RIGS.includes(trdl_url)) return null
+  try {
+    let res = await fetch(trdl_url)
+    return res.ok ? await res.text() : null
+  } catch { return null }
+}
+
 let rigs_list_el = document.getElementById('rigs-list')
 if (rigs_list_el) rigs_list_el.tabIndex = 0      // focusable so it can take key events
+
+// Loading a pre-built rig replaces the editor contents. If the user has
+// unsaved edits, confirm before discarding them. Guards the rigs list only —
+// Open / Load-URL are deliberate explicit actions.
+function confirm_discard_edits() {
+  if (!window.workshop?.edited) return true
+  return window.confirm(
+    'You have unsaved edits to this rig. Loading another will discard them. Continue?')
+}
 
 rigs_list_el?.addEventListener('click', async e => {
   let item = e.target.closest('.rig-item')
   if (!item) return
+  if (!confirm_discard_edits()) return
   load_rig(item.dataset.file)
 })
 
@@ -696,6 +753,7 @@ rigs_list_el?.addEventListener('keydown', e => {
   else if (e.key === 'Home')      next = 0
   else if (e.key === 'End')       next = items.length - 1
   let path = items[next].dataset.file
+  if (!confirm_discard_edits()) return
   load_rig(path)
   // load_rig synchronously re-renders the list (active class moves), so
   // the previous DOM nodes are detached. Scroll the *new* active item

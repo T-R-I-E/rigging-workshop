@@ -19,6 +19,7 @@ import { SECP256r1 } from './src/client/secp256r1.js'
 import { Abject } from './src/abject/abject.js'
 import { DelegableActionable } from './src/abject/actionable.js'
 import { DQ } from './src/abject/quantity.js'  // registers DQ interpreter
+import { bytes_struct_equal } from './toda/bytes_struct.js'
 
 const TWIST = 0x48
 const BODY  = 0x49
@@ -1316,11 +1317,6 @@ function bytes_equal(a, b) {
     return true
 }
 
-function results_differ(a, b) {
-    if (!a || !b) return true
-    return a.state !== b.state || a.detail !== b.detail
-}
-
 function badge_for(state) {
     return state === 'ok'    ? 'OK'
          : state === 'warn'  ? 'WARN'
@@ -1330,25 +1326,26 @@ function badge_for(state) {
 }
 
 // Determine which "pass" we're in for the current render. For .toda loads
-// we keep a baseline (the original bytes + the first-pass rig-check
-// results) so a lossy decompile→recompile cycle doesn't clobber the
-// baseline result; instead we surface the divergence below. The
-// load-rig lifecycle clears initial_toda_load whenever the user switches
-// rigs, so init being non-null already means "user hasn't moved on".
+// we keep a baseline (the original bytes + the first-pass rig-check results).
+// While that baseline exists the panel only ever renders the loaded
+// (lossless) bytes: focus/cork clicks re-render the same bytes, and the
+// decompile→recompile round-trip is surfaced separately by compare_roundtrip
+// (which never renders the recompiled bytes into viz/hex). The baseline is
+// dropped the moment the user edits the TRDL, so init being non-null means
+// "unedited .toda load, hasn't moved on".
 function classify_pass(ctx) {
     let init = window.workshop?.initial_toda_load
-    if (!init) return 'no-init'                         // .trdl / fresh editor / moved on
-    if (bytes_equal(ctx.bytes, init.bytes)) {
-        if (init.results.size === 0)                   return 'initial'
-        // Same bytes but the focus changed (user clicked a different twist
-        // in the viz) — the cached per-checker results are for the old
-        // focus and need to be re-run for the new one. Cork override
-        // (shift-click) also lands here via a different corkline.
-        if (init.last_focus !== ctx.twistHex)          return 'initial'
-        if (init.last_cork  !== ctx.corklineHex)       return 'initial'
-        return 'rebuild-same'
-    }
-    return 'rebuild-diff'
+    if (!init) return 'no-init'                         // .trdl / fresh editor / edited / moved on
+    // Bytes always match the baseline here (see above); the unequal branch is
+    // defensive — treat it as a fresh pass rather than a stale comparison.
+    if (!bytes_equal(ctx.bytes, init.bytes))           return 'initial'
+    if (init.results.size === 0)                       return 'initial'
+    // Same bytes but the focus changed (user clicked a different twist in the
+    // viz) — the cached per-checker results are for the old focus and need to
+    // be re-run. Cork override (shift-click) also lands here via a new cork.
+    if (init.last_focus !== ctx.twistHex)              return 'initial'
+    if (init.last_cork  !== ctx.corklineHex)           return 'initial'
+    return 'rebuild-same'                               // nothing changed → keep cached rows
 }
 
 // Rigging Workshop is for single test rigs (TRDL authoring). Abjects and
@@ -1473,49 +1470,6 @@ function show_abject_info(id) {
         return
     }
 
-    if (pass === 'rebuild-diff') {
-        // Append a divergence note + per-checker rows that differ from the
-        // initial pass. Don't touch the initial rows above. Replace any
-        // previously-rendered diff section so re-edits show fresh output,
-        // and drop any stale workshop-status banner now that we have new
-        // results to show.
-        let init = window.workshop.initial_toda_load
-        rc.querySelectorAll('[data-section="diff"], [data-section="workshop-status"]')
-            .forEach(e => e.remove())
-        rc.insertAdjacentHTML('beforeend',
-            `<div class="rig-diff-note" data-section="diff">` +
-            `recompiled bytes differ from the loaded .toda — re-running checkers</div>`)
-        // Run all checkers in parallel, render the differing rows in
-        // CHECKERS registry order. Pre-Promise.all this appended rows in
-        // finish-time order, so the panel reshuffled across re-edits as
-        // some checkers warmed up faster than others.
-        Promise.all(CHECKERS.map(async c => {
-            let t0 = performance.now()
-            try {
-                let { state, detail } = await c.run(ctx)
-                return { c, state, detail, dt: performance.now() - t0 }
-            } catch (e) {
-                console.error(`[${c.label}]`, e)
-                return {
-                    c, state: 'bad',
-                    detail: (e?.message || String(e)).slice(0, 120),
-                    dt: performance.now() - t0,
-                }
-            }
-        })).then(results => {
-            for (let { c, state, detail, dt } of results) {
-                let init_res = init.results.get(c.id)
-                if (!results_differ(init_res, { state, detail })) continue
-                rc.insertAdjacentHTML('beforeend',
-                    render_check_row(c, state, badge_for(state),
-                                     `${detail} · ${dt.toFixed(0)}ms`)
-                        .replace('class="rig-check',
-                                 'data-section="diff" class="rig-check'))
-            }
-        })
-        return
-    }
-
     // pass === 'initial' or 'no-init': fresh full render.
     // Stash the focus + corkline this pass used so classify_pass can
     // distinguish a click-driven focus change from a same-bytes rebuild.
@@ -1532,13 +1486,14 @@ function show_abject_info(id) {
     rc.innerHTML = CHECKERS.map(c =>
         render_check_row(c, '', 'CHECK', 'verifying…')).join('')
 
-    for (let c of CHECKERS) {
+    let runs = CHECKERS.map(c => {
         let t0 = performance.now()
-        c.run(ctx)
+        return c.run(ctx)
             .then(({state, detail}) => {
                 let dt = (performance.now() - t0).toFixed(0)
                 update_check_row(c.id, state, badge_for(state), `${detail} · ${dt}ms`)
-                // Snapshot the initial pass so future rebuilds can compare.
+                // Snapshot the initial pass so the decompile→recompile
+                // round-trip comparison (compare_roundtrip) has a baseline.
                 if (pass === 'initial') {
                     window.workshop.initial_toda_load.results.set(c.id, {state, detail})
                 }
@@ -1552,6 +1507,122 @@ function show_abject_info(id) {
                 }
                 console.error(`[${c.label}]`, e)
             })
+    })
+    // Completion signal so compare_roundtrip waits for the baseline to finish
+    // caching before diffing the recompiled rig against it.
+    if (pass === 'initial' && window.workshop?.initial_toda_load) {
+        window.workshop.initial_toda_load.results_ready = Promise.all(runs)
+    }
+}
+
+// Human-readable summary of a bytes_struct_equal diff: "twist 6→7, body 6→7".
+function struct_summary(struct) {
+    if (struct.error)  return struct.error
+    if (!struct.diff)  return struct.reason || 'differs'
+    return Object.entries(struct.diff)
+        .map(([k, { a, b }]) => `${k} ${a}→${b}`).join(', ')
+}
+
+// Decompile→recompile round-trip surfacing for an *unedited* .toda load.
+// editor.js's build() calls this when the editor still shows exactly the TRDL
+// we loaded (decompiled, or — Case B — the canonical sibling .trdl). The
+// viz/hex stay on the loaded .toda bytes (lossless); here we ask whether the
+// editor's TRDL recompiles back to the same rig. The loaded rig's hashes don't
+// exist in the recompiled bytes (fresh shields/sigs), so the structural check
+// is shape-count level (bytes_struct_equal) and the checker rerun uses the
+// recompiled rig's OWN corkline (from compile) and focus (atoms.focus).
+//
+// Divergence → a "second copy": a note (naming the structural diff when there
+// is one) plus checker rows below the initial pass. Per spec, a structural
+// difference shows ALL recompiled checker rows even when their verdicts agree;
+// otherwise only the checkers whose verdict changed are shown. Same structure
+// and matching verdicts → nothing appended.
+async function compare_roundtrip(recompiled, recompiled_cork) {
+    let init = window.workshop?.initial_toda_load
+    let rc = el('rigcheck')
+    if (!init || !rc) return
+    let rebuilt = recompiled instanceof Uint8Array
+        ? recompiled : new Uint8Array(recompiled)
+
+    // Byte-identical recompile (deterministic shielded:false rigs): nothing
+    // can diverge, so skip the structural check and the (network) checker
+    // rerun entirely. Clear any prior round-trip section and bail.
+    if (bytes_equal(init.bytes, rebuilt)) {
+        rc.querySelectorAll('[data-section="diff"]').forEach(e => e.remove())
+        return
+    }
+
+    // 1. Structural comparison (shape-count level; see bytes_struct.js).
+    let struct
+    try {
+        struct = bytes_struct_equal(init.bytes, rebuilt)
+    } catch (e) {
+        struct = { equal: false, reason: 'parse-error', error: String(e?.message || e) }
+    }
+
+    // 2. Self-consistent ctx for the recompiled bytes (its own cork + focus).
+    let ctx = null
+    try {
+        let atoms = Atoms.fromBytes(rebuilt)
+        let focus = atoms.focus
+        if (focus && recompiled_cork) {
+            let twist = new Twist(atoms, focus)
+            ctx = {
+                twist,
+                corklineHash: Hash.fromHex(recompiled_cork),
+                twistHash:    twist.getHash(),
+                bytes:        rebuilt,
+                corklineHex:  recompiled_cork,
+                twistHex:     focus.toString(),
+            }
+        }
+    } catch (_e) { /* no ctx → structural note only, checkers skipped */ }
+
+    // Wait for the initial pass to finish caching its baseline, then bail if
+    // the user moved on (new load / edit nulled the baseline) meanwhile.
+    await (init.results_ready || Promise.resolve())
+    let current = () => window.workshop?.initial_toda_load === init
+    if (!current() || init.results.size === 0) return
+
+    let results = ctx
+        ? await Promise.all(CHECKERS.map(async c => {
+            let t0 = performance.now()
+            try {
+                let { state, detail } = await c.run(ctx)
+                return { c, state, detail, dt: performance.now() - t0 }
+            } catch (e) {
+                return { c, state: 'bad',
+                         detail: (e?.message || String(e)).slice(0, 120),
+                         dt: performance.now() - t0 }
+            }
+          }))
+        : []
+    if (!current()) return
+
+    // Verdict comparison is state-only: detail strings quote rig-specific
+    // hashes that always differ between the loaded and recompiled rigs.
+    let changed = results.filter(({ c, state }) =>
+        init.results.get(c.id)?.state !== state)
+    let diverged = !struct.equal || changed.length > 0
+
+    // Re-entrant: drop any prior round-trip section before re-rendering.
+    rc.querySelectorAll('[data-section="diff"]').forEach(e => e.remove())
+    if (!diverged) return
+
+    let note = struct.equal
+        ? 'decompile→recompile: checker verdicts differ from the loaded .toda'
+        : `decompile→recompile: structure differs from the loaded .toda (${struct_summary(struct)}) — recompiled checkers below`
+    rc.insertAdjacentHTML('beforeend',
+        `<div class="rig-diff-note" data-section="diff">${escape_text(note)}</div>`)
+
+    for (let { c, state, detail, dt } of (struct.equal ? changed : results)) {
+        rc.insertAdjacentHTML('beforeend',
+            render_check_row(c, state, badge_for(state), `${detail} · ${dt.toFixed(0)}ms`)
+                .replace('class="rig-check', 'data-section="diff" class="rig-check'))
+    }
+    if (!ctx) {
+        rc.insertAdjacentHTML('beforeend',
+            `<div class="rig-diff-note" data-section="diff">checkers skipped — no corkline for the recompiled rig</div>`)
     }
 }
 
@@ -1559,6 +1630,7 @@ function show_abject_info(id) {
 // Public API
 window.workshop = {
     render(buffer) { return showpipe(buffer) },
+    compare_roundtrip,
     select_node, highlight_node,
     check_supported: check_workshop_supported,
     render_unsupported(info) {
