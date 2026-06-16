@@ -682,6 +682,15 @@ async function load_rig(path) {
     let want = '#' + path
     if (location.hash !== want) window.history.replaceState(null, '', want)
   } catch {}
+  // Reset the corkline before loading the new rig. load_rig_meta only *sets*
+  // it when the sidecar carries one, so without this a rig whose sidecar has
+  // `corkline: null` would inherit the previously-loaded rig's corkline —
+  // making its rig-check result depend on navigation history. After the reset,
+  // such a rig falls through to notify_rendered's auto-default (its own
+  // top-left twist), which is deterministic. (deselect_rig does this for
+  // file/URL loads; load_rig needs it too.)
+  window.workshop.corkline = null
+  window.workshop.corkline_source = null
   // Await the meta fetch so that workshop.corkline is set from the canonical
   // JSON before load_bytes triggers an immediate render — otherwise the
   // .toda rig-check fires with no corkline yet.
