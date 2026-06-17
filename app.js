@@ -1155,9 +1155,8 @@ async function rust_check(ctx) {
 // rignet checker — the rignet project's TypeScript interpreter, compiled to
 // browser ES modules (toda/rignet/, tsc output of ../rignet/src — check path
 // only, so no node:fs / torrent code). Loaded lazily like rust; a failed load
-// degrades to 'broke'. Unlike js/clj/bb/rust, rignet's checkRig takes only the
-// corkline and derives the focus from the file, so it verifies the rig's own
-// focus rather than the user-clicked twist (ctx.twistHex is not consulted).
+// degrades to 'broke'. checkRig's third arg is a focus override, so we pass
+// ctx.twistHex to pivot on the user-selected twist like js/clj/bb/rust.
 let _rignet_load
 async function load_rignet() {
     if (!_rignet_load) _rignet_load = (async () => {
@@ -1187,7 +1186,7 @@ async function rignet_check(ctx) {
             atoms.push(atm)
             offset += atm.serialized.length
         }
-        let colour = await r.checkRig(r.lat(atoms), ctx.corklineHex)
+        let colour = await r.checkRig(r.lat(atoms), ctx.corklineHex, ctx.twistHex)
         let state = colour === 'green' ? 'ok' : colour === 'yellow' ? 'warn' : 'bad'
         return { state, detail: colour }
     } catch (e) {

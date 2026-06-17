@@ -969,8 +969,13 @@ export async function evalRig(conn, corkHex, focusHex) {
     }
 }
 // ── Test harness entry point ───────────────────────────
-export async function checkRig(l, corklineHex) {
-    const focus = latFocus(l);
+export async function checkRig(l, corklineHex, focusOverride) {
+    // The focus identifies which twist's support is being verified. It normally
+    // comes from the LAT (the last twist), but a caller may supply focusOverride
+    // to rerun the same rig against a different focus without re-parsing — this
+    // mirrors toda-bb's `(interpret conn cork-hex focus-hex)`, whose focus-hex is
+    // an explicit argument.
+    const focus = focusOverride ?? latFocus(l);
     const conn = createDb();
     try {
         await loadTwists(conn, l);

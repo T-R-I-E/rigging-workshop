@@ -130,8 +130,8 @@ async function rust_check(ctx) {
 
 // rignet runs entirely in-browser from the compiled bundle at toda/rignet/.
 // Replicates rignet's parseTodaBytes inline (its index.ts pulls node:fs):
-// atomFromBytes loop → lat → checkRig. checkRig takes only the corkline and
-// derives the focus from the file (so it ignores ctx.twistHex, like app.js).
+// atomFromBytes loop → lat → checkRig. checkRig's third arg is a focus
+// override — pass ctx.twistHex so it pivots on the same twist as the others.
 async function rignet_check(ctx) {
   try {
     let bytes = ctx.bytes instanceof Uint8Array ? ctx.bytes : new Uint8Array(ctx.bytes)
@@ -141,7 +141,7 @@ async function rignet_check(ctx) {
       atoms.push(atm)
       offset += atm.serialized.length
     }
-    let colour = await rignet_checkRig(rignet_lat(atoms), ctx.corklineHex)
+    let colour = await rignet_checkRig(rignet_lat(atoms), ctx.corklineHex, ctx.twistHex)
     return { v: colour === 'green' ? 'ok' : colour === 'yellow' ? 'warn' : 'bad', detail: colour }
   } catch (e) {
     return { v: 'broke', detail: e.message || String(e) }
