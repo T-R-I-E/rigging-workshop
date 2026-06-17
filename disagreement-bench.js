@@ -274,8 +274,7 @@ function canonical_pill(c) {
   return `<span class="v-${c}">${c.toUpperCase()}</span>`
 }
 
-function render_row(tbody, r) {
-  let tr = document.createElement('tr')
+function render_row(tr, r) {
   let basename = r.path.replace(/^.*\//, '').replace(/\.(trdl|toda)$/, '')
   let verdict, vClass
   if (r.error) {
@@ -310,7 +309,6 @@ function render_row(tbody, r) {
     cells +
     `<td><span class="verdict ${vClass}">${escape_html(verdict)}</span></td>` +
     `<td class="note">${note}</td>`
-  tbody.appendChild(tr)
 }
 
 function escape_html(s) {
@@ -342,16 +340,42 @@ async function run_all() {
     ? RIGS.filter(p => p.toLowerCase().includes(filter))
     : RIGS
 
-  _results = []
+  _results = new Array(targets.length)
+  // Pre-create one row per target, in order, then fill each in place as its
+  // rig finishes — so concurrent completion still renders in a stable order.
+  let rows = targets.map(p => {
+    let tr = document.createElement('tr')
+    tr.innerHTML =
+      `<td class="path" title="${escape_html(p)}">${escape_html(p.replace(/^.*\//, '').replace(/\.(trdl|toda)$/, ''))}</td>` +
+      `<td colspan="8" class="note">…</td>`
+    tbody.appendChild(tr)
+    return tr
+  })
+
+  // Bounded concurrency pool: run N rigs in flight so their network waits
+  // (the remote clj/bb checkers — ~100ms each — dominate the wall-clock)
+  // overlap instead of running strictly serially. Each worker pulls the next
+  // index until drained; next++ is atomic between await points (single-
+  // threaded JS), so no two workers grab the same rig.
+  const CONCURRENCY = 12
+  let next = 0, done = 0
+  async function worker() {
+    while (next < targets.length) {
+      let i = next++
+      let r = await run_one(targets[i])
+      _results[i] = r
+      render_row(rows[i], r)
+      progress.textContent = `${++done}/${targets.length}`
+    }
+  }
+  await Promise.all(
+    Array.from({ length: Math.min(CONCURRENCY, targets.length) }, worker))
+
   let perfect = 0, partial = 0, noneAgree = 0, errs = 0
   let perChecker = Object.fromEntries(CHECKER_KEYS.map(k => [k, 0]))
-  for (let i = 0; i < targets.length; i++) {
-    progress.textContent = `${i + 1}/${targets.length} · ${targets[i].replace(/^.*\//, '')}`
-    let r = await run_one(targets[i])
-    _results.push(r)
-    render_row(tbody, r)
+  for (let r of _results) {
     if (r.error) errs++
-    else if (r.canonicalAgreementCount === 4) perfect++
+    else if (r.canonicalAgreementCount === CHECKER_KEYS.length) perfect++
     else if (r.canonicalAgreementCount === 0) noneAgree++
     else partial++
     if (r.colours && r.canonical) {
