@@ -327,8 +327,7 @@ function pill(v) {
   return `<span class="v-${v.v || v}">${(v.v || v).toUpperCase()}</span>`
 }
 
-function render_row(tbody, r) {
-  let tr = document.createElement('tr')
+function render_row(tr, r) {
   let basename = r.path.replace(/^.*\//, '').replace(/\.toda$/, '')
   let oc = r.orig || {}, rc = r.rec || {}
   let verdict, vClass
@@ -376,7 +375,6 @@ function render_row(tbody, r) {
     `<td>${shapeCell}</td>` +
     `<td><span class="verdict ${vClass}">${verdict}</span></td>` +
     `<td class="note">${escape_html(note)}</td>`
-  tbody.appendChild(tr)
 }
 
 function escape_html(s) {
@@ -408,13 +406,39 @@ async function run_all() {
     ? FIXTURES.filter(f => f.toLowerCase().includes(filter))
     : FIXTURES
 
-  _results = []
+  _results = new Array(targets.length)
+  // Pre-create one row per target, in order, then fill each in place as its
+  // rig finishes — so concurrent completion still renders in a stable order.
+  let rows = targets.map(p => {
+    let tr = document.createElement('tr')
+    tr.innerHTML =
+      `<td title="${escape_html(p)}">${escape_html(p.replace(/^.*\//, '').replace(/\.toda$/, ''))}</td>` +
+      `<td colspan="12" class="note">…</td>`
+    tbody.appendChild(tr)
+    return tr
+  })
+
+  // Bounded concurrency pool: run N rigs in flight so their network waits
+  // (the remote clj/bb checkers — ~100ms each, twice per rig — dominate the
+  // wall-clock) overlap instead of running strictly serially. Each worker
+  // pulls the next index until the list is drained. next++ is atomic between
+  // await points (single-threaded JS), so no two workers grab the same rig.
+  const CONCURRENCY = 12
+  let next = 0, done = 0
+  async function worker() {
+    while (next < targets.length) {
+      let i = next++
+      let r = await run_one(targets[i])
+      _results[i] = r
+      render_row(rows[i], r)
+      progress.textContent = `${++done}/${targets.length}`
+    }
+  }
+  await Promise.all(
+    Array.from({ length: Math.min(CONCURRENCY, targets.length) }, worker))
+
   let perfect = 0, imperfect = 0, errs = 0
-  for (let i = 0; i < targets.length; i++) {
-    progress.textContent = `${i + 1}/${targets.length} · ${targets[i].replace(/^.*\//, '')}`
-    let r = await run_one(targets[i])
-    _results.push(r)
-    render_row(tbody, r)
+  for (let r of _results) {
     if (r.error || r.recompileError) errs++
     else if (r.rigPerfect)            perfect++
     else                              imperfect++
