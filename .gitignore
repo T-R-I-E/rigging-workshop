@@ -13,3 +13,5 @@ extras/
 tmp/
 
 rignet
+rignet/
+rignet/*
