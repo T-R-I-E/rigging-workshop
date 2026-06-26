@@ -84,6 +84,13 @@ function collect_twist_specs(lines) {
   return out
 }
 
+// "corkline[0]" → "corkline_0" (twist-id form); plain ids pass through.
+function ref_to_kw(s) {
+  if (s == null) return null
+  let m = /^(.+)\[(\d+)\]$/.exec(s)
+  return m ? `${m[1]}_${m[2]}` : s
+}
+
 function twist_deps(spec, all_ids) {
   let deps = new Set()
   let add  = id => { if (id && all_ids.has(id)) deps.add(id) }
@@ -188,11 +195,15 @@ async function build_reqsat_map(reqsat_specs) {
   return map
 }
 
-async function build_twists(lines, trie_specs = [], reqsat_map = new Map()) {
-  let all_specs = collect_twist_specs(lines)
+async function build_twists(lines, trie_specs = [], reqsat_map = new Map(), overrides = new Map()) {
+  // `overrides` maps a twist id to a pre-built atom lat (an `atom` entity whose
+  // id names this twist — see build()). Skip generating those twists and seed
+  // the map with the override atom, so references resolve to its identifier.
+  let all_specs = collect_twist_specs(lines).filter(s => !overrides.has(s.id))
   let by_id     = new Map(all_specs.map(s => [s.id, s]))
   let line_keys = await collect_line_keypairs(all_specs)
   let twists    = new Map()
+  for (let [tid, lat] of overrides) twists.set(tid, lat)
   // Validate every line's reqsat field — either it's one of the
   // legacy literals (null / none / ed25519) or it matches a named reqsat
   // entity declared by the rig. ("none" is the implicit reqsat for the null
@@ -526,21 +537,31 @@ function assemble_output(twists, output) {
 // `length` overrides the BE32 length field in the packet — used by
 // designed-bad rigs that intentionally encode the wrong length so the
 // atom hash differs from the canonical (length-correct) one.
+// Build one atom entity into a single-atom lat. Content comes from `raw`
+// (verbatim hex) or `data` (a bitstream expression). The identifier is the
+// computed packet hash unless `id` (a value expression) overrides it — used to
+// declare an atom with a specific, possibly non-canonical identifier (and, when
+// that id names a twist, to override the twist — see build()).
+async function build_one_atom(entry) {
+  let { shape, raw, data, length, id } = entry
+  let shape_byte = typeof shape === 'number' ? shape : SHAPE[shape]
+  if (shape_byte == null) return new Map()
+  let content
+  if (raw != null)       content = hex_to_bytes(raw)
+  else if (data != null) content = await evaluate(data)
+  else                   content = new Uint8Array(0)
+  let len_field = (length != null) ? length : content.length
+  if (id != null)
+    return packet_with_id(shape_byte, len_field, content, await evaluate(id))
+  if (length != null && length !== content.length)
+    return await packet_with_length(shape_byte, len_field, content)
+  return await from_packet(shape_byte, content)
+}
+
 async function build_atoms(atom_entries) {
   let lat = new Map()
   for (let entry of atom_entries) {
-    let { shape, raw, data, length } = entry
-    let shape_byte = typeof shape === 'number' ? shape : SHAPE[shape]
-    if (shape_byte == null) continue
-    let content
-    if (raw != null)       content = hex_to_bytes(raw)
-    else if (data != null) content = await evaluate(data)
-    else                   content = new Uint8Array(0)
-    let len_field = (length != null) ? length : content.length
-    let atom_lat = (length != null && length !== content.length)
-      ? await packet_with_length(shape_byte, len_field, content)
-      : await from_packet(shape_byte, content)
-    for (let [k, v] of atom_lat) {
+    for (let [k, v] of await build_one_atom(entry)) {
       if (lat.has(k)) lat.delete(k)
       lat.set(k, v)
     }
@@ -562,10 +583,33 @@ async function packet_with_length(shape_byte, length, content) {
   return lat
 }
 
+// Like packet_with_length but stores the packet under a caller-supplied
+// identifier (the full hash bytes, e.g. 0x01 + a 32-byte digest) instead of the
+// computed sha-256 hash. Used by the `id` override on an atom entity.
+function packet_with_id(shape_byte, length, content, id_bytes) {
+  let pkt = byte_concat(new Uint8Array([shape_byte]), be32(length), content)
+  let atom_bytes = byte_concat(id_bytes, pkt)
+  let lat = new Map()
+  lat.set(bytes_to_hex(id_bytes), atom_bytes)
+  return lat
+}
+
 // Public entry point. Returns { bytes, twists, corkline_h }.
 export async function build(spec) {
   let reqsat_map = await build_reqsat_map(spec.reqsats ?? [])
-  let { twists, trie_lat } = await build_twists(spec.lines, spec.tries ?? [], reqsat_map)
+  // An `atom` entity whose id names a twist overrides that twist (spec
+  // granularity: atom is the finest object). Build those first, keyed by the
+  // twist id, and hand them to build_twists to seed + skip; the rest merge as
+  // extras below.
+  let twist_ids   = new Set(collect_twist_specs(spec.lines).map(s => s.id))
+  let overrides   = new Map()
+  let extra_atoms = []
+  for (let entry of (spec.atoms ?? [])) {
+    let tid = ref_to_kw(entry.hash)
+    if (tid != null && twist_ids.has(tid)) overrides.set(tid, await build_one_atom(entry))
+    else extra_atoms.push(entry)
+  }
+  let { twists, trie_lat } = await build_twists(spec.lines, spec.tries ?? [], reqsat_map, overrides)
   let out_lat = assemble_output(twists, spec.output)
   // Atom + trie entities are merged at the BEGINNING of the byte
   // stream. Several rig-checkers treat the last atom in the bundle
@@ -574,8 +618,8 @@ export async function build(spec) {
   // final-atom-is-focus invariant while still ensuring the extras
   // are present.
   let extras_lat = null
-  if (spec.atoms?.length) {
-    extras_lat = await build_atoms(spec.atoms)
+  if (extra_atoms.length) {
+    extras_lat = await build_atoms(extra_atoms)
   }
   if (trie_lat && trie_lat.size) {
     if (extras_lat) {

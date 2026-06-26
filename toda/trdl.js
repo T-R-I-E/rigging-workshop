@@ -476,8 +476,9 @@ export function trdl_to_spec(entities) {
   //     values.js (utility functions, symbols, constants, concat).
   //
   // Spec also defines `shape` (name or integer), `alg`, `length`, `id`.
-  // For phase 2 we wire `data`, integer `shape`, and `length`; `alg` and
-  // `id` arrive with phase 4 alongside reqsat/trie/spool.
+  // `id` overrides the computed identifier (compile stores the atom under it),
+  // and an atom whose id matches a twist id overrides that twist. `alg` is
+  // still pending.
   let atoms = entities
     .filter(e => e.entity_type === 'atom')
     .map(e => ({
@@ -486,6 +487,7 @@ export function trdl_to_spec(entities) {
       raw:    e.raw,
       data:   e.data,
       length: e.length,
+      id:     e.id,
     }))
 
   // Trie entities — built into pairtrie atoms by compile.js after
