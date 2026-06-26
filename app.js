@@ -464,7 +464,7 @@ function notify_rendered(env) {
     // twist has the minimum x.
     //
     // Compile's own corkline_h (from build() in editor.js) is NOT
-    // authoritative here — decompile can pick a non-canonical poptop
+    // authoritative here — decompile can pick a non-canonical corkline
     // for unusual rigs, and the user's mental model is the visual
     // top-left, not whatever the recompile chose.
     let src = window.workshop?.corkline_source

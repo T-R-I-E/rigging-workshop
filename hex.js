@@ -119,7 +119,7 @@ function is_null_slot(slot) { return !slot || slot === '00' || slot === 'ff' }
 // ---- Names: position-in-rig labels for every atom ----
 // Build a Map<hash → friendly name> by walking the twist prev-chains to
 // identify lines, then assigning twist[i] / body of twist[i] / pairtrie
-// twist[i]rigs / pairtrie lineNamereqs / etc. The "poptop" line is the one
+// twist[i]rigs / pairtrie lineNamereqs / etc. The "corkline" line is the one
 // containing the workshop's canonical corkline hash; other lines get a, b,
 // c, … in discovery order. Anything not nameable that way falls through to
 // `arb #N` / `pairtrie #N` numbered by atom discovery order.
@@ -161,18 +161,18 @@ function compute_names(env) {
     lines.push(chain)
   }
 
-  // Pick which line is "poptop" (the corkline). The workshop's
-  // `window.workshop.corkline` is the canonical poptop twist hash; whichever
-  // line contains it is named poptop. The rest get a, b, c, ….
+  // Pick which line is the "corkline". The workshop's
+  // `window.workshop.corkline` is the canonical corkline twist hash; whichever
+  // line contains it is named corkline. The rest get a, b, c, ….
   let corkline = window.workshop?.corkline
-  let poptop_idx = -1
+  let corkline_idx = -1
   if (corkline) {
     for (let i = 0; i < lines.length; i++) {
-      if (lines[i].includes(corkline)) { poptop_idx = i; break }
+      if (lines[i].includes(corkline)) { corkline_idx = i; break }
     }
   }
   let line_names = new Array(lines.length)
-  if (poptop_idx >= 0) line_names[poptop_idx] = 'poptop'
+  if (corkline_idx >= 0) line_names[corkline_idx] = 'corkline'
   let next_letter = 'a'.charCodeAt(0)
   for (let i = 0; i < lines.length; i++) {
     if (line_names[i]) continue

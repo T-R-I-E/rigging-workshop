@@ -148,7 +148,7 @@ function name_lines(env, body_cache, lines) {
   let line_idx = new Map()
   lines.forEach((line, idx) => line.forEach(h => line_idx.set(h, idx)))
 
-  let poptop_idx = null, abject_idx = null
+  let corkline_idx = null, leadline_idx = null
   outer: for (let line of lines) {
     for (let h of line) {
       let carg = body_cache.get(h)?.carg
@@ -158,8 +158,8 @@ function name_lines(env, body_cache, lines) {
       let pairs = read_pairtrie(env, cargo_a)
       let entry = pairs.find(([k]) => k === SYM_POPTOP)
       if (entry) {
-        abject_idx = line_idx.get(h)
-        poptop_idx = line_idx.get(entry[1])
+        leadline_idx = line_idx.get(h)
+        corkline_idx = line_idx.get(entry[1])
         break outer
       }
     }
@@ -167,12 +167,12 @@ function name_lines(env, body_cache, lines) {
 
   let other = []
   for (let i = 0; i < lines.length; i++) {
-    if (i !== poptop_idx && i !== abject_idx) other.push(i)
+    if (i !== corkline_idx && i !== leadline_idx) other.push(i)
   }
 
   let named = []
-  if (poptop_idx != null) named.push({ name: 'poptop', twists: lines[poptop_idx] })
-  if (abject_idx != null) named.push({ name: 'abject', twists: lines[abject_idx] })
+  if (corkline_idx != null) named.push({ name: 'corkline', twists: lines[corkline_idx] })
+  if (leadline_idx != null) named.push({ name: 'leadline', twists: lines[leadline_idx] })
   let letters = 'abcdefghijklmnopqrstuvwxyz'
   other.forEach((idx, i) => named.push({ name: letters[i], twists: lines[idx] }))
   return named
@@ -353,7 +353,7 @@ export async function decompile(buf, name = 'rig', corkline_hint = null) {
   let hitches    = await detect_hitches(env, body_cache, named)
   let crosses    = detect_cross_line_prevs(body_cache, named)
 
-  // Identify the corkline line. trdl_to_spec uses the rig entity's `poptop`
+  // Identify the corkline line. trdl_to_spec uses the rig entity's `corkline`
   // field to resolve which line's ids[0] becomes the corkline hash; without
   // a meaningful value it falls back to lines_map.values()[0] which is the
   // first-discovered line — for most test rigs that's the LEADLINE, and
@@ -420,7 +420,7 @@ export async function decompile(buf, name = 'rig', corkline_hint = null) {
                     ? hash_to_ref.get(last_atom.hash)
                     : null
   let rig_entity = corkline_line_name
-    ? { rig: name, poptop: corkline_line_name }
+    ? { rig: name, corkline: corkline_line_name }
     : { rig: name }
   if (focus_ref) rig_entity.focus = focus_ref
   out.push(rig_entity)
@@ -565,7 +565,7 @@ export async function decompile(buf, name = 'rig', corkline_hint = null) {
       }
       // Cargo: preserve the original body.carg verbatim for every twist.
       //
-      // trdl_to_spec's default for "other firsts" (non-poptop, non-abject)
+      // trdl_to_spec's default for "other firsts" (non-corkline, non-leadline)
       // is spec.cargo = `cargo-<line_name>` — a deterministic per-line
       // string hashed via str_to_hash, intended for hand-authored TRDL.
       // For decompile, we want the EXACT original cargo bytes so that

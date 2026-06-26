@@ -252,11 +252,11 @@ function collect_twist_overrides(twist_entities) {
   return out
 }
 
-function determine_line_order(lines_map, poptop_name, abject_name) {
+function determine_line_order(lines_map, corkline_name, leadline_name) {
   let others = [...lines_map.keys()]
-                 .filter(n => n !== poptop_name && n !== abject_name)
+                 .filter(n => n !== corkline_name && n !== leadline_name)
                  .sort()
-  return [poptop_name, abject_name, ...others]
+  return [corkline_name, leadline_name, ...others]
 }
 
 // ---- v2-feature gate ----
@@ -265,7 +265,7 @@ function determine_line_order(lines_map, poptop_name, abject_name) {
 // implements only the original Rigging Specification (basic-body
 // twists, shape 0x49). The new TRDL spec defaults `version` to 2 and
 // introduces liftable bodies, lift-tickets, end-hitches, and spool
-// poptops — none of which exist in the canonical compilers yet.
+// corklines — none of which exist in the canonical compilers yet.
 //
 // We accept and preserve these fields at parse time so authors can
 // write spec-shaped TRDL today, but refuse to compile rigs that
@@ -278,14 +278,14 @@ function validate_v1_compatible(rig_entity, line_entities, hitch_entities, twist
     throw new Error(
       `rig version ${version} is not yet supported; this workshop ` +
       `implements the original Rigging Specification only (version 1). ` +
-      `Liftable bodies, end-hitches, spool poptops, and lift-tickets ` +
+      `Liftable bodies, end-hitches, spool corklines, and lift-tickets ` +
       `are spec-defined but pending canonical implementation.`)
   }
   if (spool_entities.length) {
     throw new Error(
       `spool entities are a v2 feature, not implemented yet. ` +
       `(See spec §"spool" — addendum-level feature requiring liftable ` +
-      `bodies and a spool poptop.)`)
+      `bodies and a spool corkline.)`)
   }
   // Named reqsats: ed25519 and secp256r1 + rslist (canonical name
   // `reqsatlist`) are implemented. rsline has no canonical compiler
@@ -333,10 +333,15 @@ export function trdl_to_spec(entities) {
   validate_v1_compatible(rig_entity, line_entities, hitch_entities,
                           twist_entities, spool_entities, reqsat_entities)
 
-  let poptop_name = rig_entity?.poptop || 'poptop'
-  let abject_name = rig_entity?.abject || 'abject'
-
   let lines_map = expand_lines(line_entities)
+  // Rig terms: the corkline (bottom anchor line) and the leadline (the led
+  // line). Accept the legacy aliases poptop/abject; default to a line named
+  // "corkline"/"leadline" when present, else the legacy "poptop"/"abject" so
+  // the existing corpus (which names its lines poptop/abject) still loads.
+  let corkline_name = rig_entity?.corkline ?? rig_entity?.poptop
+    ?? (lines_map.has('corkline') ? 'corkline' : 'poptop')
+  let leadline_name = rig_entity?.leadline ?? rig_entity?.abject
+    ?? (lines_map.has('leadline') ? 'leadline' : 'abject')
   let hitch_data = expand_hitches(hitch_entities, lines_map)
   let { tethers, hoist_rigs, post_rigs, shield_sources } = hitch_data
 
@@ -345,7 +350,7 @@ export function trdl_to_spec(entities) {
   let fast_twists = new Set(tethers.keys())
   for (let [kw, o] of overrides) if (o.tether) fast_twists.add(kw)
 
-  let line_order = determine_line_order(lines_map, poptop_name, abject_name)
+  let line_order = determine_line_order(lines_map, corkline_name, leadline_name)
 
   let edn_lines = new Map()
   for (let line_name of line_order) {
@@ -356,7 +361,7 @@ export function trdl_to_spec(entities) {
     // the reqs/sats trie, so "none" and "null" are synonyms here: both mean
     // "no reqsat". (Bare "null"/falsy also collapse to no reqsat.)
     let reqsat_kw = (reqsat && reqsat !== 'null' && reqsat !== 'none') ? reqsat : null
-    let poptop_first = lines_map.get(poptop_name)?.ids[0]
+    let corkline_first = lines_map.get(corkline_name)?.ids[0]
 
     let specs = ids.map((id, i) => {
       let override   = overrides.get(id) || {}
@@ -368,9 +373,9 @@ export function trdl_to_spec(entities) {
       let shield_hex  = (shielded && is_fast && tether_kw && !override.shield)
                           ? random_shield_hex() : null
       let shield_src  = shield_sources.get(id) ?? null
-      let is_abject_first = (line_name === abject_name && i === 0)
-      let is_other_first  = (line_name !== poptop_name &&
-                             line_name !== abject_name && i === 0)
+      let is_leadline_first = (line_name === leadline_name && i === 0)
+      let is_other_first  = (line_name !== corkline_name &&
+                             line_name !== leadline_name && i === 0)
       // Decompile emits explicit `cargo` overrides — 'null' for
       // line-firsts whose original body.carg was NULL, 'arb:<hex>' /
       // literal hash for non-null. Presence of the key (rather than
@@ -434,7 +439,7 @@ export function trdl_to_spec(entities) {
         spec.shield = shield_hex
       }
       if (shield_src)           spec.shield_source = shield_src
-      if (is_abject_first)      spec.poptop        = poptop_first
+      if (is_leadline_first)      spec.poptop        = corkline_first
       else if (is_other_first && !hasCargoOverride && !hasCargoRawOverride)
                                 spec.cargo         = `cargo-${line_name}`
       if (hasCargoOverride)     spec.cargo         = override.cargo
@@ -514,14 +519,14 @@ export function trdl_to_spec(entities) {
       focus: focus_id_kw,
       merge:    last_ids,
       exclude:  [],
-      // Resolve the corkline ID to the named poptop line when present;
+      // Resolve the corkline ID to the named corkline line when present;
       // fall back to the first real line in lines_map otherwise. Without
       // this, single-line rigs (or anything whose corkline isn't called
-      // "poptop") returned corkline:null, so `workshop.corkline` after
+      // "corkline") returned corkline:null, so `workshop.corkline` after
       // recompile stayed pinned to the .json sidecar's canonical hash,
       // which doesn't appear in the recompiled bytes — and every checker
       // got handed a corkline twist that wasn't in the file.
-      corkline: (lines_map.get(poptop_name) ?? [...lines_map.values()][0])
+      corkline: (lines_map.get(corkline_name) ?? [...lines_map.values()][0])
                 ?.ids[0] ?? null,
     },
   }

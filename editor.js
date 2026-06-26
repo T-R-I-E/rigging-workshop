@@ -11,26 +11,26 @@ import { compile, decompile } from "./bridge.js"
 import { list_rigs } from "./rig-manifest.js"
 
 const STARTER = `{"rig":"Example rig from spec"}
-{"line":"poptop","twists":6,"shielded":false,"reqsat":"null"}
+{"line":"corkline","twists":6,"shielded":false,"reqsat":"null"}
 {"line":"a","twists":5,"shielded":false,"reqsat":"null"}
 {"line":"b","twists":2,"shielded":false,"reqsat":"null"}
 {"line":"c","twists":3,"shielded":false,"reqsat":"null"}
 {"line":"d","twists":5,"shielded":false,"reqsat":"null"}
 {"line":"e","twists":3,"shielded":false,"reqsat":"null"}
 {"line":"f","twists":7,"shielded":false,"reqsat":"null"}
-{"line":"abject","twists":6,"shielded":false,"reqsat":"null"}
-{"hitch":"Pb1","lead":"abject[0]","meet":"abject[1]","fastener":"f[1]","hoist":"f[4]"}
-{"hitch":"Pb2","lead":"abject[1]","meet":"abject[2]","fastener":"f[2]","hoist":"f[5]"}
-{"hitch":"Pb3","lead":"abject[2]","meet":"abject[3]","fastener":"e[1]","hoist":"e[2]"}
-{"hitch":"Pb4","lead":"abject[3]","meet":"abject[4]","fastener":"d[0]","hoist":"d[2]"}
-{"hitch":"Pb5","lead":"abject[4]","meet":"abject[5]","fastener":"d[1]","hoist":"d[3]"}
+{"line":"leadline","twists":6,"shielded":false,"reqsat":"null"}
+{"hitch":"Pb1","lead":"leadline[0]","meet":"leadline[1]","fastener":"f[1]","hoist":"f[4]"}
+{"hitch":"Pb2","lead":"leadline[1]","meet":"leadline[2]","fastener":"f[2]","hoist":"f[5]"}
+{"hitch":"Pb3","lead":"leadline[2]","meet":"leadline[3]","fastener":"e[1]","hoist":"e[2]"}
+{"hitch":"Pb4","lead":"leadline[3]","meet":"leadline[4]","fastener":"d[0]","hoist":"d[2]"}
+{"hitch":"Pb5","lead":"leadline[4]","meet":"leadline[5]","fastener":"d[1]","hoist":"d[3]"}
 {"hitch":"F1","lead":"f[0]","meet":"f[3]","fastener":"c[0]","hoist":"c[1]","post":"none"}
 {"hitch":"F2","lead":"f[3]","meet":"f[6]","fastener":"b[0]","hoist":"b[1]"}
-{"hitch":"C1","lead":"c[0]","meet":"c[2]","fastener":"poptop[1]","hoist":"poptop[3]"}
+{"hitch":"C1","lead":"c[0]","meet":"c[2]","fastener":"corkline[1]","hoist":"corkline[3]"}
 {"hitch":"D1","lead":"d[0]","meet":"d[4]","fastener":"a[1]","hoist":"a[3]"}
-{"hitch":"B1","lead":"b[0]","meet":"b[1]","fastener":"poptop[0]","hoist":"poptop[4]"}
+{"hitch":"B1","lead":"b[0]","meet":"b[1]","fastener":"corkline[0]","hoist":"corkline[4]"}
 {"hitch":"E1","lead":"e[0]","meet":"e[2]","fastener":"a[0]","hoist":"a[2]"}
-{"hitch":"A1","lead":"a[0]","meet":"a[4]","fastener":"poptop[2]","hoist":"poptop[5]"}`
+{"hitch":"A1","lead":"a[0]","meet":"a[4]","fastener":"corkline[2]","hoist":"corkline[5]"}`
 
 let last_built_bytes = null
 let line_hashes = []                         // entityIdx → [hash, ...]; from /compile
@@ -340,7 +340,7 @@ async function load_bytes(buf, editor_trdl = null) {
     // window.workshop.corkline was just set by load_rig_meta (when the
     // sidecar carries a corkline hash). Pass it as a hint to decompile
     // so the corkline-line identification doesn't fall back to the
-    // heuristic on rigs with non-canonical poptop topologies.
+    // heuristic on rigs with non-canonical corkline topologies.
     let text = editor_trdl != null
       ? editor_trdl
       : await decompile(buf, window.workshop?.corkline || null)
