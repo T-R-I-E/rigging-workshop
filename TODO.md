@@ -150,26 +150,9 @@
   recorded state before the ALB swap: 29 pass · 0 fail · 3 skip.
 
 ## Open / next
-- **Tighten `bytes_struct_equal`** beyond shape counts: digest each
-  atom recursively (ignoring random-content positions: shield arbs,
-  ed25519 sig arbs, pubkey arbs) so structural-equivalent shielded rigs
-  can compare equal. Likely path: walk both rigs from the corkline,
-  build (atom-shape, child-digest-list) tuples, compare those.
-- **Investigate the 4 twist-loss cases**: real decompile lossiness.
-  `cork_prev_invalid_green/red` look line-related; `lashed_non_colinear`
-  and `corkline_incomplete_late` may be different mechanisms.
-- **Decide how to handle the 17 orphan-body fixtures** in the structural
-  test: either exclude them (their byte stream isn't a valid rig) or
-  add a TRDL `{"orphan_body":"<hash>"}` entity so the decompile can
-  preserve them verbatim.
-- **38 `arb_and_pairtrie` inflation cases**: are these all explained by
-  `shielded:true` default on lines that the original wasn't shielding?
-  Worth confirming by comparing trdl-emit shielded flags against the
-  original's actual shield-arb presence.
-- **`tests.html` skipped rigs (per CLAUDE.md TODO)**: tighten the harness
-  so a JS-only or server-only error reports as FAIL instead of silently
-  matching the existing skip path. Also: rigs 19/20 could be marked as
-  `expected-error` rather than counted in skip.
+Compiler-level items (bytes_struct tightening, twist-loss cases, orphan-body
+fixtures, inflation cases, parity-harness skip tightening) moved to the trdl
+repo's TODO.md with the August 2026 split.
 - **Heuristic dot colours**: only ~12 of the 60+ examples have an
   authoritative descriptor (those with a `tests/<dir>/*.json` or
   `todatests/rigging/*.json` sibling). The rest in `rigs/*.trdl` are
@@ -185,9 +168,6 @@
   3-5 for maintainable.
 
 ## Notes
-- `toda-twist-maker` fix lives on `dx-null-shield-fun` branch in todaclj.
-  Main server's JVM uses whatever is checked out at start time — restart
-  required after a branch switch.
-- `noble-ed25519` v2 is fetched from esm.sh; if esm.sh ever goes down,
-  vendor the file under `toda/vendor/`.
 - Push remains denied in this repo and the user manages all git in todaclj.
+- Compiler notes (esm.sh noble vendoring, dx-null-shield-fun branch) moved
+  to `../trdl/CLAUDE.md`.

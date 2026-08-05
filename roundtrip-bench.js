@@ -20,11 +20,11 @@ import { Line } from './src/core/line.js'
 import { Twist } from './src/core/twist.js'
 import { Hash } from './src/core/hash.js'
 
-import { decompile, emit_jsonl } from './toda/decompile.js'
-import { parse_trdl_string, trdl_to_spec } from './toda/trdl.js'
-import { build } from './toda/compile.js'
+import { decompile, emit_jsonl } from './trdl/decompile.js'
+import { parse_trdl_string, trdl_to_spec } from './trdl/trdl.js'
+import { build } from './trdl/compile.js'
 import { check_via_worker } from './toda/rustoda-wasm/client.js'
-import { extract_shape } from './toda/shape.js'
+import { extract_shape } from './trdl/shape.js'
 import { list_rigs } from './rig-manifest.js'
 
 // ----------------------------------------------------------------------------

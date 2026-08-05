@@ -2,7 +2,8 @@
 
 Browser tool for authoring TODA rigs in TRDL (a JSONL format) and visualising
 the resulting `.toda` bytes. Editor is the source of truth. Compile / decompile
-run entirely in the browser via the modules under `toda/`.
+run entirely in the browser via the sibling `../trdl` repo, imported through
+the `trdl` symlink.
 
 **Scope:** single test rigs (≤ ~500 twists). Abjects with delegation chains,
 sub-rigs, or external poptops are detected on load and bailed out with a
@@ -19,27 +20,20 @@ See [TODO.md](TODO.md) for current plan, tasks, and deferred items.
 - `app.js` — adapted copy of `../svgiewer/svgiewer.js`. Takes an `ArrayBuffer`,
   populates the viz / hex / metadata / rig-check panels.
 - `editor.js`, `hex.js`, `bridge.js` — workshop-specific glue.
-- `toda/` — JS port of `toda-twist-maker` + the parts of `toda-core` it needs.
-  - `bytes.js` — hex / sha256 / random / be32 primitives
-  - `lat.js` — atom packet build + Lat (insertion-ordered Map)
-  - `factory.js` — arb / pairtrie / hashes / body / twist atom builders
-  - `ed25519.js` — keypair / sign / req-sat pairtrie helpers (raw 32-byte keys)
-  - `trdl.js` — JSONL parser, classifier, trdl→spec, emit
-  - `compile.js` — build pipeline (TRDL → bytes)
-  - `decompile.js` — bytes → TRDL entities (unshielded path only in v1).
-    Exports `parse_atoms` for reuse by `bytes_struct.js`.
-  - `bytes_struct.js` — atom-level structural comparison of two .toda byte
-    streams (v1: per-shape atom counts). Used to assess decompile→recompile
-    round-trip fidelity when byte-equality isn't possible (random shields
-    / sigs / pubkeys).
-- `tests.html`, `tests.js` — byte-equality test harness vs the Clojure
-  rigchecker server (sibling `../rigchecker/`). Needs `clj -M:server`
-  running there on `localhost:7878`.
+- `trdl` — symlink to `../trdl/js`: the TRDL compiler / decompiler reference
+  implementation (JS port of `toda-twist-maker` + the parts of `toda-core`
+  it needs). Split out of this repo (August 2026, with git history) into the
+  sibling `../trdl` repo, which also holds the TRDL spec, the Node test
+  suites, and the browser byte-parity harness. See `../trdl/CLAUDE.md`.
+- `toda/` — rig-checker bundles only, now that the TRDL modules moved to
+  `../trdl`: holds `rustoda-wasm/` and `rignet/`, described below.
 - `src/`, `rels.js` — symlinks into `../svgiewer/`. Don't edit; they're shared.
-- `rigs/` — symlink into `../todaclj/toda-twist-maker/rigs/`. Workshop's
-  primary example set, served from a path that stays inside the served root.
+- `rigs/` — symlink into `../todaclj/toda-twist-maker/rigs/`. No longer read
+  by the app since the TRDL split (the trdl repo has its own `fixtures/`
+  symlinks); kept for manual browsing.
 - `tests/` — symlink into `../todaclj/toda-clj-tests/`. ~35 paired
-  `.trdl` / `.json` test rigs, organised by subdir.
+  `.trdl` / `.json` test rigs, organised by subdir. Same post-split status
+  as `rigs/`.
 - `todatests/` — symlink into `../todatests/`. ~60 paired `.toda` / `.json`
   rigging tests; `.toda` loads route through decompile.
 - `toda/rustoda-wasm/` — `wasm-pack build --target web --release` output
@@ -89,34 +83,14 @@ See [TODO.md](TODO.md) for current plan, tasks, and deferred items.
 2. Open `http://<host>/toda/riggingworkshop/` — the workshop runs entirely in
    the browser.
 
-## Running tests.html parity harness (optional)
+## TRDL tests
 
-`tests.html` calls `localhost:7878/compile` for byte-equality checks
-against the canonical Clojure compiler. Boot the server from the sibling
-rigchecker repo:
-
-```
-cd ../rigchecker && clj -M:server
-```
+The compiler's tests (Node suites + browser byte-parity harness) moved to
+the trdl repo with the split — see `../trdl/CLAUDE.md` for how to run them.
 
 ## Known v1 caveats
-- `ed25519.js` uses raw 32-byte public keys, which is the canonical format
-  per RFC 8032 §5.1.5 (and per the rustoda reqsat verifier's explicit
-  comment: "No SPKI/DER wrapping — Ed25519 has only one canonical form,
-  so the wrapping would be redundant given the reqsat trie key already
-  identifies the algorithm"). The Clojure twist-maker (`twist-maker.ed25519`)
-  encodes via Java's `.getEncoded` which produces X.509 SubjectPublicKeyInfo
-  bytes — diverging from the rest of the toolchain on `reqsat: ed25519`
-  rigs. The workshop is correct; the Clojure compiler is the outlier.
-- `decompile.js` finds candidate hoists by scanning rig pairtries for the
-  bare `I(meet)` value, then confirms the spec-canonical quad against the
-  lead's shield (NULL → plain hash, arb → prefixed hash). Works for both
-  shielded:true and shielded:false rigs.
-- Random shields make `shielded: true` rigs non-deterministic across runs.
-- Anonymous-line naming in decompile (`a`, `b`, `c`, …) follows JS atom
-  byte-discovery order, which can differ from the Clojure server's JVM
-  hash-bucket order. The resulting TRDL is structurally equivalent — same
-  rig, possibly different label assignment to nameless lines.
+Compiler-level caveats (ed25519 key format, decompile hoist detection,
+random shields, anonymous-line naming) moved to `../trdl/CLAUDE.md`.
 - Rig check uses `HalfHitchInterpreter` in `app.js`, a thin subclass of the
   canonical Interpreter that allows half-hitches: `hitchPost` returns null
   on a missing post-rig-entry instead of throwing `MissingPostEntry`, and
@@ -125,22 +99,6 @@ cd ../rigchecker && clj -M:server
   was a compile bug; this is about TRDL test rigs that use `post:"none"`
   to model the last hitch on a corkline.
 
-## TODO
-- **`tests.html` skipped rigs**: 3 of 32 are skipped, currently in a way
-  that hides per-side compile failures behind "skip". The 3 are:
-    - `5-lash-left-non-overlap-missing.trdl` — non-deterministic (random
-      shield/sig/dangling), legitimately can't byte-compare. Could move to
-      a parallel "structural equality" check instead of skipping.
-    - `19-fast-line-multiply-lashed-up-to-slow-line.trdl` — circular
-      dependency in twist specs (server agrees, both compilers reject it
-      symmetrically). Could mark as "expected error" so it's reported
-      instead of silently skipped.
-    - `20-slow-line-lashed-up-to-fast-line.trdl` — same circular dep as 19.
-  Also: the harness's skip path swallows *any* per-side compile error
-  (`tests.js:115-119` skips when *either* side errors, despite the comment
-  saying "both failing the same way"). Means a JS-only or server-only
-  failure currently masquerades as a skip. Tighten the harness to require
-  both sides to error symmetrically before skipping; otherwise FAIL.
 ## Git policy (overrides global)
 You manage git directly in this project. The global "manual git" rule does
 NOT apply here. `git push` remains denied at the permission layer; the user

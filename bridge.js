@@ -1,10 +1,11 @@
 // Compile / decompile bridge. As of the JS port, both run in-browser via the
-// modules under toda/. The Clojure server is no longer required at runtime.
+// sibling trdl repo (imported through the trdl/ symlink). The Clojure server
+// is no longer required at runtime.
 
-import { parse_trdl_string, trdl_to_spec } from './toda/trdl.js'
-import { build, entity_hashes }            from './toda/compile.js'
+import { parse_trdl_string, trdl_to_spec } from './trdl/trdl.js'
+import { build, entity_hashes }            from './trdl/compile.js'
 import { decompile as toda_decompile,
-         emit_jsonl }                      from './toda/decompile.js'
+         emit_jsonl }                      from './trdl/decompile.js'
 
 export async function compile(trdl_text) {
   let entities = parse_trdl_string(trdl_text)

@@ -19,7 +19,7 @@ import { SECP256r1 } from './src/client/secp256r1.js'
 import { Abject } from './src/abject/abject.js'
 import { DelegableActionable } from './src/abject/actionable.js'
 import { DQ } from './src/abject/quantity.js'  // registers DQ interpreter
-import { bytes_struct_equal } from './toda/bytes_struct.js'
+import { bytes_struct_equal } from './trdl/bytes_struct.js'
 
 const TWIST = 0x48
 const BODY  = 0x49
