@@ -28,12 +28,6 @@ See [TODO.md](TODO.md) for current plan, tasks, and deferred items.
 - `toda/` — rig-checker bundles only, now that the TRDL modules moved to
   `../trdl`: holds `rustoda-wasm/` and `rignet/`, described below.
 - `src/`, `rels.js` — symlinks into `../svgiewer/`. Don't edit; they're shared.
-- `rigs/` — symlink into `../todaclj/toda-twist-maker/rigs/`. No longer read
-  by the app since the TRDL split (the trdl repo has its own `fixtures/`
-  symlinks); kept for manual browsing.
-- `tests/` — symlink into `../todaclj/toda-clj-tests/`. ~35 paired
-  `.trdl` / `.json` test rigs, organised by subdir. Same post-split status
-  as `rigs/`.
 - `todatests/` — symlink into `../todatests/`. ~60 paired `.toda` / `.json`
   rigging tests; `.toda` loads route through decompile.
 - `toda/rustoda-wasm/` — `wasm-pack build --target web --release` output
