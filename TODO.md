@@ -153,6 +153,17 @@
 Compiler-level items (bytes_struct tightening, twist-loss cases, orphan-body
 fixtures, inflation cases, parity-harness skip tightening) moved to the trdl
 repo's TODO.md with the August 2026 split.
+- ! **v1-tests compile gaps** (work belongs in `../trdl`, blocking here):
+  6,367 of 6,633 `todatests/v1-tests/` fixtures fail to compile, so the
+  workshop lists them but can't build them. Ranked by fixtures unblocked —
+  hex literals 5,879, `name[i]suffix` refs 519, rslist `"none"` 292, `id`
+  aliasing 3. See the caveat in CLAUDE.md for the exact defects; re-measure
+  with `node tmp/probe-v2.mjs`.
+- **2 malformed v1-tests fixtures** to report upstream: both files under
+  `Half_hitch/hoist_incorporates_lead_and_meet_with_non-NULL_shield/` split
+  one JSON object over several lines, which JSONL disallows. Also
+  `Lat/valid_one_hitch_rig.trdl` is the only fixture with no comment header,
+  so it gets no dot and no rig-meta.
 - **Heuristic dot colours**: only ~12 of the 60+ examples have an
   authoritative descriptor (those with a `tests/<dir>/*.json` or
   `todatests/rigging/*.json` sibling). The rest in `rigs/*.trdl` are

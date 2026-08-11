@@ -28,8 +28,21 @@ See [TODO.md](TODO.md) for current plan, tasks, and deferred items.
 - `toda/` — rig-checker bundles only, now that the TRDL modules moved to
   `../trdl`: holds `rustoda-wasm/` and `rignet/`, described below.
 - `src/`, `rels.js` — symlinks into `../svgiewer/`. Don't edit; they're shared.
-- `todatests/` — symlink into `../todatests/`. ~60 paired `.toda` / `.json`
-  rigging tests; `.toda` loads route through decompile.
+- `todatests/` — symlink into `../todatests/`. Three fixture families, all
+  discovered by `rig-manifest.js` walking the static server's directory
+  indexes (adding a fixture needs no code change):
+  - `rigging/` + `reqsat/` — ~340 paired `.toda` / `.json` tests. `.toda`
+    loads route through decompile; the `.json` sidecar carries moniker /
+    colour / corkline.
+  - `v1-tests/` — 6,633 `.trdl` spec-conformance fixtures, nested
+    `<Structure>/<Property>/<Condition>.trdl`. **No `.json` sidecars**:
+    each file states its own expectation in a comment header (`Structure`,
+    `Property`, `Condition`, `Expected evaluation`), parsed by
+    `parse_trdl_header` in `editor.js`. `VALID` and `GREEN` mean the same
+    thing, and a few files underscore-join the words.
+  Index hrefs are percent-encoded and 5.7k v1-tests names contain `=`, so
+  the manifest decodes them — otherwise labels show `%3D` and filtering on
+  those names fails.
 - `toda/rustoda-wasm/` — `wasm-pack build --target web --release` output
   of `../rustoda` (the Rust rig-checker). Bundle is `rigcheck.js` (glue)
   + `rigcheck_bg.wasm` (~223 KB). Rebuild after changes to `../rustoda`
@@ -92,6 +105,19 @@ random shields, anonymous-line naming) moved to `../trdl/CLAUDE.md`.
   the walk-back. This is *not* the unshielded relaxation we removed — that
   was a compile bug; this is about TRDL test rigs that use `post:"none"`
   to model the last hitch on a corkline.
+- Most of `todatests/v1-tests/` does not compile yet — the workshop lists
+  and describes every fixture, but selecting one of these shows a TRDL
+  COMPILE ERROR. Measured 2026-08-11 over all 6,633 (`tmp/probe-v2.mjs`);
+  all four gaps are in `../trdl`, none in the workshop:
+  - 5,879 — hex literals (`{"atom": …, "shape": 0x00}`). `trdl-spec-2.md`
+    §atom explicitly sanctions these, but `parse_trdl_string` uses raw
+    `JSON.parse`. Fixing this one alone unblocks ~89%.
+  - 519 — `name[i]suffix` refs (`corkline[0]body`, `leadline[1]sats`).
+    `read_name` in `values.js` stops consuming at `]`.
+  - 292 — `"reqsat": "none"` as an rslist sub-entry.
+  - 5 — `id` aliasing to an unreferenced line (3), and 2 fixtures that put
+    one JSON object across several physical lines, which JSONL disallows —
+    that pair is a todatests bug, not a compiler gap.
 
 ## Git policy (overrides global)
 You manage git directly in this project. The global "manual git" rule does

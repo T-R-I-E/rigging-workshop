@@ -507,15 +507,64 @@ body {
   min-height: 0;
   margin: 0 -4px;
 }
-.rig-group {
+.rigs-filter {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--ink);
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 4px 6px;
+  margin: 0 0 6px 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+.rigs-filter:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.rigs-filter::placeholder { color: var(--ink-3); }
+/* Directory row in the fixture tree. */
+.rig-dir {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--ink-3);
+  letter-spacing: 0.04em;
+  padding: 4px 12px 4px 8px;
+  cursor: pointer;
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.rig-dir:hover { background: var(--panel-2); color: var(--ink-2); }
+.rig-dir.open  { color: var(--ink-2); }
+.rig-chevron {
+  flex: none;
+  width: 8px;
+  font-size: 9px;
+  opacity: 0.7;
+}
+.rig-dir-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rig-count {
+  flex: none;
+  margin-left: auto;
+  font-size: 9.5px;
+  color: var(--ink-3);
+  opacity: 0.75;
+}
+.rig-truncated {
   font-family: var(--mono);
   font-size: 10px;
   color: var(--ink-3);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  padding: 8px 12px 2px 8px;
+  padding: 8px;
+  font-style: italic;
 }
-.rig-group:first-child { padding-top: 0; }
 .rig-item {
   font-family: var(--mono);
   font-size: 11.5px;
@@ -571,6 +620,10 @@ body {
 .rig-meta .rm-colour.green::before  { background: var(--ok); }
 .rig-meta .rm-colour.yellow::before { background: var(--warn); }
 .rig-meta .rm-colour.red::before    { background: var(--bad); }
+/* v1-tests header fields: the spec condition a fixture probes. */
+.rig-meta .rm-expected  { color: var(--ink-2); }
+.rig-meta .rm-structure,
+.rig-meta .rm-property  { color: var(--ink-3); }
 
 /* Multi-checker layout. */
 .rig-check-list {

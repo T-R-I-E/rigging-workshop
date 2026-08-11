@@ -256,6 +256,17 @@ function set_rigcheck(klass, label, msg) {
   rc.innerHTML = `<span class="badge">${label}</span><div>${escape_html(msg)}</div>`
 }
 
+// Drop the previous rig's checker rows when switching fixtures. They describe
+// different bytes, and set_rigcheck appends the workshop status *below* them —
+// so a fixture that fails to compile would otherwise show the last rig's
+// verdicts ("OK rust · verified") sitting above its own compile error.
+function reset_rigcheck() {
+  let rc = document.getElementById('rigcheck')
+  if (!rc) return
+  rc.className = 'rig-check warn'
+  rc.innerHTML = '<span class="badge">CHECK</span><div>building…</div>'
+}
+
 async function build() {
   let my = ++build_seq
   let bytes, lineHashes, corkline
@@ -524,41 +535,131 @@ document.getElementById('btn-share').addEventListener('click', async () => {
 // on next page load without editing this file.
 let RIGS = []
 
-function group_label(path) {
-  let m = path.match(/^todatests\/([^/]+)/)
-  return m ? `todatests/${m[1]}` : 'other'
-}
-
 function rig_label(path) {
   let basename = path.replace(/^.*\//, '').replace(/\.(trdl|toda)$/, '')
   return basename.replace(/^(\d+a?)-/, '$1 · ')
 }
 
 let active_rig = null
-// Cache of sidecar colour by rig path, populated by update_dot_colours().
-// render_rigs_list reads this on each call; cells whose sidecar hasn't
+// Cache of expectation colour by rig path, populated by update_dot_colours().
+// render_rigs_list reads this on each call; cells whose expectation hasn't
 // resolved yet render with an empty dot, which fills in once the fetch
 // lands and update_dot_colours triggers a re-render via patch_dot.
 const sidecar_colour = new Map()
+// Paths whose expectation lookup already failed, so the pool doesn't retry
+// them on every re-render.
+const colour_missing = new Set()
+
+// --- rig tree ---------------------------------------------------------------
+
+// v1-tests turned the sidebar from ~175 flat rows into ~6.8k, so the list is
+// a collapsible tree over the fixtures' own directory hierarchy. Only the
+// expanded nodes are rendered — collapsed subtrees emit no DOM at all, which
+// is what keeps a 6.6k-fixture corpus cheap to draw and keeps the arrow-key
+// walk (which reads .rig-item off the DOM) restricted to visible rows.
+let rig_tree = { dirs: new Map(), files: [], count: 0 }
+// rigging/ and reqsat/ open by default so the pre-v1-tests workflow is
+// unchanged; v1-tests stays shut until asked for.
+let expanded = new Set(['todatests/rigging', 'todatests/reqsat'])
+let rig_filter = ''
+// Cap on rows drawn in one pass. Only reachable via the filter box (the
+// largest single directory is 256 fixtures), and reported when it bites so
+// a truncated list never reads as a complete one.
+const MAX_ROWS = 400
+
+function build_tree(paths) {
+  let root = { dirs: new Map(), files: [], count: 0, path: '' }
+  for (let p of paths) {
+    let segs = p.split('/')
+    segs.pop()                                   // filename; dirs are the path
+    let node = root
+    node.count++
+    for (let s of segs) {
+      if (!node.dirs.has(s)) {
+        node.dirs.set(s, { dirs: new Map(), files: [], count: 0,
+                           path: node.path ? `${node.path}/${s}` : s, name: s })
+      }
+      node = node.dirs.get(s)
+      node.count++
+    }
+    node.files.push({ path: p, label: rig_label(p) })
+  }
+  // Descend through single-child roots ('todatests') so the top level is the
+  // fixture families themselves — rigging, reqsat, v1-tests.
+  while (root.dirs.size === 1 && root.files.length === 0) {
+    root = [...root.dirs.values()][0]
+  }
+  return root
+}
+
+// Open every ancestor directory of a rig so it's visible in the tree.
+function reveal(path) {
+  let segs = path.split('/')
+  segs.pop()
+  let acc = ''
+  for (let s of segs) {
+    acc = acc ? `${acc}/${s}` : s
+    expanded.add(acc)
+  }
+}
+
+function matches(path) {
+  return path.toLowerCase().includes(rig_filter)
+}
 
 function render_rigs_list() {
   let host = document.getElementById('rigs-list')
   if (!host) return
-  let last_group = null
-  let html = ''
-  for (let path of RIGS) {
-    let g = group_label(path)
-    if (g !== last_group) {
-      html += `<div class="rig-group">${escape_html(g)}</div>`
-      last_group = g
+  let rows = [], shown = 0, total = 0
+
+  // A filter forces every matching subtree open and hides the rest; without
+  // one, `expanded` drives what descends.
+  function walk_node(node, depth) {
+    for (let dir of node.dirs.values()) {
+      let hits = rig_filter ? count_matches(dir) : dir.count
+      if (rig_filter && hits === 0) continue
+      let open = rig_filter ? true : expanded.has(dir.path)
+      if (shown < MAX_ROWS) {
+        rows.push(
+          `<div class="rig-dir${open ? ' open' : ''}" data-dir="${escape_html(dir.path)}" ` +
+          `style="padding-left:${8 + depth * 12}px">` +
+          `<span class="rig-chevron">${open ? '▾' : '▸'}</span>` +
+          `<span class="rig-dir-name">${escape_html(dir.name)}</span>` +
+          `<span class="rig-count">${hits}</span></div>`)
+        shown++
+      }
+      if (open) walk_node(dir, depth + 1)
     }
-    let label  = rig_label(path)
-    let active = path === active_rig ? ' active' : ''
-    let colour = sidecar_colour.get(path) || ''
-    html += `<div class="rig-item${active}" data-file="${escape_html(path)}">` +
-            `<span class="rig-dot ${colour}"></span>${label}</div>`
+    for (let f of node.files) {
+      if (rig_filter && !matches(f.path)) continue
+      total++
+      if (shown >= MAX_ROWS) continue
+      let active = f.path === active_rig ? ' active' : ''
+      let colour = sidecar_colour.get(f.path) || ''
+      rows.push(
+        `<div class="rig-item${active}" data-file="${escape_html(f.path)}" ` +
+        `style="padding-left:${8 + depth * 12}px">` +
+        `<span class="rig-dot ${colour}"></span>${escape_html(f.label)}</div>`)
+      shown++
+    }
   }
-  host.innerHTML = html
+
+  function count_matches(node) {
+    let n = 0
+    for (let d of node.dirs.values()) n += count_matches(d)
+    for (let f of node.files) if (matches(f.path)) n++
+    return n
+  }
+
+  walk_node(rig_tree, 0)
+  if (shown >= MAX_ROWS) {
+    rows.push(`<div class="rig-truncated">showing first ${MAX_ROWS} rows` +
+              (rig_filter ? ` of ${total} matches` : '') + ` — narrow the filter</div>`)
+  } else if (rig_filter && total === 0) {
+    rows.push(`<div class="rig-truncated">no fixtures match “${escape_html(rig_filter)}”</div>`)
+  }
+  host.innerHTML = rows.join('')
+  update_dot_colours()
 }
 
 // Patch the dot for a single rig in-place — cheaper than re-rendering
@@ -572,23 +673,84 @@ function patch_dot(path, colour) {
   if (colour) item.classList.add(colour)
 }
 
-// Fan out to every rig's .json sidecar in parallel; update the dot
-// colours as each lands. Errors are swallowed silently — a missing or
-// malformed sidecar just leaves the dot blank, which surfaces the gap
-// without breaking the rest of the list.
+// v1-tests fixtures state their expectation in a comment header rather than
+// a .json sidecar. Checking the prefix (instead of probing for a sidecar and
+// falling back) avoids a guaranteed 404 per fixture across a 6.6k corpus.
+const HEADER_META_PREFIX = 'todatests/v1-tests/'
+function uses_header_meta(path) { return path.startsWith(HEADER_META_PREFIX) }
+
+// Parse the header block every v1-tests fixture carries:
+//   // Structure: Basic Body
+//   // Property: carg must be trie or null
+//   // Condition: carg.shape = 0x00
+//   // Expected evaluation: YELLOW (nospec)
+// Colours are normalised onto the sidecar's green/yellow/red vocabulary:
+// VALID is used interchangeably with GREEN, and a handful of files join the
+// words with underscores (e.g. RED_(ed25519-reqsat_INVALID)).
+export function parse_trdl_header(src) {
+  let field = k => {
+    let m = src.match(new RegExp(`^//\\s*${k}:\\s*(.+)$`, 'm'))
+    return m ? m[1].trim() : null
+  }
+  let expected = field('Expected evaluation')
+  let colour = null
+  if (expected) {
+    let w = expected.replace(/_/g, ' ').match(/\b(GREEN|VALID|YELLOW|RED)\b/)
+    if (w) colour = w[1] === 'VALID' ? 'green' : w[1].toLowerCase()
+  }
+  return { structure: field('Structure'), property: field('Property'),
+           condition: field('Condition'), note: field('Note'),
+           expected, colour }
+}
+
+// Load one rig's expectation metadata, from whichever source that family
+// uses. Shape matches the .json sidecar so callers stay uniform.
+async function fetch_rig_meta(path) {
+  if (uses_header_meta(path)) {
+    let res = await fetch(path)
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    let h = parse_trdl_header(await res.text())
+    return { ...h, moniker: h.condition, corkline: null, source: path }
+  }
+  let json_url = path.replace(/\.(trdl|toda)$/, '.json')
+  let res = await fetch(json_url)
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return { ...await res.json(), source: json_url }
+}
+
+// Fill in dots for the rows currently on screen. Collapsed subtrees are
+// never fetched, so opening the tree pays only for what it reveals — the
+// whole-corpus fan-out this replaced would have been 6.8k requests at boot.
+// Failures are recorded so a re-render doesn't retry them; a blank dot
+// surfaces the gap without breaking the rest of the list.
 async function update_dot_colours() {
-  await Promise.all(RIGS.map(async path => {
-    try {
-      let json_url = path.replace(/\.(trdl|toda)$/, '.json')
-      let res = await fetch(json_url)
-      if (!res.ok) return
-      let m = await res.json()
-      if (m.colour) {
-        sidecar_colour.set(path, m.colour)
-        patch_dot(path, m.colour)
-      }
-    } catch {}
-  }))
+  let host = document.getElementById('rigs-list')
+  if (!host) return
+  let want = [...host.querySelectorAll('.rig-item')]
+        .map(el => el.dataset.file)
+        .filter(p => !sidecar_colour.has(p) && !colour_missing.has(p))
+  if (!want.length) return
+
+  // Bounded pool: each worker pulls the next path until drained. next++ is
+  // atomic between await points, so no two workers grab the same rig.
+  const CONCURRENCY = 12
+  let next = 0
+  async function worker() {
+    while (next < want.length) {
+      let path = want[next++]
+      try {
+        let m = await fetch_rig_meta(path)
+        if (m.colour) {
+          sidecar_colour.set(path, m.colour)
+          patch_dot(path, m.colour)
+        } else {
+          colour_missing.add(path)
+        }
+      } catch { colour_missing.add(path) }
+    }
+  }
+  await Promise.all(
+    Array.from({ length: Math.min(CONCURRENCY, want.length) }, worker))
 }
 
 function truncate_hash(h, head=10, tail=8) {
@@ -606,15 +768,31 @@ async function load_rig_meta(rig_url, explicit_json_url) {
   let header  = document.getElementById('rig-meta-filename')
   let host    = document.getElementById('rig-meta')
   if (!section || !host) return
-  let json_url = explicit_json_url || rig_url?.replace(/\.(trdl|toda)$/, '.json')
-  if (!json_url) { section.hidden = true; return }
+  if (!explicit_json_url && !rig_url) { section.hidden = true; return }
   try {
-    let res = await fetch(json_url)
-    if (!res.ok) throw new Error(`HTTP ${res.status}`)
-    let m = await res.json()
+    // Explicit sidecar (file / URL loads) wins; otherwise ask the family's
+    // own metadata source — sidecar for rigging & reqsat, comment header
+    // for v1-tests.
+    let m, json_url
+    if (explicit_json_url) {
+      let res = await fetch(explicit_json_url)
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      m = await res.json()
+      json_url = explicit_json_url
+    } else {
+      m = await fetch_rig_meta(rig_url)
+      json_url = m.source
+    }
     let parts = []
     if (m.moniker)  parts.push(`<span class="rm-moniker">${escape_html(m.moniker)}</span>`)
     if (m.colour)   parts.push(`<span class="rm-colour ${escape_html(m.colour)}">${escape_html(m.colour)}</span>`)
+    // v1-tests header fields — the spec condition this fixture probes.
+    if (m.expected && m.expected.replace(/_/g, ' ').trim() !== (m.colour || '').toUpperCase()) {
+      parts.push(`<span class="rm-expected">${escape_html(m.expected)}</span>`)
+    }
+    if (m.structure) parts.push(`<span class="rm-structure">${escape_html(m.structure)}</span>`)
+    if (m.property)  parts.push(`<span class="rm-property">${escape_html(m.property)}</span>`)
+    if (m.note)      parts.push(`<span class="rm-notes">${escape_html(m.note)}</span>`)
     if (m.corkline) parts.push(`<span class="rm-cork" title="${escape_html(m.corkline)}">cork: ${escape_html(truncate_hash(m.corkline))}</span>`)
     // `issue` historically was a flat string ('INVALID', 'MISSING'); newer
     // sidecars use a structured tree. Render either — JSON-stringify the
@@ -667,6 +845,7 @@ async function load_rig_meta(rig_url, explicit_json_url) {
 
 async function load_rig(path) {
   active_rig = path
+  reveal(path)
   render_rigs_list()
   set_loaded_label(rig_label(path))
   // Reflect the current rig in the URL hash so the page is shareable /
@@ -691,6 +870,7 @@ async function load_rig(path) {
   // file/URL loads; load_rig needs it too.)
   window.workshop.corkline = null
   window.workshop.corkline_source = null
+  reset_rigcheck()
   // Await the meta fetch so that workshop.corkline is set from the canonical
   // JSON before load_bytes triggers an immediate render — otherwise the
   // .toda rig-check fires with no corkline yet.
@@ -744,10 +924,27 @@ function confirm_discard_edits() {
 }
 
 rigs_list_el?.addEventListener('click', async e => {
+  let dir = e.target.closest('.rig-dir')
+  if (dir) {
+    // Toggling under an active filter would fight the filter's forced-open
+    // state, so collapse is a no-op there.
+    if (rig_filter) return
+    let key = dir.dataset.dir
+    if (expanded.has(key)) expanded.delete(key)
+    else                   expanded.add(key)
+    render_rigs_list()
+    return
+  }
   let item = e.target.closest('.rig-item')
   if (!item) return
   if (!confirm_discard_edits()) return
   load_rig(item.dataset.file)
+})
+
+let rigs_filter_el = document.getElementById('rigs-filter')
+rigs_filter_el?.addEventListener('input', () => {
+  rig_filter = rigs_filter_el.value.trim().toLowerCase()
+  render_rigs_list()
 })
 
 rigs_list_el?.addEventListener('keydown', e => {
@@ -833,8 +1030,11 @@ if (rc_el) {
 render_rigs_list()
 list_rigs().then(rigs => {
   RIGS = rigs
-  render_rigs_list()
-  update_dot_colours()
+  rig_tree = build_tree(rigs)
+  // If the initial hash pointed at a rig, open the path down to it so the
+  // selection is visible rather than buried in a collapsed subtree.
+  if (active_rig) reveal(active_rig)
+  render_rigs_list()      // renders, then fills dots for what's on screen
 }).catch(e => console.warn('[editor] rig manifest walk failed', e))
 // React to URL-bar edits and browser back/forward. Hash forms:
 //   #<path>           → load file (existing)
