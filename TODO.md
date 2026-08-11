@@ -154,12 +154,13 @@ Compiler-level items (bytes_struct tightening, twist-loss cases, orphan-body
 fixtures, inflation cases, parity-harness skip tightening) moved to the trdl
 repo's TODO.md with the August 2026 split.
 - ! **v1-tests compile gaps** (work belongs in `../trdl`, blocking here):
-  only 659 of 6,633 `todatests/v1-tests/` fixtures compile, so the workshop
-  lists them but can't build them. Ranked by fixtures unblocked — hex
-  literals 5,879, then rslist `"none"` 35, `symbol(rslist)` 29, `shield()`
-  14, and ~17 stragglers; a further ~519 `name[i]suffix` fixtures sit
-  behind the hex wall. See the caveat in CLAUDE.md. Re-measure in the
-  browser (a Node sweep invents ~5.5k ed25519 failures).
+  3,208 of 6,633 `todatests/v1-tests/` fixtures compile after the bare-hex
+  literal fix; the workshop lists the rest but can't build them. Ranked by
+  fixtures unblocked — `symbol(rslist)` alias 1,305, atom refs as trie
+  entry values 1,020, `name[i]suffix` refs 520, rslist `"none"` 292, `shld`
+  expression evaluation 256, `shield()` 14, ~18 stragglers. See the caveat
+  in CLAUDE.md. Re-measure in the browser (a Node sweep invents thousands
+  of ed25519 failures).
 - **2 malformed v1-tests fixtures** to report upstream: both files under
   `Half_hitch/hoist_incorporates_lead_and_meet_with_non-NULL_shield/` split
   one JSON object over several lines, which JSONL disallows. Also

@@ -105,27 +105,34 @@ random shields, anonymous-line naming) moved to `../trdl/CLAUDE.md`.
   the walk-back. This is *not* the unshielded relaxation we removed — that
   was a compile bug; this is about TRDL test rigs that use `post:"none"`
   to model the last hitch on a corkline.
-- Most of `todatests/v1-tests/` does not compile yet — the workshop lists
-  and describes every fixture, but selecting one of these shows a TRDL
-  COMPILE ERROR. **659 of 6,633 compile**; the gaps are all in `../trdl`,
-  none in the workshop. Measured in-browser 2026-08-11 over the whole
-  corpus. Measure in the *browser*, not Node: `@noble/ed25519` comes from
-  the importmap CDN, and lines default to `reqsat: ed25519`, so a Node
-  sweep reports ~5.5k phantom failures that the browser doesn't have.
-  - 5,879 — hex literals (`{"atom": …, "shape": 0x00}`). `trdl-spec-2.md`
-    §atom explicitly sanctions these, but `parse_trdl_string` uses raw
-    `JSON.parse`. Fixing this one alone unblocks ~89%.
-  - 35 — `"reqsat": "none"` as an rslist sub-entry; 29 — `symbol(rslist)`
-    missing from the symbol table; 14 — `shield()` unimplemented.
-  - 17 — long tail: `id` aliasing to an unreferenced line (3), unresolved
-    `k`/`k<n>` key refs (5), unknown reqsat-value refs (5), a circular
-    twist spec, an odd-length hex literal, and 2 fixtures that spread one
+- About half of `todatests/v1-tests/` does not compile yet — the workshop
+  lists and describes every fixture, but selecting an uncompilable one
+  shows a TRDL COMPILE ERROR. **3,208 of 6,633 compile** (was 659 before
+  the bare-hex/octal literal fix, trdl f9a47d9). The gaps are all in
+  `../trdl`, none in the workshop. Measured in-browser 2026-08-11 over the
+  whole corpus. Measure in the *browser*, not Node: `@noble/ed25519` comes
+  from the importmap CDN and lines default to `reqsat: ed25519`, so a Node
+  sweep reports thousands of phantom failures the browser doesn't have.
+  Ranked by fixtures unblocked:
+  - 1,305 — `symbol(rslist)`: `js/symbols.js` holds the same symbol under
+    `reqsatlist`, so this is a spelling alias, not a missing constant.
+    Fixtures use `rslist` throughout, matching the reqsat `type`.
+  - 1,020 — atom entities unresolvable as trie entry *values*
+    (`{"atom": "fakereqval", …}` then `entries: {"symbol(ed25519)":
+    "fakereqval"}` → `unknown reference`). Hits every shape variant of
+    the ed25519 and secp256r1 reqsat families.
+  - 520 — `name[i]suffix` refs (`corkline[0]body`, `leadline[1]sats`):
+    `read_name` in `values.js` stops consuming at `]`, so the suffix is
+    reported as trailing garbage.
+  - 292 — `"reqsat": "none"` as an rslist sub-entry.
+  - 256 — `shld` doesn't evaluate value expressions: `"shld":
+    "symbol(ed25519)"` is parsed as hex and fails as `odd-length hex`.
+  - 14 — `shield()` unimplemented.
+  - 18 — long tail: `id` aliasing to an unreferenced line (3), pairtrie
+    `k`/`k<n>` key refs (5), unknown reqsat-value refs (5), an atom→atom
+    `data` ref (2), a circular twist spec, and 2 fixtures that spread one
     JSON object over several physical lines, which JSONL disallows — that
     pair is a todatests bug, not a compiler gap.
-  Behind the hex-literal wall sits a second layer the sweep can't see:
-  normalising hex offline (`tmp/probe-v2.mjs`) surfaces ~519 fixtures using
-  `name[i]suffix` refs (`corkline[0]body`, `leadline[1]sats`), which
-  `read_name` in `values.js` stops consuming at `]`.
 
 ## Git policy (overrides global)
 You manage git directly in this project. The global "manual git" rule does
