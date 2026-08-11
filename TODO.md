@@ -154,13 +154,15 @@ Compiler-level items (bytes_struct tightening, twist-loss cases, orphan-body
 fixtures, inflation cases, parity-harness skip tightening) moved to the trdl
 repo's TODO.md with the August 2026 split.
 - ! **v1-tests compile gaps** (work belongs in `../trdl`, blocking here):
-  3,208 of 6,633 `todatests/v1-tests/` fixtures compile after the bare-hex
-  literal fix; the workshop lists the rest but can't build them. Ranked by
-  fixtures unblocked — `symbol(rslist)` alias 1,305, atom refs as trie
-  entry values 1,020, `name[i]suffix` refs 520, rslist `"none"` 292, `shld`
-  expression evaluation 256, `shield()` 14, ~18 stragglers. See the caveat
-  in CLAUDE.md. Re-measure in the browser (a Node sweep invents thousands
-  of ed25519 failures).
+  3,212 of 6,633 `todatests/v1-tests/` fixtures compile; the workshop lists
+  the rest but can't build them. Ranked by fixtures unblocked — atom
+  entities missing from the reference namespace ~2,326, `name[i]suffix`
+  refs 520, rslist `"none"` 292, `shld` expression evaluation 256,
+  `shield()` 14, ~13 stragglers. The first one is one resolution path and
+  dwarfs the rest. See the caveat in CLAUDE.md. Re-measure in the browser
+  (a Node sweep invents thousands of ed25519 failures).
+- `../trdl` `js/symbols.js` has an uncommitted `rslist` symbol alias — I
+  can't write that repo's .git from the sandbox, so it needs committing.
 - **2 malformed v1-tests fixtures** to report upstream: both files under
   `Half_hitch/hoist_incorporates_lead_and_meet_with_non-NULL_shield/` split
   one JSON object over several lines, which JSONL disallows. Also

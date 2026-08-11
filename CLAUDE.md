@@ -107,20 +107,20 @@ random shields, anonymous-line naming) moved to `../trdl/CLAUDE.md`.
   to model the last hitch on a corkline.
 - About half of `todatests/v1-tests/` does not compile yet — the workshop
   lists and describes every fixture, but selecting an uncompilable one
-  shows a TRDL COMPILE ERROR. **3,208 of 6,633 compile** (was 659 before
+  shows a TRDL COMPILE ERROR. **3,212 of 6,633 compile** (was 659 before
   the bare-hex/octal literal fix, trdl f9a47d9). The gaps are all in
   `../trdl`, none in the workshop. Measured in-browser 2026-08-11 over the
   whole corpus. Measure in the *browser*, not Node: `@noble/ed25519` comes
   from the importmap CDN and lines default to `reqsat: ed25519`, so a Node
   sweep reports thousands of phantom failures the browser doesn't have.
   Ranked by fixtures unblocked:
-  - 1,305 — `symbol(rslist)`: `js/symbols.js` holds the same symbol under
-    `reqsatlist`, so this is a spelling alias, not a missing constant.
-    Fixtures use `rslist` throughout, matching the reqsat `type`.
-  - 1,020 — atom entities unresolvable as trie entry *values*
-    (`{"atom": "fakereqval", …}` then `entries: {"symbol(ed25519)":
-    "fakereqval"}` → `unknown reference`). Hits every shape variant of
-    the ed25519 and secp256r1 reqsat families.
+  - ~2,326 — **atom entities aren't in the reference namespace.** An
+    `{"atom": "entrylist", …}` declaration can't be referenced by name,
+    either as a `trie` entry value (`entries: {"symbol(rslist)":
+    "entrylist"}`) or from another atom's `data` — both give
+    `unknown reference`. One resolution path, and by far the biggest
+    lever left. Surfaces under many names (`entrylist` 1,038,
+    `fakereqval` 765, `fakesatval` 510, plus ~13 stragglers).
   - 520 — `name[i]suffix` refs (`corkline[0]body`, `leadline[1]sats`):
     `read_name` in `values.js` stops consuming at `]`, so the suffix is
     reported as trailing garbage.
@@ -128,11 +128,13 @@ random shields, anonymous-line naming) moved to `../trdl/CLAUDE.md`.
   - 256 — `shld` doesn't evaluate value expressions: `"shld":
     "symbol(ed25519)"` is parsed as hex and fails as `odd-length hex`.
   - 14 — `shield()` unimplemented.
-  - 18 — long tail: `id` aliasing to an unreferenced line (3), pairtrie
-    `k`/`k<n>` key refs (5), unknown reqsat-value refs (5), an atom→atom
-    `data` ref (2), a circular twist spec, and 2 fixtures that spread one
-    JSON object over several physical lines, which JSONL disallows — that
-    pair is a todatests bug, not a compiler gap.
+  - 13 — long tail: `id` aliasing to an unreferenced line (3), pairtrie
+    `k`/`k<n>` key refs (5), a circular twist spec, and 2 fixtures that
+    spread one JSON object over several physical lines, which JSONL
+    disallows — that pair is a todatests bug, not a compiler gap.
+  `symbol(rslist)` (1,305) was fixed by aliasing it to `reqsatlist` in
+  `js/symbols.js`; it moved the compiling count only 3,208 → 3,212,
+  because those fixtures then hit the atom-reference gap above.
 
 ## Git policy (overrides global)
 You manage git directly in this project. The global "manual git" rule does
