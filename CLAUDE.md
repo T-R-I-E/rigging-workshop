@@ -107,17 +107,25 @@ random shields, anonymous-line naming) moved to `../trdl/CLAUDE.md`.
   to model the last hitch on a corkline.
 - Most of `todatests/v1-tests/` does not compile yet — the workshop lists
   and describes every fixture, but selecting one of these shows a TRDL
-  COMPILE ERROR. Measured 2026-08-11 over all 6,633 (`tmp/probe-v2.mjs`);
-  all four gaps are in `../trdl`, none in the workshop:
+  COMPILE ERROR. **659 of 6,633 compile**; the gaps are all in `../trdl`,
+  none in the workshop. Measured in-browser 2026-08-11 over the whole
+  corpus. Measure in the *browser*, not Node: `@noble/ed25519` comes from
+  the importmap CDN, and lines default to `reqsat: ed25519`, so a Node
+  sweep reports ~5.5k phantom failures that the browser doesn't have.
   - 5,879 — hex literals (`{"atom": …, "shape": 0x00}`). `trdl-spec-2.md`
     §atom explicitly sanctions these, but `parse_trdl_string` uses raw
     `JSON.parse`. Fixing this one alone unblocks ~89%.
-  - 519 — `name[i]suffix` refs (`corkline[0]body`, `leadline[1]sats`).
-    `read_name` in `values.js` stops consuming at `]`.
-  - 292 — `"reqsat": "none"` as an rslist sub-entry.
-  - 5 — `id` aliasing to an unreferenced line (3), and 2 fixtures that put
-    one JSON object across several physical lines, which JSONL disallows —
-    that pair is a todatests bug, not a compiler gap.
+  - 35 — `"reqsat": "none"` as an rslist sub-entry; 29 — `symbol(rslist)`
+    missing from the symbol table; 14 — `shield()` unimplemented.
+  - 17 — long tail: `id` aliasing to an unreferenced line (3), unresolved
+    `k`/`k<n>` key refs (5), unknown reqsat-value refs (5), a circular
+    twist spec, an odd-length hex literal, and 2 fixtures that spread one
+    JSON object over several physical lines, which JSONL disallows — that
+    pair is a todatests bug, not a compiler gap.
+  Behind the hex-literal wall sits a second layer the sweep can't see:
+  normalising hex offline (`tmp/probe-v2.mjs`) surfaces ~519 fixtures using
+  `name[i]suffix` refs (`corkline[0]body`, `leadline[1]sats`), which
+  `read_name` in `values.js` stops consuming at `]`.
 
 ## Git policy (overrides global)
 You manage git directly in this project. The global "manual git" rule does
