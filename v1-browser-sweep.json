@@ -1,0 +1,17 @@
+{
+  "total": 6633,
+  "compiled": 6605,
+  "failed": 28,
+  "measured": "2026-08-12",
+  "note": "Browser sweep via rig-manifest list_rigs + trdl build. Matches the Node figure from ../trdl/tests/v1-compile.test.mjs exactly. Compiling is not the same as checker-green — see the caveat in CLAUDE.md.",
+  "buckets": [
+    "8x  composite \"leadlineReqs\": component type \"rslist\" is not supported",
+    "6x  unknown reference: redsats",
+    "4x  unknown reference: entryNReq",
+    "3x  unknown reference: tethline[N]",
+    "2x  unknown reference: corkline[N]body",
+    "2x  Expected property name or '}' in JSON at position N (line N column N)",
+    "2x  sign() not implemented yet",
+    "1x  Circular dependency in twist/trie specs: selfloop_N"
+  ]
+}

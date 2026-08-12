@@ -105,36 +105,35 @@ random shields, anonymous-line naming) moved to `../trdl/CLAUDE.md`.
   the walk-back. This is *not* the unshielded relaxation we removed — that
   was a compile bug; this is about TRDL test rigs that use `post:"none"`
   to model the last hitch on a corkline.
-- About half of `todatests/v1-tests/` does not compile yet — the workshop
-  lists and describes every fixture, but selecting an uncompilable one
-  shows a TRDL COMPILE ERROR. **3,212 of 6,633 compile** (was 659 before
-  the bare-hex/octal literal fix, trdl f9a47d9). The gaps are all in
-  `../trdl`, none in the workshop. Measured in-browser 2026-08-11 over the
-  whole corpus. Measure in the *browser*, not Node: `@noble/ed25519` comes
-  from the importmap CDN and lines default to `reqsat: ed25519`, so a Node
-  sweep reports thousands of phantom failures the browser doesn't have.
-  Ranked by fixtures unblocked:
-  - ~2,326 — **atom entities aren't in the reference namespace.** An
-    `{"atom": "entrylist", …}` declaration can't be referenced by name,
-    either as a `trie` entry value (`entries: {"symbol(rslist)":
-    "entrylist"}`) or from another atom's `data` — both give
-    `unknown reference`. One resolution path, and by far the biggest
-    lever left. Surfaces under many names (`entrylist` 1,038,
-    `fakereqval` 765, `fakesatval` 510, plus ~13 stragglers).
-  - 520 — `name[i]suffix` refs (`corkline[0]body`, `leadline[1]sats`):
-    `read_name` in `values.js` stops consuming at `]`, so the suffix is
-    reported as trailing garbage.
-  - 292 — `"reqsat": "none"` as an rslist sub-entry.
-  - 256 — `shld` doesn't evaluate value expressions: `"shld":
-    "symbol(ed25519)"` is parsed as hex and fails as `odd-length hex`.
-  - 14 — `shield()` unimplemented.
-  - 13 — long tail: `id` aliasing to an unreferenced line (3), pairtrie
-    `k`/`k<n>` key refs (5), a circular twist spec, and 2 fixtures that
-    spread one JSON object over several physical lines, which JSONL
-    disallows — that pair is a todatests bug, not a compiler gap.
-  `symbol(rslist)` (1,305) was fixed by aliasing it to `reqsatlist` in
-  `js/symbols.js`; it moved the compiling count only 3,208 → 3,212,
-  because those fixtures then hit the atom-reference gap above.
+- **6,605 of 6,633 `todatests/v1-tests/` fixtures compile** (measured
+  in-browser 2026-08-12, `v1-browser-sweep.json`; was 659, then 3,212).
+  Selecting one of the remaining 28 still shows a TRDL COMPILE ERROR. The
+  gaps are all in `../trdl`, none in the workshop:
+  - 13 — atoms need folding into the unified topological sort. Atom
+    `data` / `id` may reference tries (`redsats`), reqsats (`entry2Req`)
+    and twists (`tethline[0]`), but atoms are currently built before
+    both. Includes `<twistref>body` (`corkline[0]body`), which names a
+    twist's body atom.
+  - 8 — `composite` reqsats with an `rslist` component. Rejected by
+    design: rslist exposes no raw pubkey or unwrapped sign function.
+  - 2 — `sign(reqsat, data)` unimplemented.
+  - 1 — a genuinely circular twist spec, correctly rejected.
+  - 2 — fixtures that spread one JSON object over several physical
+    lines, which JSONL disallows. A todatests bug, not a compiler gap.
+- Node and the browser now agree exactly, so either is a valid place to
+  measure — `../trdl/tests/v1-compile.test.mjs` reports the same 6,605 in
+  ~7s. The old "measure in the browser, not Node" rule is **retired**:
+  `js/ed25519.js` prefers WebCrypto over the importmap CDN, so a Node
+  sweep no longer invents thousands of phantom `@noble` failures.
+- **Compiling is not checker-green, and the gap is large.** A fixture that
+  builds bytes without throwing may still be rejected by every checker.
+  `ReqSat/req_and_sat_both_NULL_or_both_non-NULL/prev_req=NULL_succ_sat=
+  NULL.trdl` is declared GREEN, compiles, and gets `js · todajs
+  ReqSatError`. It uses no hex literal, atom, `shield()` or rslist
+  feature, so it compiled at the 659 baseline too — this is a
+  long-standing condition, not fallout from the 2026-08-12 compiler work.
+  Nobody has yet measured declared-colour vs checker verdict across
+  v1-tests; the compile count says nothing about it.
 
 ## Git policy (overrides global)
 You manage git directly in this project. The global "manual git" rule does

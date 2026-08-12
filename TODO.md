@@ -153,16 +153,18 @@
 Compiler-level items (bytes_struct tightening, twist-loss cases, orphan-body
 fixtures, inflation cases, parity-harness skip tightening) moved to the trdl
 repo's TODO.md with the August 2026 split.
-- ! **v1-tests compile gaps** (work belongs in `../trdl`, blocking here):
-  3,212 of 6,633 `todatests/v1-tests/` fixtures compile; the workshop lists
-  the rest but can't build them. Ranked by fixtures unblocked — atom
-  entities missing from the reference namespace ~2,326, `name[i]suffix`
-  refs 520, rslist `"none"` 292, `shld` expression evaluation 256,
-  `shield()` 14, ~13 stragglers. The first one is one resolution path and
-  dwarfs the rest. See the caveat in CLAUDE.md. Re-measure in the browser
-  (a Node sweep invents thousands of ed25519 failures).
-- `../trdl` `js/symbols.js` has an uncommitted `rslist` symbol alias — I
-  can't write that repo's .git from the sandbox, so it needs committing.
+- **v1-tests compile gaps** (work belongs in `../trdl`): 6,605 of 6,633
+  compile; the workshop lists the remaining 28 but can't build them.
+  Tracked in `../trdl/TODO.md` — atoms in the unified topo sort 13,
+  `sign()` 2. The other 11 are rejected by design or malformed at source.
+  Node and browser now agree, so `node ../trdl/tests/v1-compile.test.mjs`
+  is enough to re-measure.
+- ! **measure declared colour vs checker verdict across v1-tests.** The
+  compile count says nothing about correctness, and spot checks show
+  GREEN-declared fixtures the JS checker rejects — including ones that
+  compiled long before the 2026-08-12 compiler work, so this is not
+  fallout from it. This is the workshop's job, not `../trdl`'s: the
+  checker rows live here. See the caveat in CLAUDE.md.
 - **2 malformed v1-tests fixtures** to report upstream: both files under
   `Half_hitch/hoist_incorporates_lead_and_meet_with_non-NULL_shield/` split
   one JSON object over several lines, which JSONL disallows. Also
