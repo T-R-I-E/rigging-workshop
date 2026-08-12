@@ -10,19 +10,32 @@ Measured 2026-08-12. Reproduce with `tmp/spec-join.mjs` (spec axis) and
 
 ---
 
+> **Revised 2026-08-12** against todatests `fd24a64`, which added 75 fixtures
+> (new `Complex_rigs`, `Invariance`, `Plural` structures) and a generated
+> `.json` sidecar for all 6,708. The sidecars **supersede the comment headers**
+> and change the central finding of §3 — see §3.0. Numbers below are against
+> `fd24a64` unless marked otherwise.
+
 ## 0. The one-paragraph version
 
-The corpus is mechanically excellent and conceptually mismatched with its
-consumers. Every fixture but one maps cleanly onto a row of the spec
-spreadsheet, and 6,605 of 6,633 now compile. But **on 95% of the corpus, two
-of the three local rig-checkers cannot return a verdict at all** — they throw
-while parsing the deliberately-malformed atoms the fixtures are built from.
-The third (rustoda) does return a colour, and disagrees with the fixture's
-declared colour on 83% of what it evaluates. Most of that disagreement is not
-a bug in either party: a large fraction of v1-tests asks *atom- and
-body-shape* questions that a *rig* checker is not scoped to answer. The
-corpus and the checkers are talking past each other, and the spreadsheet's
-"(Captured in Rig Checks)" annotation is the assumption that fails.
+The corpus is mechanically excellent, well traced to its source, and — as of
+the 2026-08-12 revision — **substantially reconciled with the one checker that
+can read it**. 6,640 of 6,708 fixtures map onto a spreadsheet row and 6,674
+compile. rustoda's agreement with declared colour jumped from **17% to 56%**
+when the new sidecars replaced the headers as the baseline, and the
+reqsat families went from ~1% to 99–100%. That reconciliation came from the
+corpus adopting the *invariance principle* — a verdict cannot flip on bytes
+the rig walk never consults — which is independently the same conclusion §3.2
+of this review reached by measurement.
+
+Two problems remain. **On 94% of the corpus, two of the three local
+rig-checkers still cannot return a verdict at all** — they throw while parsing
+the deliberately-malformed atoms the fixtures are built from, and only rustoda
+treats a bad atom as a judgeable condition. And the reconciliation was applied
+unevenly: 2,885 sidecars now contradict their own `detail` field, and the
+shape/alg enumeration families (`Basic_Twist`, `Hash`, `Hitch`, `Packet`)
+still sit at 0–3% agreement on an unresolved question — whether a field the
+rig walk ignores is `nospec` (yellow) or fine (green).
 
 ---
 
@@ -30,19 +43,22 @@ corpus and the checkers are talking past each other, and the spreadsheet's
 
 | | |
 |---|---|
-| Fixtures | 6,633 `.trdl` |
-| Layout | `v1-tests/<Structure>/<Property>/<Condition>.trdl`, 19 structures |
-| Metadata | 4-line comment header, **no `.json` sidecars** |
-| Largest families | Reqsat_list 1,585 · Basic_Body 1,558 · Half_hitch 1,062 |
+| Fixtures | 6,708 `.trdl` (+75 since `3e8dfb7`) |
+| Layout | `v1-tests/<Structure>/<Property>/<Condition>.trdl`, 22 structures |
+| Metadata | 4-line comment header **plus** a generated `.json` sidecar (6,708/6,708) |
+| Largest families | Reqsat_list 1,585 · Basic_Body 1,559 · Half_hitch 1,062 |
+| New in `fd24a64` | `Invariance` 34 · `Complex_rigs` 18 · `Plural` 9 |
 
-Declared colours: **3,295 yellow · 3,267 red · 70 green**. Of the yellows,
-2,261 are `YELLOW (nospec)` — a third of the whole corpus asserts that the
-specification says nothing about the case.
+Colour distribution, and the scale of the revision:
 
-The header format is a genuine improvement over the `.json` sidecars used by
-`rigging/` and `reqsat/`: the expectation lives in the file it describes, and
-it records *why* (`Structure` / `Property` / `Condition`) rather than only
-*what*. The workshop now reads it directly.
+| Source | yellow | red | green |
+|---|---|---|---|
+| Comment header | 3,301 | **3,274** | 120 |
+| `.json` sidecar | 3,307 | **369** | **3,032** |
+
+The header format remains a genuine improvement on a bare sidecar — it records
+*why* (`Structure` / `Property` / `Condition`), not only *what*. But the
+headers no longer carry the current verdict.
 
 ---
 
@@ -134,9 +150,83 @@ declaring red against a sheet `valid`.
 
 ## 3. Against the implementations
 
-Compiled all 6,633 and ran the three in-browser checkers. **6,340 reached the
-checkers**; 28 fail to compile (documented in CLAUDE.md) and 265 produce no
-corkline (the raw-atom `Packet` / `Lat` families, which have no rig).
+### 3.0 The sidecars supersede the headers — and vindicate §3.2
+
+`88e2b2f` generated a `.json` sidecar per fixture. They are not a restatement
+of the headers: **2,910 fixtures now have a sidecar colour that differs from
+their header**, almost all `red → green`.
+
+The reason is stated explicitly in the hand-authored ones. From
+`Basic_Body/carg_must_be_trie_or_null/carg_alg=0xff.json`:
+
+> *"spreadsheet says shape error but the rig walk does not consult body.carg"*
+> … *"the rig's verdict cannot flip from green to red because of irrelevant
+> bytes in the file — otherwise simply adding unused twists would invalidate
+> an otherwise-valid rig"* — citing §5.1, §6, §4.2, and `RUSTODA_IMPL_GAPS.md`.
+
+This is the **invariance principle**, and it is the same conclusion §3.2 of
+this review reached from the other direction: the field-shape families were
+asking questions a rig checker is not scoped to answer, and rustoda's uniform
+green was correct-by-scope rather than a defect. The corpus has now adopted
+that reading. The 34-fixture `Invariance` suite exists to test it directly.
+
+**Effect on agreement.** Re-running the sweep against each baseline:
+
+| Baseline | rustoda | rignet (of evaluated) | js (of evaluated) |
+|---|---|---|---|
+| Comment header | 1,138 / 6,650 — **17%** | 39% | 67% |
+| `.json` sidecar | 3,759 / 6,663 — **56%** | 63% | **29%** |
+
+Per structure, rustoda against the sidecars:
+
+| Structure | n | was (header) | now (sidecar) |
+|---|---|---|---|
+| Reqsat_list | 1,575 | 1% | **99%** |
+| secp256r1_reqsat | 525 | 1% | **100%** |
+| ed25519_reqsat | 524 | 1% | **99%** |
+| Plural | 9 | — | **100%** |
+| Invariance | 31 | — | **90%** |
+| Complex_rigs | 18 | — | 67% |
+| Half_hitch | 1,060 | 49% | 50% |
+| Basic_Body | 1,559 | 33% | 33% |
+| Hitch | 267 | 2% | **3%** |
+| Basic_Twist | 522 | 2% | **1%** |
+| Packet | 256 | — | **2%** |
+| Hash | 251 | 1% | **0%** |
+
+Note `js` moved the *wrong* way — 67% → 29% — because the sidecars moved ~2,900
+fixtures to green and js reds nearly everything. The reconciliation makes the
+js defect in §3.3 more visible, not less.
+
+### 3.0.1 Two defects in the revision
+
+**(a) 2,885 sidecars contradict themselves.** The generator reclassified
+`colour` but copied `detail` verbatim from the old header, so the common case
+looks like:
+
+```json
+{ "colour": "green", "detail": "RED (succession.predecessor INVALID)" }
+```
+
+Both fields are machine-read. Either `detail` is stale and should be
+regenerated, or it is a deliberate record of the superseded verdict and needs
+a name that says so (`superseded_detail`, say) — but not `detail`.
+
+**(b) The reasoning is attached to only 62 fixtures.** Of 6,708 sidecars, 62
+are "rich" (53 carry an `invariant` block with spec citations); of the 2,910
+reclassifications, only **23** carry that justification and **2,887** are bare.
+So a principle that moved 43% of the corpus is documented on 0.8% of it. The
+argument is sound and well-written where present — it should be attached by
+reference (e.g. an `invariant: "carg-not-consulted"` key resolving to one
+shared statement) rather than left implicit on 2,887 fixtures.
+
+### 3.1 onwards — measured against the header baseline
+
+Compiled all 6,708 and ran the three in-browser checkers. **6,663 reached the
+checkers**; 34 fail to compile and 11 produce no corkline. (The 265 no-corkline
+cases in the previous revision were the raw-atom `Packet` family, which
+`fd24a64` rewrote to carry rigs — hence `Packet` now appearing in the
+agreement table at all.)
 
 > Scope: the two server checkers (`clj`, `bb`) are excluded. One HTTPS
 > round-trip per rig per checker is ~13k requests against a shared ALB for a
@@ -147,9 +237,9 @@ corkline (the raw-atom `Packet` / `Lat` families, which have no rig).
 
 | Checker | Returned a verdict | Could not evaluate |
 |---|---|---|
-| `rust · rustoda` | **6,340 / 6,340** | 0 |
-| `js · todajs` | 319 (5%) | **6,021 — threw during parse** |
-| `rignet · ts` | 270 (4%) | **6,070 — threw during check** |
+| `rust · rustoda` | **6,663 / 6,663** | 0 |
+| `js · todajs` | 390 (6%) | **6,273 — threw during parse** |
+| `rignet · ts` | 340 (5%) | **6,323 — threw during check** |
 
 The failure modes are parser strictness, not checker logic:
 
@@ -297,18 +387,37 @@ it. Do not report a single corpus-wide "pass rate"; it will be meaningless.
 ## 6. Conclusions
 
 1. **The corpus is sound as a specification artifact and traceable to its
-   source.** 6,632 of 6,633 fixtures map to a spreadsheet row. That is
+   source.** 6,640 of 6,708 fixtures map to a spreadsheet row. That is
    unusually good provenance for a test corpus this size.
 
-2. **It is not yet usable as a pass/fail suite against rig checkers**, and no
-   amount of compiler work will make it so. Two of three checkers cannot
-   parse 95% of it, and the third answers a different question than the one
-   ~3,200 fixtures ask.
+1a. **The 2026-08-12 revision was the right move and it worked.** Adopting the
+   invariance principle took rustoda agreement from 17% to 56% overall and to
+   99–100% on the three reqsat families. That is the corpus and the reference
+   implementation converging on a shared reading of the spec, which is exactly
+   what this corpus is for. It needs finishing, not reverting: the `detail`
+   contradiction (2,885 fixtures) and the missing justification (2,887) are
+   loose ends of a correct change.
+
+2. **It is still not usable as a pass/fail suite against the js or rignet
+   checkers**, and no amount of compiler or metadata work will change that.
+   Two of three cannot parse 94% of it. That is a checker-architecture
+   question (§6), not a corpus question.
 
 3. **The single most valuable fix is on the implementation side, not the
    corpus side:** `js · todajs` returning red on 57 of 58 declared-VALID
    fixtures via `ReqSatError` is a real defect with a bounded, well-specified
-   reproduction set.
+   reproduction set. The revision made this *worse* in relative terms (js
+   agreement fell to 29% as everything else moved to green), which sharpens
+   rather than weakens the case.
+
+3a. **The residual disagreement has collapsed to one question.** After the
+   revision, the largest remaining bucket is `yellow → rust green` (1,774
+   fixtures), concentrated in `Basic_Twist` / `Hash` / `Hitch` / `Packet`. It
+   asks: when the rig walk does not consult a field, is the outcome `nospec`
+   (yellow — corpus) or green (rustoda)? The invariance principle already
+   answers this for *irrelevant* bytes; these families are the same argument
+   applied to shape/alg enumerations, and finishing the reclassification there
+   would likely take overall agreement well past 80%.
 
 4. **One semantic question needs a human ruling, and it is bigger than its
    251-fixture headline.** The corpus treats spec-unassigned shape/alg bytes
@@ -331,16 +440,19 @@ it. Do not report a single corpus-wide "pass rate"; it will be meaningless.
 
 ### Recommended next steps, in order
 
-1. Fix the workshop's fatal-for-everyone panel path so "no checker ran" is
-   visually distinct from "all checkers agree" (§3.1). It is currently
-   actively misleading, and it misled this review.
-2. Investigate `ReqSatError` in `js · todajs` against the 58-fixture
-   declared-VALID set (§3.3).
-3. Get a ruling on unassigned shape/alg bytes — `nospec` or `INVALID` (§2.3a).
-4. Decide whether field-shape conditions are in scope for rig checkers. If
-   yes, that is a substantial implementation programme across three
-   codebases; if no, ~3,200 fixtures need a different harness and should stop
-   being measured against rig checkers (§3.2).
-5. Fix the 4 corpus defects in §5 — an afternoon's work.
-6. Re-run this review including `clj` and `bb` on a stratified sample once
-   the above lands.
+1. **Regenerate `detail`, or rename it.** 2,885 sidecars assert two different
+   colours in two fields (§3.0.1a). Cheapest fix here, and it is machine-read
+   metadata, so the cost of leaving it is silent misreads.
+2. **Give the invariance reclassification a shared citation** so the reasoning
+   covers all 2,910 fixtures rather than 23 (§3.0.1b).
+3. **Wrap checker errors into an explicit outcome vocabulary**
+   (`green|yellow|red|no-verdict`) with per-implementation adapters, and fix
+   the workshop's fatal-for-everyone panel path so "no checker ran" is
+   distinct from "all checkers agree" (§3.1). It is actively misleading and it
+   misled this review.
+4. **Investigate `ReqSatError` in `js · todajs`** against the declared-VALID
+   set (§3.3).
+5. **Settle `nospec` vs green for un-consulted shape/alg fields** — the one
+   question the residual 1,774-fixture disagreement reduces to (§3a), and the
+   same question as §2.3a.
+6. Re-run including `clj` and `bb` on a stratified sample once the above lands.

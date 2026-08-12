@@ -673,9 +673,12 @@ function patch_dot(path, colour) {
   if (colour) item.classList.add(colour)
 }
 
-// v1-tests fixtures state their expectation in a comment header rather than
-// a .json sidecar. Checking the prefix (instead of probing for a sidecar and
-// falling back) avoids a guaranteed 404 per fixture across a 6.6k corpus.
+// v1-tests fixtures carry a comment header AND (since todatests 88e2b2f) a
+// generated .json sidecar. The sidecar's colour is authoritative: it applies
+// the invariance-principle reclassification that moved ~2.9k fixtures from
+// red to green, which the headers predate and no longer reflect. The header
+// still supplies the only statement of Structure / Property / Condition, so
+// both are read and merged.
 const HEADER_META_PREFIX = 'todatests/v1-tests/'
 function uses_header_meta(path) { return path.startsWith(HEADER_META_PREFIX) }
 
@@ -706,16 +709,29 @@ export function parse_trdl_header(src) {
 // Load one rig's expectation metadata, from whichever source that family
 // uses. Shape matches the .json sidecar so callers stay uniform.
 async function fetch_rig_meta(path) {
+  let json_url = path.replace(/\.(trdl|toda)$/, '.json')
+  let sidecar = null
+  try {
+    let res = await fetch(json_url)
+    if (res.ok) sidecar = await res.json()
+  } catch {}
+
   if (uses_header_meta(path)) {
     let res = await fetch(path)
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
     let h = parse_trdl_header(await res.text())
-    return { ...h, moniker: h.condition, corkline: null, source: path }
+    if (!sidecar) return { ...h, moniker: h.condition, corkline: null, source: path }
+    // Sidecar colour wins; header contributes the spec coordinates. When the
+    // two disagree the header's original verdict is surfaced as `superseded`
+    // rather than dropped — that reclassification is the interesting part.
+    let superseded = h.colour && sidecar.colour && h.colour !== sidecar.colour
+          ? h.expected : null
+    return { ...h, ...sidecar,
+             moniker: sidecar.moniker || h.condition,
+             superseded, source: json_url }
   }
-  let json_url = path.replace(/\.(trdl|toda)$/, '.json')
-  let res = await fetch(json_url)
-  if (!res.ok) throw new Error(`HTTP ${res.status}`)
-  return { ...await res.json(), source: json_url }
+  if (!sidecar) throw new Error(`no sidecar for ${path}`)
+  return { ...sidecar, source: json_url }
 }
 
 // Fill in dots for the rows currently on screen. Collapsed subtrees are
@@ -787,7 +803,12 @@ async function load_rig_meta(rig_url, explicit_json_url) {
     if (m.moniker)  parts.push(`<span class="rm-moniker">${escape_html(m.moniker)}</span>`)
     if (m.colour)   parts.push(`<span class="rm-colour ${escape_html(m.colour)}">${escape_html(m.colour)}</span>`)
     // v1-tests header fields — the spec condition this fixture probes.
-    if (m.expected && m.expected.replace(/_/g, ' ').trim() !== (m.colour || '').toUpperCase()) {
+    // `superseded` means the sidecar reclassified the header's verdict; show
+    // what it used to be, since that is the substantive change.
+    if (m.superseded) {
+      parts.push(`<span class="rm-superseded" title="reclassified by the .json sidecar">` +
+                 `was ${escape_html(m.superseded)}</span>`)
+    } else if (m.expected && m.expected.replace(/_/g, ' ').trim() !== (m.colour || '').toUpperCase()) {
       parts.push(`<span class="rm-expected">${escape_html(m.expected)}</span>`)
     }
     if (m.structure) parts.push(`<span class="rm-structure">${escape_html(m.structure)}</span>`)
@@ -802,8 +823,14 @@ async function load_rig_meta(rig_url, explicit_json_url) {
       parts.push(`<span class="rm-issue">issue: ${escape_html(s)}</span>`)
     }
     if (m.invariant) {
-      let s = typeof m.invariant === 'string' ? m.invariant : JSON.stringify(m.invariant)
-      parts.push(`<span class="rm-invariant">invariant: ${escape_html(s)}</span>`)
+      // v1-tests invariant blocks are objects with name / spec / quote, where
+      // `quote` runs to a paragraph. Show the name and keep the spec citation
+      // on hover; stringifying the whole object floods the panel.
+      let s = typeof m.invariant === 'string' ? m.invariant
+            : m.invariant.name || JSON.stringify(m.invariant)
+      let cite = typeof m.invariant === 'object' && m.invariant.spec
+            ? ` title="${escape_html(m.invariant.spec)}"` : ''
+      parts.push(`<span class="rm-invariant"${cite}>invariant: ${escape_html(s)}</span>`)
     }
     if (m.notes != null) {
       let s = Array.isArray(m.notes) ? m.notes.join(' • ')

@@ -622,6 +622,13 @@ body {
 .rig-meta .rm-colour.red::before    { background: var(--bad); }
 /* v1-tests header fields: the spec condition a fixture probes. */
 .rig-meta .rm-expected  { color: var(--ink-2); }
+/* Header verdict the sidecar reclassified — struck through, since it is the
+   superseded value, not the current one. */
+.rig-meta .rm-superseded {
+  color: var(--ink-3);
+  text-decoration: line-through;
+  opacity: 0.8;
+}
 .rig-meta .rm-structure,
 .rig-meta .rm-property  { color: var(--ink-3); }
 
