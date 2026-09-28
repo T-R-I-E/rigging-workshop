@@ -105,26 +105,29 @@ random shields, anonymous-line naming) moved to `../trdl/CLAUDE.md`.
   the walk-back. This is *not* the unshielded relaxation we removed — that
   was a compile bug; this is about TRDL test rigs that use `post:"none"`
   to model the last hitch on a corkline.
-- **6,605 of 6,633 `todatests/v1-tests/` fixtures compile** (measured
-  in-browser 2026-08-12, `v1-browser-sweep.json`; was 659, then 3,212).
-  Selecting one of the remaining 28 still shows a TRDL COMPILE ERROR. The
-  gaps are all in `../trdl`, none in the workshop:
-  - 13 — atoms need folding into the unified topological sort. Atom
-    `data` / `id` may reference tries (`redsats`), reqsats (`entry2Req`)
-    and twists (`tethline[0]`), but atoms are currently built before
-    both. Includes `<twistref>body` (`corkline[0]body`), which names a
-    twist's body atom.
+- **6,690 of 6,708 `todatests/v1-tests/` fixtures compile**
+  (`v1-browser-sweep.json`; was 659, then 3,212, then 6,605). The corpus
+  itself grew from 6,633 to 6,708 in September 2026. Selecting one of the
+  remaining 18 still shows a TRDL COMPILE ERROR. The gaps are all in
+  `../trdl`, none in the workshop:
   - 8 — `composite` reqsats with an `rslist` component. Rejected by
     design: rslist exposes no raw pubkey or unwrapped sign function.
-  - 2 — `sign(reqsat, data)` unimplemented.
-  - 1 — a genuinely circular twist spec, correctly rejected.
-  - 2 — fixtures that spread one JSON object over several physical
-    lines, which JSONL disallows. A todatests bug, not a compiler gap.
-- Node and the browser now agree exactly, so either is a valid place to
-  measure — `../trdl/tests/v1-compile.test.mjs` reports the same 6,605 in
-  ~7s. The old "measure in the browser, not Node" rule is **retired**:
-  `js/ed25519.js` prefers WebCrypto over the importmap CDN, so a Node
-  sweep no longer invents thousands of phantom `@noble` failures.
+  - 3 — `sign(reqsat, data)` unimplemented.
+  - 3 — malformed at source: 2 spread one JSON object over several
+    physical lines, 1 writes `"version",1` with a comma where JSON needs
+    a colon. A todatests bug, not a compiler gap.
+  - 2 — genuinely circular twist specs, correctly rejected.
+  - 1 — `<twistref>body`, e.g. `corkline[0]body` naming a twist's body
+    atom: a derived reference rather than a declared entity.
+  - 1 — a deliberately truncated 4-byte packet.
+- Node and the browser have agreed exactly at every measurement so far, so
+  either is a valid place to measure — `node
+  ../trdl/tests/v1-compile.test.mjs` reports 6,690 in ~7s. The old "measure
+  in the browser, not Node" rule is **retired**: `js/ed25519.js` prefers
+  WebCrypto over the importmap CDN, so a Node sweep no longer invents
+  thousands of phantom `@noble` failures. Caveat: the 6,690 figure has
+  *not* been re-checked in-browser — the Playwright chromium build is not
+  installed — so re-run the sweep here if that matters.
 - **Compiling is not checker-green, and the gap is large.** A fixture that
   builds bytes without throwing may still be rejected by every checker.
   `ReqSat/req_and_sat_both_NULL_or_both_non-NULL/prev_req=NULL_succ_sat=

@@ -1,17 +1,16 @@
 {
-  "total": 6633,
-  "compiled": 6605,
-  "failed": 28,
-  "measured": "2026-08-12",
-  "note": "Browser sweep via rig-manifest list_rigs + trdl build. Matches the Node figure from ../trdl/tests/v1-compile.test.mjs exactly. Compiling is not the same as checker-green — see the caveat in CLAUDE.md.",
+  "total": 6708,
+  "compiled": 6690,
+  "failed": 18,
+  "measured": "2026-09-15",
+  "measured_in": "node",
+  "note": "Measured with ../trdl/tests/v1-compile.test.mjs. NOT re-verified in-browser this round — the Playwright chromium build is not installed. Node and browser agreed exactly at all three previous measurements (3212, 6591, 6605). Corpus grew from 6633 to 6708 in September 2026. Compiling is not the same as checker-green — see the caveat in CLAUDE.md.",
   "buckets": [
     "8x  composite \"leadlineReqs\": component type \"rslist\" is not supported",
-    "6x  unknown reference: redsats",
-    "4x  unknown reference: entryNReq",
-    "3x  unknown reference: tethline[N]",
-    "2x  unknown reference: corkline[N]body",
-    "2x  Expected property name or '}' in JSON at position N (line N column N)",
-    "2x  sign() not implemented yet",
-    "1x  Circular dependency in twist/trie specs: selfloop_N"
+    "3x  sign() not implemented yet",
+    "3x  malformed at source (2 multi-line JSON, 1 \"version\",1 comma)",
+    "2x  Circular dependency in twist/trie specs",
+    "1x  unknown reference: corkline[N]body",
+    "1x  odd-length hex (deliberately truncated packet)"
   ]
 }

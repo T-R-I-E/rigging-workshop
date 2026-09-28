@@ -153,18 +153,21 @@
 Compiler-level items (bytes_struct tightening, twist-loss cases, orphan-body
 fixtures, inflation cases, parity-harness skip tightening) moved to the trdl
 repo's TODO.md with the August 2026 split.
-- **v1-tests compile gaps** (work belongs in `../trdl`): 6,605 of 6,633
-  compile; the workshop lists the remaining 28 but can't build them.
-  Tracked in `../trdl/TODO.md` — atoms in the unified topo sort 13,
-  `sign()` 2. The other 11 are rejected by design or malformed at source.
-  Node and browser now agree, so `node ../trdl/tests/v1-compile.test.mjs`
-  is enough to re-measure.
+- **v1-tests compile gaps** (work belongs in `../trdl`): 6,690 of 6,708
+  compile; the workshop lists the remaining 18 but can't build them.
+  Tracked in `../trdl/TODO.md` — `sign()` 3, `<twistref>body` 1. The other
+  14 are rejected by design or malformed at source. `node
+  ../trdl/tests/v1-compile.test.mjs` re-measures in ~7s.
+- re-run the in-browser sweep once the Playwright chromium build is back;
+  6,690 is a Node figure and has not been browser-verified.
 - ! **measure declared colour vs checker verdict across v1-tests.** The
   compile count says nothing about correctness, and spot checks show
   GREEN-declared fixtures the JS checker rejects — including ones that
-  compiled long before the 2026-08-12 compiler work, so this is not
-  fallout from it. This is the workshop's job, not `../trdl`'s: the
-  checker rows live here. See the caveat in CLAUDE.md.
+  compiled long before any of the 2026 compiler work, so this is not
+  fallout from it. `todatests` now ships a `.json` sidecar per fixture
+  carrying the expected colour, which makes this automatable for the first
+  time. This is the workshop's job, not `../trdl`'s: the checker rows live
+  here. See the caveat in CLAUDE.md.
 - **2 malformed v1-tests fixtures** to report upstream: both files under
   `Half_hitch/hoist_incorporates_lead_and_meet_with_non-NULL_shield/` split
   one JSON object over several lines, which JSONL disallows. Also
